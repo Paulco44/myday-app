@@ -1,0 +1,17 @@
+packages:
+  "@dnd-kit/core": "Core drag and drop functionality for the Kanban board"
+  "@dnd-kit/sortable": "Sortable lists for Kanban columns"
+  "@dnd-kit/utilities": "Utility functions for dnd-kit sensors and collisions"
+  "date-fns": "Human-readable date formatting for card due dates"
+  "@hookform/resolvers": "Zod validation integration with react-hook-form"
+  "react-hook-form": "Form state management for creating and editing items"
+
+images:
+  - path: "artifacts/myday-kanban/public/images/hero-abstract.png"
+    description: "Subtle, minimal abstract gradient mesh background in very light icy blue and soft white with a smooth frosted glass aesthetic, perfect for a clean productivity app header."
+    aspect_ratio: "16:9"
+
+notes:
+  - Uses @workspace/api-client-react hooks for all API interactions
+  - Drag and drop handles optimistic local state updates before mutating via API
+  - Forms use Zod resolvers locally to match API expected shapes

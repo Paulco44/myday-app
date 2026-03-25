@@ -1,15 +1,18 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: MyDay Kanban API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: columns
+    description: Kanban column operations
+  - name: cards
+    description: Kanban card operations
 paths:
   /healthz:
     get:
@@ -24,6 +27,179 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /columns:
+    get:
+      operationId: getColumns
+      tags: [columns]
+      summary: List all columns
+      responses:
+        "200":
+          description: List of columns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Column"
+    post:
+      operationId: createColumn
+      tags: [columns]
+      summary: Create a column
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateColumnInput"
+      responses:
+        "201":
+          description: Created column
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Column"
+
+  /columns/{id}:
+    patch:
+      operationId: updateColumn
+      tags: [columns]
+      summary: Update a column
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateColumnInput"
+      responses:
+        "200":
+          description: Updated column
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Column"
+        "404":
+          description: Column not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteColumn
+      tags: [columns]
+      summary: Delete a column
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "404":
+          description: Column not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /cards:
+    get:
+      operationId: getCards
+      tags: [cards]
+      summary: List all cards
+      responses:
+        "200":
+          description: List of cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Card"
+    post:
+      operationId: createCard
+      tags: [cards]
+      summary: Create a card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCardInput"
+      responses:
+        "201":
+          description: Created card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+
+  /cards/{id}:
+    patch:
+      operationId: updateCard
+      tags: [cards]
+      summary: Update a card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCardInput"
+      responses:
+        "200":
+          description: Updated card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+        "404":
+          description: Card not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteCard
+      tags: [cards]
+      summary: Delete a card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "404":
+          description: Card not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +210,118 @@ components:
       required:
         - status
 
+    Column:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        position:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - position
+        - createdAt
+
+    CreateColumnInput:
+      type: object
+      properties:
+        title:
+          type: string
+        position:
+          type: integer
+      required:
+        - title
+        - position
+
+    UpdateColumnInput:
+      type: object
+      properties:
+        title:
+          type: string
+        position:
+          type: integer
+
+    Card:
+      type: object
+      properties:
+        id:
+          type: integer
+        columnId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        position:
+          type: integer
+        priority:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - columnId
+        - title
+        - position
+        - createdAt
+
+    CreateCardInput:
+      type: object
+      properties:
+        columnId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        position:
+          type: integer
+        priority:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+      required:
+        - columnId
+        - title
+        - position
+
+    UpdateCardInput:
+      type: object
+      properties:
+        columnId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        position:
+          type: integer
+        priority:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+
+    DeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

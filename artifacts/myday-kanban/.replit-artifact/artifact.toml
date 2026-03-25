@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "MyDay Kanban"
+version = "1.0.0"
+id = "artifacts/myday-kanban"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23345
+
+[services.development]
+run = "pnpm --filter @workspace/myday-kanban run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/myday-kanban", "run", "build" ]
+publicDir = "artifacts/myday-kanban/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23345"
+BASE_PATH = "/"
