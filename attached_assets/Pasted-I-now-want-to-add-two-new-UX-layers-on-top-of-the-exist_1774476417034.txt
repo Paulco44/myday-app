@@ -1,0 +1,84 @@
+I now want to add two new UX layers on top of the existing task manager: a “My Day” page and a Kanban board, using the current FastAPI + SQLite + Jinja2 setup under /task-manager.
+
+Please do the following:
+
+My Day page
+
+Create a new Jinja2 template, e.g. templates/my_day.html, that:
+
+Shows a section “Today’s Must Do” listing tasks with is_today = True, grouped by status if helpful.
+
+Shows another section “Suggestions” with tasks that:
+
+Are overdue (due_date < today and not done), or
+
+Are due today, or
+
+Are high priority (priority = 'high') and not done.
+
+For each suggested task, include a button or checkbox to “Add to Today”, which will set is_today = True.
+
+Add a route GET /task-manager/my-day that:
+
+Queries the database for is_today = True tasks and suggested tasks as described.
+
+Renders my_day.html.
+
+Add a route POST /task-manager/tasks/{task_id}/set-today (or similar) that:
+
+Sets is_today = True for that task and redirects back to /task-manager/my-day.
+
+On the My Day page, also add a small section showing overdue counts, completed-today counts, etc., if easy.
+
+Add a link or button from index.html and tasks.html to go to the My Day page.
+
+Kanban board page
+
+Create a new Jinja2 template, e.g. templates/kanban.html, that:
+
+Displays columns for task status values: “Backlog”, “To Do”, “Doing”, “Waiting”, “Done”.
+
+In each column, show the tasks with that status as small cards (title, due date, priority, maybe project).
+
+Add a route GET /task-manager/kanban that:
+
+Fetches tasks from the DB grouped by status.
+
+Renders kanban.html.
+
+Implement a way to change a task’s status from the Kanban view. For an MVP, it’s fine to:
+
+Use small forms or buttons on each card to move status (e.g., change to “Doing” or “Done”), OR
+
+If feasible, add basic drag-and-drop with JavaScript that calls a POST /task-manager/tasks/{task_id}/status endpoint to update the status and reload.
+
+Create that status update endpoint to change status and save updated_at; if status becomes “done”, set completed_at if not already set.
+
+Settings use (WIP limit)
+
+In the Kanban view, fetch Settings (the single row) and show the WIP limit for “Doing” (e.g., wip_limit_doing).
+
+If the number of tasks in “Doing” exceeds that limit, visually highlight the column (e.g., red border or warning text).
+
+If there is no Settings row yet, create a default one on startup with reasonable defaults (e.g., morning_ritual_time = "08:30", wip_limit_doing = 3, default_priority = "medium").
+
+Navigation
+
+Ensure the navigation between pages is clear:
+
+From the home page (index.html), include links to My Day, Kanban, and Tasks.
+
+From tasks.html, include links to My Day and Kanban.
+
+From my_day.html and kanban.html, include links back to Tasks.
+
+Explain briefly
+
+Which new templates and routes were added.
+
+How I can:
+
+Open /task-manager/my-day to manage my Today list.
+
+Open /task-manager/kanban to see and update statuses visually.
+Please implement all these changes in the existing repo so that I can click “Run” and use My Day and Kanban pages end-to-end.

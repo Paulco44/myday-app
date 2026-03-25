@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kanban — MyDay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #1a202c; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Nav ── */
+    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; gap: 0; height: 3.25rem; flex-shrink: 0; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-links { display: flex; gap: 0; }
+    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
+    .nav-links a:hover { color: #1a202c; }
+    .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+    .wip-info { margin-left: auto; font-size: .8rem; color: #94a3b8; }
+    .wip-info strong { color: #475569; }
+
+    /* ── Board ── */
+    .board { flex: 1; display: flex; gap: 1rem; padding: 1.25rem 1.5rem; overflow-x: auto; align-items: flex-start; }
+
+    .column {
+      background: #e8eaf0;
+      border-radius: .75rem;
+      width: 240px;
+      min-width: 240px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 7rem);
+    }
+    .column.drag-over { outline: 2px dashed #4f46e5; outline-offset: 2px; }
+    .column.wip-exceeded { background: #fee2e2; }
+    .column-head {
+      padding: .75rem .9rem .5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+    }
+    .column-title { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #475569; }
+    .col-count { background: #fff; border-radius: 999px; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; color: #64748b; }
+    .wip-warn { font-size: .7rem; color: #dc2626; font-weight: 700; margin-top: .15rem; }
+
+    .column-body { padding: .25rem .6rem .75rem; overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; min-height: 60px; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: .55rem;
+      padding: .7rem .8rem;
+      cursor: grab;
+      transition: box-shadow .15s, transform .15s;
+      user-select: none;
+    }
+    .card:active { cursor: grabbing; }
+    .card.dragging { opacity: .5; transform: rotate(1.5deg); box-shadow: 0 8px 20px rgba(0,0,0,.15); }
+    .card-title { font-weight: 600; font-size: .87rem; line-height: 1.3; }
+    .card-meta { margin-top: .35rem; display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
+    .badge { display: inline-block; padding: .12rem .45rem; border-radius: 999px; font-size: .7rem; font-weight: 600; }
+    .pri-high   { color: #dc2626; font-weight: 700; font-size: .72rem; }
+    .pri-medium { color: #d97706; font-size: .72rem; }
+    .pri-low    { color: #94a3b8; font-size: .72rem; }
+    .card-due   { font-size: .7rem; color: #94a3b8; }
+    .card-due.overdue { color: #dc2626; font-weight: 600; }
+    .card-project { font-size: .68rem; color: #94a3b8; }
+    .card-today { font-size: .68rem; background: #fef3c7; color: #92400e; border-radius: 3px; padding: .1rem .3rem; }
+
+    /* Quick-action dropdown */
+    .card-actions { margin-top: .5rem; display: flex; gap: .3rem; flex-wrap: wrap; }
+    .move-btn { font-size: .7rem; padding: .2rem .45rem; border-radius: .3rem; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; cursor: pointer; font-weight: 500; transition: background .1s; }
+    .move-btn:hover { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+
+    .empty-col { text-align: center; padding: 1rem .5rem; color: #94a3b8; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/kanban" class="active">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+    </div>
+    <span class="wip-info">WIP limit (Doing): <strong>{{ wip_limit }}</strong></span>
+  </nav>
+
+  <div class="board" id="board">
+    {% for status in statuses %}
+    {% set tasks = columns[status] %}
+    {% set is_doing = status == 'doing' %}
+    {% set exceeded = is_doing and (tasks | length) > wip_limit %}
+    <div class="column {% if exceeded %}wip-exceeded{% endif %}"
+         data-status="{{ status }}"
+         ondragover="event.preventDefault(); this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event, '{{ status }}')">
+
+      <div class="column-head">
+        <div>
+          <div class="column-title">{{ status_labels[status] }}</div>
+          {% if is_doing and exceeded %}
+          <div class="wip-warn">⚠ WIP limit exceeded ({{ tasks | length }}/{{ wip_limit }})</div>
+          {% endif %}
+        </div>
+        <span class="col-count">{{ tasks | length }}</span>
+      </div>
+
+      <div class="column-body">
+        {% if tasks %}
+        {% for task in tasks %}
+        <div class="card"
+             draggable="true"
+             data-task-id="{{ task.id }}"
+             ondragstart="handleDragStart(event, {{ task.id }})"
+             ondragend="this.classList.remove('dragging')">
+
+          <div class="card-title">{{ task.title }}</div>
+          <div class="card-meta">
+            <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
+            {% if task.due_date %}
+            <span class="card-due {% if task.due_date < today %}overdue{% endif %}">
+              {{ task.due_date.strftime('%b %-d') }}
+            </span>
+            {% endif %}
+            {% if task.project %}<span class="card-project">{{ task.project.name }}</span>{% endif %}
+            {% if task.is_today %}<span class="card-today">Today</span>{% endif %}
+          </div>
+
+          <!-- Quick move buttons -->
+          <div class="card-actions">
+            {% for s in statuses %}
+            {% if s != status %}
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/status" style="display:inline">
+              <input type="hidden" name="status" value="{{ s }}" />
+              <input type="hidden" name="redirect_to" value="{{ base }}/kanban" />
+              <button class="move-btn" type="submit">→ {{ status_labels[s] }}</button>
+            </form>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-col">Drop cards here</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    const BASE = "{{ base }}";
+    let draggedId = null;
+
+    function handleDragStart(event, taskId) {
+      draggedId = taskId;
+      event.target.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDrop(event, newStatus) {
+      event.preventDefault();
+      event.currentTarget.classList.remove('drag-over');
+      if (!draggedId) return;
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `${BASE}/tasks/${draggedId}/status`;
+
+      const statusInput = document.createElement('input');
+      statusInput.type = 'hidden';
+      statusInput.name = 'status';
+      statusInput.value = newStatus;
+      form.appendChild(statusInput);
+
+      const redirectInput = document.createElement('input');
+      redirectInput.type = 'hidden';
+      redirectInput.name = 'redirect_to';
+      redirectInput.value = `${BASE}/kanban`;
+      form.appendChild(redirectInput);
+
+      document.body.appendChild(form);
+      form.submit();
+    }
+  </script>
+</body>
+</html>
