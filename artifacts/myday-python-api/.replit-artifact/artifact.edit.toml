@@ -1,0 +1,15 @@
+kind = "api"
+previewPath = "/task-manager"
+title = "MyDay Task Manager (Python)"
+version = "1.0.0"
+id = "artifacts/myday-python-api"
+
+[[services]]
+localPort = 8000
+name = "Task Manager API"
+paths = ["/task-manager"]
+
+[services.development]
+run = "cd artifacts/myday-python-api && python main.py"
+
+[services.production]

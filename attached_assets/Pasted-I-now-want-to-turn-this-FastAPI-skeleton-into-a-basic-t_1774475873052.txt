@@ -1,0 +1,182 @@
+I now want to turn this FastAPI skeleton into a basic task manager with SQLite and SQLAlchemy.
+
+Please do the following:
+
+Set up SQLite + SQLAlchemy
+
+Configure a SQLite database file (for example app.db) using SQLAlchemy.
+
+Create a database.py (or similar) module with:
+
+Engine and session maker.
+
+A declarative Base for models.
+
+A get_db() dependency for FastAPI routes (session per request).
+
+Make sure tables are created on startup.
+
+Create models for the MVP schema
+Implement SQLAlchemy models for:
+
+Project (projects table):
+
+id (int, primary key)
+
+name (string)
+
+description (string, nullable)
+
+is_active (bool, default True)
+
+Task (tasks table):
+
+id (int, primary key)
+
+title (string, required)
+
+description (string, nullable)
+
+project_id (foreign key to projects.id, nullable)
+
+owner (string, default something like "me")
+
+status (string; values like "backlog", "todo", "doing", "waiting", "done")
+
+priority (string; values like "low", "medium", "high")
+
+due_date (date or datetime, nullable)
+
+created_at (datetime, default now)
+
+updated_at (datetime, auto-updated)
+
+completed_at (datetime, nullable)
+
+is_today (bool, default False)
+
+source_type (string; e.g. "meeting", "email", "director", "self", "other")
+
+source_ref (string, nullable)
+
+Subtask (subtasks table):
+
+id (int, primary key)
+
+task_id (foreign key to tasks.id)
+
+title (string)
+
+is_done (bool, default False)
+
+created_at (datetime, default now)
+
+completed_at (datetime, nullable)
+
+Tag (tags table):
+
+id (int, primary key)
+
+name (string, unique)
+
+TaskTag (task_tags table, many-to-many):
+
+id (int, primary key)
+
+task_id (foreign key to tasks.id)
+
+tag_id (foreign key to tags.id)
+
+RecurringTask (recurring_tasks table):
+
+id (int, primary key)
+
+title (string)
+
+description (string, nullable)
+
+project_id (foreign key to projects.id, nullable)
+
+priority (string)
+
+recurrence_type (string; e.g. "daily", "weekly", "monthly")
+
+recurrence_rule (string; examples: "Fri", "1st_mon")
+
+active (bool, default True)
+
+Settings (settings table):
+
+id (int, primary key, just one row for now)
+
+morning_ritual_time (string, e.g. "08:30")
+
+wip_limit_doing (int)
+
+default_priority (string)
+Use standard SQLAlchemy patterns with relationships where helpful (e.g. from Task to Project, from Subtask to Task, and many-to-many for tags).
+
+Add basic Pydantic schemas (for API)
+
+Create Pydantic models for reading/creating/updating tasks and projects (e.g. TaskCreate, TaskUpdate, TaskRead, ProjectRead, etc.), following common FastAPI + SQLAlchemy patterns.
+
+Implement basic CRUD API endpoints
+
+Under /projects:
+
+GET /projects → list all projects.
+
+POST /projects → create a new project.
+
+Under /tasks:
+
+GET /tasks → list tasks (optionally support query params like status, project_id, is_today).
+
+POST /tasks → create a new task (at minimum, accept title, plus optional fields).
+
+PUT /tasks/{task_id} → update a task.
+
+DELETE /tasks/{task_id} → delete a task.
+
+Keep the logic clear and simple; this is a single-user app for now.
+
+Add a very simple HTML UI for tasks
+
+Create a new Jinja2 template, e.g. templates/tasks.html, that:
+
+Shows a list of tasks from the database in a basic table.
+
+Has a small form at the top to create a new task with:
+
+title (text input, required)
+
+project (dropdown or simple text for now if easier)
+
+priority (dropdown: low/medium/high)
+
+due_date (date input, optional)
+
+Add a GET /tasks-page route that:
+
+Reads tasks from the DB.
+
+Renders tasks.html with the list.
+
+Add a POST handler that the form submits to, to create the task and then redirect back to /tasks-page.
+
+Wire the home page to link to tasks
+
+Update the index.html template to include a simple link or button “Go to Tasks” that points to /tasks-page.
+
+Finally, explain briefly:
+
+Which files were created/modified.
+
+How to test:
+
+Run the app in Replit.
+
+Go to /tasks-page.
+
+Create a task and see it appear in the list.
+Please implement all this directly in the repl so that I can click “Run”, open /tasks-page, and create/list tasks end-to-end.

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tasks — MyDay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: .875rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header a { text-decoration: none; color: #4f46e5; font-weight: 800; font-size: 1.2rem; }
+    header span { color: #94a3b8; }
+    main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
+
+    /* New-task form */
+    .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: .75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #475569; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: .75rem;
+      align-items: end;
+    }
+    @media(max-width: 700px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+    .field { display: flex; flex-direction: column; gap: .3rem; }
+    label { font-size: .8rem; font-weight: 500; color: #64748b; }
+    input, select {
+      padding: .5rem .75rem;
+      border: 1px solid #cbd5e1;
+      border-radius: .4rem;
+      font-size: .9rem;
+      background: #fff;
+      color: #1a202c;
+    }
+    input:focus, select:focus { outline: 2px solid #4f46e5; border-color: #4f46e5; }
+    .btn {
+      padding: .55rem 1.25rem;
+      border-radius: .4rem;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-sm { padding: .35rem .8rem; font-size: .78rem; }
+    .btn-danger { background: #ef4444; color: #fff; }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .filters a {
+      padding: .35rem .9rem;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 500;
+      text-decoration: none;
+      background: #e2e8f0;
+      color: #475569;
+      transition: background .15s;
+    }
+    .filters a.active, .filters a:hover { background: #4f46e5; color: #fff; }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: .75rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+      border: 1px solid #e2e8f0;
+    }
+    th {
+      text-align: left;
+      padding: .75rem 1rem;
+      background: #f8fafc;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    td {
+      padding: .75rem 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: .9rem;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .badge {
+      display: inline-block;
+      padding: .2rem .55rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 600;
+    }
+    .badge-todo     { background: #e0e7ff; color: #3730a3; }
+    .badge-doing    { background: #fef3c7; color: #92400e; }
+    .badge-done     { background: #d1fae5; color: #065f46; }
+    .badge-backlog  { background: #f1f5f9; color: #64748b; }
+    .badge-waiting  { background: #fce7f3; color: #9d174d; }
+
+    .pri-high   { color: #dc2626; font-weight: 700; }
+    .pri-medium { color: #d97706; }
+    .pri-low    { color: #6b7280; }
+
+    .empty {
+      text-align: center;
+      padding: 3rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="{{ base }}/">MyDay</a>
+    <span>/</span>
+    <span style="color:#1a202c;font-weight:600;">Tasks</span>
+  </header>
+
+  <main>
+    <h1>Tasks</h1>
+
+    <!-- New Task Form -->
+    <div class="card">
+      <h2>Add New Task</h2>
+      <form method="post" action="{{ base }}/tasks-page">
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 1 / span 1;">
+            <label for="title">Title *</label>
+            <input id="title" name="title" type="text" placeholder="What needs to be done?" required />
+          </div>
+
+          <div class="field">
+            <label for="project_id">Project</label>
+            <select id="project_id" name="project_id">
+              <option value="">— none —</option>
+              {% for p in projects %}
+              <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="priority">Priority</label>
+            <select id="priority" name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="due_date">Due Date</label>
+            <input id="due_date" name="due_date" type="date" />
+          </div>
+
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              <option value="backlog">Backlog</option>
+              <option value="todo" selected>To Do</option>
+              <option value="doing">Doing</option>
+              <option value="waiting">Waiting</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+
+          <div>
+            <button type="submit" class="btn btn-primary">Add Task</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <a href="{{ base }}/tasks-page" class="{% if not current_status %}active{% endif %}">All</a>
+      <a href="{{ base }}/tasks-page?status=todo"    class="{% if current_status == 'todo'    %}active{% endif %}">To Do</a>
+      <a href="{{ base }}/tasks-page?status=doing"   class="{% if current_status == 'doing'   %}active{% endif %}">Doing</a>
+      <a href="{{ base }}/tasks-page?status=backlog" class="{% if current_status == 'backlog' %}active{% endif %}">Backlog</a>
+      <a href="{{ base }}/tasks-page?status=waiting" class="{% if current_status == 'waiting' %}active{% endif %}">Waiting</a>
+      <a href="{{ base }}/tasks-page?status=done"    class="{% if current_status == 'done'    %}active{% endif %}">Done</a>
+    </div>
+
+    <!-- Tasks table -->
+    {% if tasks %}
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Project</th>
+          <th>Due Date</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td><strong>{{ task.title }}</strong>
+            {% if task.description %}<br><span style="color:#94a3b8;font-size:.82rem;">{{ task.description }}</span>{% endif %}
+          </td>
+          <td>
+            <span class="badge badge-{{ task.status }}">{{ task.status }}</span>
+          </td>
+          <td>
+            <span class="pri-{{ task.priority }}">{{ task.priority | capitalize }}</span>
+          </td>
+          <td>
+            {% if task.project %}{{ task.project.name }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}
+          </td>
+          <td>
+            {% if task.due_date %}{{ task.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}
+          </td>
+          <td style="color:#94a3b8;font-size:.82rem;">{{ task.created_at.strftime('%b %d') }}</td>
+          <td>
+            <form method="post" action="{{ base }}/tasks-page/{{ task.id }}/delete" style="display:inline">
+              <button type="submit" class="btn btn-sm btn-danger"
+                onclick="return confirm('Delete this task?')">✕</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      <p style="font-size:2rem;">📋</p>
+      <p style="margin-top:.5rem;">No tasks yet. Create one above!</p>
+    </div>
+    {% endif %}
+  </main>
+</body>
+</html>
