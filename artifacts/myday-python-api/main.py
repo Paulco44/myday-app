@@ -240,13 +240,38 @@ async def morning_checkin_process(
             title=line,
             status="todo",
             is_today=False,
-            focus_state="later_today",
+            focus_state=None,
             source_type="brain_dump",
         )
         db.add(task)
     db.commit()
     mark_morning_checkin(db, date.today())
-    return RedirectResponse(url=f"{BASE}/my-day?from_brain_dump=1", status_code=303)
+    return RedirectResponse(url=f"{BASE}/morning-checkin/pick", status_code=303)
+
+
+@app.get(f"{BASE}/morning-checkin/pick", response_class=HTMLResponse)
+async def morning_checkin_pick(request: Request, db: Session = Depends(get_db)):
+    today_start = datetime(date.today().year, date.today().month, date.today().day)
+    brain_tasks = (
+        db.query(models.Task)
+        .filter(
+            models.Task.source_type == "brain_dump",
+            models.Task.created_at >= today_start,
+            models.Task.status != "done",
+        )
+        .order_by(models.Task.created_at.asc())
+        .all()
+    )
+    must_do_count = sum(1 for t in brain_tasks if t.is_today)
+    return templates.TemplateResponse(
+        request, "morning_checkin_pick.html",
+        {
+            "base": BASE,
+            "brain_tasks": brain_tasks,
+            "must_do_count": must_do_count,
+            "must_do_cap": 3,
+        },
+    )
 
 
 # ─── My Day ──────────────────────────────────────────────────────────────────
@@ -356,6 +381,7 @@ async def set_today(
     task_id: int,
     focus_state: str = Form(default="later_today"),
     time_block: Optional[str] = Form(default=None),
+    redirect_to: str = Form(default=""),
     db: Session = Depends(get_db),
 ):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
@@ -367,18 +393,24 @@ async def set_today(
         db_task.updated_at = datetime.utcnow()
         db.commit()
         mark_today_started(db, date.today())
-    return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
+    dest = redirect_to if redirect_to else f"{BASE}/my-day"
+    return RedirectResponse(url=dest, status_code=303)
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/unset-today")
-async def unset_today(task_id: int, db: Session = Depends(get_db)):
+async def unset_today(
+    task_id: int,
+    redirect_to: str = Form(default=""),
+    db: Session = Depends(get_db),
+):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if db_task:
         db_task.is_today = False
         db_task.focus_state = None
         db_task.updated_at = datetime.utcnow()
         db.commit()
-    return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
+    dest = redirect_to if redirect_to else f"{BASE}/my-day"
+    return RedirectResponse(url=dest, status_code=303)
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/focus-state")
@@ -420,6 +452,79 @@ async def set_time_block(
     db_task.updated_at = datetime.utcnow()
     db.commit()
     return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
+
+
+# ─── Task Edit ───────────────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/tasks/{{task_id}}/edit", response_class=HTMLResponse)
+async def edit_task_get(
+    task_id: int,
+    request: Request,
+    back: str = Query(default=""),
+    db: Session = Depends(get_db),
+):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    projects = db.query(models.Project).all()
+    return templates.TemplateResponse(
+        request, "task_edit.html",
+        {
+            "base": BASE,
+            "task": db_task,
+            "projects": projects,
+            "back": back or f"{BASE}/tasks-page",
+            "focus_states": FOCUS_STATES,
+            "time_blocks": TIME_BLOCKS,
+            "energy_tags": ENERGY_TAGS,
+            "statuses": STATUSES,
+            "status_labels": STATUS_LABELS,
+        },
+    )
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/edit")
+async def edit_task_post(
+    task_id: int,
+    title: str = Form(...),
+    status: str = Form("todo"),
+    priority: str = Form("medium"),
+    due_date: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    focus_state: Optional[str] = Form(None),
+    time_block: Optional[str] = Form(None),
+    energy_tag: Optional[str] = Form(None),
+    project_id: Optional[str] = Form(None),
+    back: str = Form(default=""),
+    db: Session = Depends(get_db),
+):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db_task.title = title
+    db_task.status = status
+    db_task.priority = priority
+    db_task.description = description or None
+    db_task.focus_state = focus_state if focus_state and focus_state != "none" else None
+    db_task.time_block = time_block if time_block and time_block != "none" else None
+    db_task.energy_tag = energy_tag if energy_tag and energy_tag != "none" else None
+    db_task.project_id = int(project_id) if project_id and project_id.strip() else None
+    if due_date:
+        try:
+            db_task.due_date = date.fromisoformat(due_date)
+        except ValueError:
+            db_task.due_date = None
+    else:
+        db_task.due_date = None
+    if status == "done" and not db_task.completed_at:
+        db_task.completed_at = datetime.utcnow()
+        mark_today_completed(db, date.today())
+    elif status != "done":
+        db_task.completed_at = None
+    db_task.updated_at = datetime.utcnow()
+    db.commit()
+    dest = back if back else f"{BASE}/tasks-page"
+    return RedirectResponse(url=dest, status_code=303)
 
 
 # ─── Kanban ──────────────────────────────────────────────────────────────────

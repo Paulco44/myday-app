@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Task — MyDay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1a202c; min-height: 100vh; }
+
+    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-links { display: flex; }
+    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; }
+    .nav-links a:hover { color: #1a202c; }
+    .nav-links a.checkin { color: #f59e0b; font-weight: 600; }
+
+    main { max-width: 580px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+    /* ── Header ── */
+    .page-back { display: inline-flex; align-items: center; gap: .35rem; color: #64748b; text-decoration: none; font-size: .84rem; font-weight: 500; margin-bottom: 1.25rem; }
+    .page-back:hover { color: #1a202c; }
+    h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 1.75rem; }
+
+    /* ── Form card ── */
+    .form-card { background: #fff; border: 1px solid #e2e8f0; border-radius: .85rem; padding: 1.5rem 1.6rem; }
+
+    /* ── Field groups ── */
+    .field { margin-bottom: 1.2rem; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #64748b; margin-bottom: .4rem; }
+    input[type="text"],
+    input[type="date"],
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: .45rem;
+      padding: .55rem .8rem;
+      font-size: .92rem;
+      font-family: inherit;
+      color: #1a202c;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: #4f46e5;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+    }
+    textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
+
+    /* ── Two-column grid ── */
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; margin-bottom: 1.2rem; }
+    @media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
+
+    /* ── Pill chip selector ── */
+    .chip-group { display: flex; gap: .45rem; flex-wrap: wrap; }
+    .chip-option { display: none; }
+    .chip-label {
+      display: inline-block;
+      padding: .35rem .8rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all .12s;
+      user-select: none;
+    }
+    .chip-option:checked + .chip-label {
+      border-color: #4f46e5;
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    /* Coloured chip variants */
+    .chip-option.energy:checked + .chip-label.creative { background: #5b21b6; border-color: #5b21b6; }
+    .chip-option.energy:checked + .chip-label.admin { background: #1e40af; border-color: #1e40af; }
+    .chip-option.energy:checked + .chip-label.social { background: #065f46; border-color: #065f46; }
+    .chip-option.energy:checked + .chip-label.low { background: #92400e; border-color: #92400e; }
+    .chip-option.block:checked + .chip-label.morning { background: #92400e; border-color: #92400e; }
+    .chip-option.block:checked + .chip-label.afternoon { background: #1e40af; border-color: #1e40af; }
+    .chip-option.block:checked + .chip-label.evening { background: #5b21b6; border-color: #5b21b6; }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 1.4rem 0; }
+
+    /* ── Actions ── */
+    .form-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; padding-top: .25rem; }
+    .btn-save { background: #4f46e5; color: #fff; border: none; border-radius: .5rem; padding: .65rem 1.6rem; font-size: .95rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn-save:hover { opacity: .88; }
+    .btn-cancel { color: #64748b; text-decoration: none; font-size: .88rem; font-weight: 500; padding: .5rem; }
+    .btn-cancel:hover { color: #1a202c; }
+
+    /* ── Hint text ── */
+    .field-hint { font-size: .73rem; color: #94a3b8; margin-top: .3rem; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: .85rem;
+      margin-top: .25rem;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/morning-checkin" class="checkin">✦ Check In</a>
+      <a href="{{ base }}/kanban">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/cop-admin">CoP Admin</a>
+    </div>
+  </nav>
+
+  <main>
+    <a class="page-back" href="{{ back }}">← Back</a>
+    <h1>Edit task</h1>
+
+    <div class="form-card">
+      <form method="post" action="{{ base }}/tasks/{{ task.id }}/edit">
+        <input type="hidden" name="back" value="{{ back }}" />
+
+        <!-- Title -->
+        <div class="field">
+          <label for="title">Task title</label>
+          <input type="text" id="title" name="title" value="{{ task.title }}" required autofocus />
+        </div>
+
+        <!-- Description -->
+        <div class="field">
+          <label for="description">Notes (optional)</label>
+          <textarea id="description" name="description" placeholder="Any extra context, links, or steps…">{{ task.description or '' }}</textarea>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-label">Status &amp; priority</div>
+
+        <div class="field-grid">
+          <!-- Status -->
+          <div class="field" style="margin-bottom:0">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              {% for s in statuses %}
+              <option value="{{ s }}" {% if task.status == s %}selected{% endif %}>{{ status_labels[s] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div class="field" style="margin-bottom:0">
+            <label for="priority">Priority</label>
+            <select id="priority" name="priority">
+              <option value="low"    {% if task.priority == 'low'    %}selected{% endif %}>Low</option>
+              <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
+              <option value="high"   {% if task.priority == 'high'   %}selected{% endif %}>High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-grid" style="margin-top:.85rem;">
+          <!-- Due date -->
+          <div class="field" style="margin-bottom:0">
+            <label for="due_date">Due date</label>
+            <input type="date" id="due_date" name="due_date"
+              value="{% if task.due_date %}{{ task.due_date.isoformat() }}{% endif %}" />
+          </div>
+
+          <!-- Project -->
+          <div class="field" style="margin-bottom:0">
+            <label for="project_id">Project</label>
+            <select id="project_id" name="project_id">
+              <option value="">— None —</option>
+              {% for p in projects %}
+              <option value="{{ p.id }}" {% if task.project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-label">Focus &amp; scheduling</div>
+
+        <!-- Focus state -->
+        <div class="field">
+          <label>Focus state</label>
+          <div class="chip-group">
+            <input class="chip-option" type="radio" name="focus_state" id="fs_none" value="none"
+              {% if not task.focus_state %}checked{% endif %} />
+            <label class="chip-label" for="fs_none">None</label>
+
+            <input class="chip-option" type="radio" name="focus_state" id="fs_now" value="now"
+              {% if task.focus_state == 'now' %}checked{% endif %} />
+            <label class="chip-label" for="fs_now">⚡ Now</label>
+
+            <input class="chip-option" type="radio" name="focus_state" id="fs_next" value="next"
+              {% if task.focus_state == 'next' %}checked{% endif %} />
+            <label class="chip-label" for="fs_next">→ Next</label>
+
+            <input class="chip-option" type="radio" name="focus_state" id="fs_later_today" value="later_today"
+              {% if task.focus_state == 'later_today' %}checked{% endif %} />
+            <label class="chip-label" for="fs_later_today">Today</label>
+
+            <input class="chip-option" type="radio" name="focus_state" id="fs_later" value="later"
+              {% if task.focus_state == 'later' %}checked{% endif %} />
+            <label class="chip-label" for="fs_later">Parked</label>
+          </div>
+        </div>
+
+        <!-- Time block -->
+        <div class="field">
+          <label>Time block</label>
+          <div class="chip-group">
+            <input class="chip-option block" type="radio" name="time_block" id="tb_none" value="none"
+              {% if not task.time_block %}checked{% endif %} />
+            <label class="chip-label" for="tb_none">Any time</label>
+
+            <input class="chip-option block" type="radio" name="time_block" id="tb_morning" value="morning"
+              {% if task.time_block == 'morning' %}checked{% endif %} />
+            <label class="chip-label morning" for="tb_morning">🌅 Morning</label>
+
+            <input class="chip-option block" type="radio" name="time_block" id="tb_afternoon" value="afternoon"
+              {% if task.time_block == 'afternoon' %}checked{% endif %} />
+            <label class="chip-label afternoon" for="tb_afternoon">☀️ Afternoon</label>
+
+            <input class="chip-option block" type="radio" name="time_block" id="tb_evening" value="evening"
+              {% if task.time_block == 'evening' %}checked{% endif %} />
+            <label class="chip-label evening" for="tb_evening">🌙 Evening</label>
+          </div>
+        </div>
+
+        <!-- Energy tag -->
+        <div class="field">
+          <label>Energy type</label>
+          <div class="chip-group">
+            <input class="chip-option energy" type="radio" name="energy_tag" id="et_none" value="none"
+              {% if not task.energy_tag %}checked{% endif %} />
+            <label class="chip-label" for="et_none">Not set</label>
+
+            <input class="chip-option energy" type="radio" name="energy_tag" id="et_creative" value="creative"
+              {% if task.energy_tag == 'creative' %}checked{% endif %} />
+            <label class="chip-label creative" for="et_creative">✨ Creative</label>
+
+            <input class="chip-option energy" type="radio" name="energy_tag" id="et_admin" value="admin"
+              {% if task.energy_tag == 'admin' %}checked{% endif %} />
+            <label class="chip-label admin" for="et_admin">📋 Admin</label>
+
+            <input class="chip-option energy" type="radio" name="energy_tag" id="et_social" value="social"
+              {% if task.energy_tag == 'social' %}checked{% endif %} />
+            <label class="chip-label social" for="et_social">💬 Social</label>
+
+            <input class="chip-option energy" type="radio" name="energy_tag" id="et_low" value="low_energy"
+              {% if task.energy_tag == 'low_energy' %}checked{% endif %} />
+            <label class="chip-label low" for="et_low">🌿 Low energy</label>
+          </div>
+          <div class="field-hint">Helps match tasks to how you feel at different times of day.</div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="form-actions">
+          <button class="btn-save" type="submit">Save changes</button>
+          <a class="btn-cancel" href="{{ back }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

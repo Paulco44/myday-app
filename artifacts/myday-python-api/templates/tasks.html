@@ -157,7 +157,11 @@
           <td>{% if task.project %}{{ task.project.name }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
           <td>{% if task.due_date %}{{ task.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
           <td style="color:#94a3b8;font-size:.82rem;">{{ task.created_at.strftime('%b %d') }}</td>
-          <td>
+          <td style="white-space:nowrap;">
+            <a href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/tasks-page"
+               style="display:inline-flex;align-items:center;gap:.2rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:.35rem;padding:.28rem .65rem;font-size:.78rem;font-weight:600;color:#475569;text-decoration:none;margin-right:.3rem;">
+              ✎ Edit
+            </a>
             <form method="post" action="{{ base }}/tasks-page/{{ task.id }}/delete" style="display:inline">
               <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this task?')">✕</button>
             </form>

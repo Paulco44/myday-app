@@ -172,6 +172,8 @@
     .btn-check:hover { opacity: .85; }
     .btn-park { color: #94a3b8; background: none; border: none; font-size: .72rem; font-weight: 500; cursor: pointer; padding: .1rem 0; }
     .btn-park:hover { color: #64748b; }
+    .btn-edit-task { color: #94a3b8; background: none; border: none; font-size: .72rem; font-weight: 500; cursor: pointer; padding: .1rem 0; text-decoration: none; }
+    .btn-edit-task:hover { color: #4f46e5; }
 
     /* ── Time block columns ── */
     .time-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .85rem; }
@@ -354,8 +356,8 @@
           <input type="hidden" name="focus_state" value="later_today" />
           <button class="btn-later-now" type="submit">Park for later</button>
         </form>
-        <a href="{{ base }}/task-manager/focus?task_id={{ now_task.id }}" style="text-decoration:none;">
-          <button class="btn-state primary" type="button">⏱ Focus Mode</button>
+        <a href="{{ base }}/tasks/{{ now_task.id }}/edit?back={{ base }}/my-day" style="text-decoration:none;">
+          <button class="btn-state" type="button">✎ Edit</button>
         </a>
       </div>
     </div>
@@ -406,6 +408,7 @@
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
               <button class="btn-check" type="submit">✓</button>
             </form>
+            <a class="btn-edit-task" href="{{ base }}/tasks/{{ next_task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
           </div>
         </div>
         {% endif %}
@@ -432,8 +435,10 @@
               <button class="btn-state warn" style="font-size:.68rem;padding:.2rem .5rem;" type="submit">Next</button>
             </form>
             <form method="post" action="{{ base }}/tasks/{{ task.id }}/unset-today">
+              <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
               <button class="btn-park" type="submit">Move to Later</button>
             </form>
+            <a class="btn-edit-task" href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
           </div>
         </div>
         {% endfor %}
