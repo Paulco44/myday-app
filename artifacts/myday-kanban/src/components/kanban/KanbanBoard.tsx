@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -23,31 +23,29 @@ import { EditCardSheet } from "./EditCardSheet";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 3 } };
+
 export function KanbanBoard() {
   const queryClient = useQueryClient();
   const { data: serverColumns, isLoading: isLoadingColumns } = useGetColumns();
   const { data: serverCards, isLoading: isLoadingCards } = useGetCards();
-  
+
   const { mutate: updateCard } = useUpdateCard({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCardsQueryKey() })
-    }
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCardsQueryKey() }),
+    },
   });
 
   const { mutate: updateColumn } = useUpdateColumn({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetColumnsQueryKey() })
-    }
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetColumnsQueryKey() }),
+    },
   });
 
   const [columns, setColumns] = useState<Column[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
-
-  // Local state for dragging overlays
   const [activeColumn, setActiveColumn] = useState<Column | null>(null);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
-
-  // For the edit card sheet
   const [editingCard, setEditingCard] = useState<Card | null>(null);
 
   useEffect(() => {
@@ -65,13 +63,96 @@ export function KanbanBoard() {
   const columnsId = useMemo(() => columns.map((col) => col.id), [columns]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 3,
-      },
-    }),
+    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
     useSensor(KeyboardSensor)
   );
+
+  // ── All useCallback hooks must be declared before any conditional return ──
+
+  const onDragStart = useCallback((event: DragStartEvent) => {
+    if (event.active.data.current?.type === "Column") {
+      setActiveColumn(event.active.data.current.column);
+    } else if (event.active.data.current?.type === "Card") {
+      setActiveCard(event.active.data.current.card);
+    }
+  }, []);
+
+  const onDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+    if (activeId === overId) return;
+
+    const isActiveACard = active.data.current?.type === "Card";
+    const isOverACard = over.data.current?.type === "Card";
+    const isOverAColumn = over.data.current?.type === "Column";
+
+    if (!isActiveACard) return;
+
+    if (isActiveACard && isOverACard) {
+      setCards((prev) => {
+        const activeIndex = prev.findIndex((t) => t.id === activeId);
+        const overIndex = prev.findIndex((t) => t.id === overId);
+        if (prev[activeIndex].columnId !== prev[overIndex].columnId) {
+          const next = [...prev];
+          next[activeIndex] = { ...next[activeIndex], columnId: prev[overIndex].columnId };
+          return arrayMove(next, activeIndex, overIndex);
+        }
+        return arrayMove(prev, activeIndex, overIndex);
+      });
+    }
+
+    if (isActiveACard && isOverAColumn) {
+      setCards((prev) => {
+        const activeIndex = prev.findIndex((t) => t.id === activeId);
+        const next = [...prev];
+        next[activeIndex] = { ...next[activeIndex], columnId: overId as number };
+        return arrayMove(next, activeIndex, activeIndex);
+      });
+    }
+  }, []);
+
+  const onDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveColumn(null);
+    setActiveCard(null);
+
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+    if (activeId === overId) return;
+
+    if (active.data.current?.type === "Column") {
+      setColumns((prev) => {
+        const activeIndex = prev.findIndex((col) => col.id === activeId);
+        const overIndex = prev.findIndex((col) => col.id === overId);
+        const next = arrayMove(prev, activeIndex, overIndex);
+        next.forEach((col, i) => { col.position = i; });
+        updateColumn({ id: activeId as number, data: { position: overIndex } });
+        return next;
+      });
+      return;
+    }
+
+    if (active.data.current?.type === "Card") {
+      setCards((prev) => {
+        const activeIndex = prev.findIndex((t) => t.id === activeId);
+        const card = prev[activeIndex];
+        if (card) {
+          updateCard({ id: card.id, data: { columnId: card.columnId, position: activeIndex } });
+        }
+        return prev;
+      });
+    }
+  }, [updateCard, updateColumn]);
+
+  const handleCardClick = useCallback((card: Card) => setEditingCard(card), []);
+  const handleEditClose = useCallback((open: boolean) => { if (!open) setEditingCard(null); }, []);
+
+  // ── Conditional render after all hooks ──
 
   if (isLoadingColumns || isLoadingCards) {
     return (
@@ -82,109 +163,6 @@ export function KanbanBoard() {
   }
 
   const highestColPos = columns.length > 0 ? Math.max(...columns.map(c => c.position)) : 0;
-
-  function onDragStart(event: DragStartEvent) {
-    if (event.active.data.current?.type === "Column") {
-      setActiveColumn(event.active.data.current.column);
-      return;
-    }
-    if (event.active.data.current?.type === "Card") {
-      setActiveCard(event.active.data.current.card);
-      return;
-    }
-  }
-
-  function onDragOver(event: DragOverEvent) {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id;
-    const overId = over.id;
-
-    if (activeId === overId) return;
-
-    const isActiveACard = active.data.current?.type === "Card";
-    const isOverACard = over.data.current?.type === "Card";
-    const isOverAColumn = over.data.current?.type === "Column";
-
-    if (!isActiveACard) return;
-
-    // Moving card over another card
-    if (isActiveACard && isOverACard) {
-      setCards((cards) => {
-        const activeIndex = cards.findIndex((t) => t.id === activeId);
-        const overIndex = cards.findIndex((t) => t.id === overId);
-        
-        if (cards[activeIndex].columnId !== cards[overIndex].columnId) {
-          const newCards = [...cards];
-          newCards[activeIndex].columnId = cards[overIndex].columnId;
-          return arrayMove(newCards, activeIndex, overIndex);
-        }
-        return arrayMove(cards, activeIndex, overIndex);
-      });
-    }
-
-    // Moving card over an empty column
-    if (isActiveACard && isOverAColumn) {
-      setCards((cards) => {
-        const activeIndex = cards.findIndex((t) => t.id === activeId);
-        const newCards = [...cards];
-        newCards[activeIndex].columnId = overId as number;
-        return arrayMove(newCards, activeIndex, activeIndex);
-      });
-    }
-  }
-
-  function onDragEnd(event: DragEndEvent) {
-    setActiveColumn(null);
-    setActiveCard(null);
-
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id;
-    const overId = over.id;
-
-    if (activeId === overId) return;
-
-    const isActiveColumn = active.data.current?.type === "Column";
-    if (isActiveColumn) {
-      setColumns((columns) => {
-        const activeColumnIndex = columns.findIndex((col) => col.id === activeId);
-        const overColumnIndex = columns.findIndex((col) => col.id === overId);
-        const newColumns = arrayMove(columns, activeColumnIndex, overColumnIndex);
-        
-        // Optimistic update locally
-        newColumns.forEach((col, index) => { col.position = index; });
-        
-        // Fire API request for the moved column
-        updateColumn({
-          id: activeId as number,
-          data: { position: overColumnIndex }
-        });
-        
-        return newColumns;
-      });
-      return;
-    }
-
-    const isActiveCard = active.data.current?.type === "Card";
-    if (isActiveCard) {
-      // Find the card in our local state (which was updated in onDragOver)
-      const activeIndex = cards.findIndex((t) => t.id === activeId);
-      const card = cards[activeIndex];
-      
-      if (card) {
-        updateCard({
-          id: card.id,
-          data: {
-            columnId: card.columnId,
-            position: activeIndex, // using index as new position approximation
-          }
-        });
-      }
-    }
-  }
 
   return (
     <>
@@ -202,7 +180,7 @@ export function KanbanBoard() {
                 key={col.id}
                 column={col}
                 cards={cards.filter((c) => c.columnId === col.id)}
-                onCardClick={(card) => setEditingCard(card)}
+                onCardClick={handleCardClick}
               />
             ))}
           </SortableContext>
@@ -215,20 +193,20 @@ export function KanbanBoard() {
                 <KanbanColumn
                   column={activeColumn}
                   cards={cards.filter((c) => c.columnId === activeColumn.id)}
-                  onCardClick={() => {}}
+                  onCardClick={handleCardClick}
                 />
               )}
-              {activeCard && <KanbanCard card={activeCard} onClick={() => {}} />}
+              {activeCard && <KanbanCard card={activeCard} onClick={handleCardClick} />}
             </DragOverlay>,
             document.body
           )}
         </DndContext>
       </div>
 
-      <EditCardSheet 
-        card={editingCard} 
-        open={!!editingCard} 
-        onOpenChange={(open) => !open && setEditingCard(null)} 
+      <EditCardSheet
+        card={editingCard}
+        open={!!editingCard}
+        onOpenChange={handleEditClose}
       />
     </>
   );
