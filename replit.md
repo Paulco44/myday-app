@@ -1,5 +1,52 @@
 # Workspace
 
+---
+
+## DESIGN CONTRACT — Hard Requirements (apply to every future change)
+
+### Core Principles
+1. **External brain, not a list** — capture → structure → schedule. Avoid raw endless lists; always show structure (time, flows, groupings).
+2. **Time must be visual** — tasks live in time blocks (Morning / Afternoon / Evening or simple timeline). Use timers to fight time blindness.
+3. **Micro-steps over big tasks** — every task must be breakable into 2–5 min subtasks. UI must make adding/checking micro-steps easy.
+4. **Now / Next / Later** — primary view shows only: current Now task, one Next, and a capped Today list (3–6 max). Backlogs are collapsed or on separate screens.
+5. **Immediate feedback, gentle rewards** — quick visual feedback on every completion (progress bar, color shift, checkmark). Streaks based on show-up, not perfection.
+6. **Non-shaming language** — no "failure." Use "Moved to Later", "We'll try again tomorrow", "Touched today", "You showed up."
+7. **Low cognitive load** — fewer choices per screen, strong defaults, minimal required fields.
+8. **Energy-based structure** — tasks support energy tags: `creative`, `admin`, `social`, `low_energy`. Flexible time blocks, not rigid hour-by-hour.
+9. **ADHD-friendly UI** — clear hierarchy, limited palette, obvious affordances, minimal motion. At-a-glance understandability.
+10. **Consistency over perfection** — emphasize "you showed up today" and partial progress.
+
+### Required Features (implement in FastAPI/Jinja2 stack, existing routes)
+
+#### 2.1 Daily Flow
+- **Morning Check-In**: fast brain-dump field → parse lines into tasks; select up to 3 Must-Do + few Nice-to-Do; place into Morning/Afternoon/Evening slots.
+- **Focus Mode** (`/task-manager/focus`): shows ONE active task + visual countdown timer (25/15/45 min choices); Done / Pause / Stop controls; on completion → instant feedback + next suggestion.
+- **Evening Reset** (`/task-manager/evening`): Planned vs Touched/Done comparison, non-judgmental; one-tap Roll to Tomorrow or Move to Later; highlight wins including partial progress.
+
+#### 2.2 Tasks & Data Model
+- Tasks have **micro-steps** (subtasks, 2–5 min each); easy to add/reorder/complete from task view and Focus Mode.
+- **Now / Next / Later Today / Later** state on every task/micro-step.
+- Primary Today view shows: Now task + one Next + capped Today list (3–6). Everything else collapsed.
+- **Energy tags**: `creative`, `admin`, `social`, `low_energy` — visible near task title.
+
+#### 2.3 Visual Rules
+- One primary focus area per screen; secondary info collapsible or on another screen.
+- Calm neutral background; at most 2 accent colors (active/focus + success/progress). Never color alone for state — always pair icon or label.
+- No looping/flashing animations. Completion feedback: short, one-shot, gentle.
+- Non-judgmental copy always.
+
+#### 2.4 Cognitive Load
+- Default focus block: 25 min (choices: 15 / 25 / 45 — not free text).
+- Routine templates: "Morning Startup", "Weekly Review" — save sets of tasks/steps.
+- Brain-dump parser: parse lines into tasks (design to allow AI later).
+
+#### 2.5 Habit Tracking
+- Track show-up per day (opened Focus Mode, completed micro-step, did Morning Check-In).
+- Streak = consecutive show-up days, not perfect completion.
+- Display kindly, never as punishment.
+
+---
+
 ## Overview
 
 pnpm workspace monorepo using TypeScript, plus a Python FastAPI service. Each package manages its own dependencies.

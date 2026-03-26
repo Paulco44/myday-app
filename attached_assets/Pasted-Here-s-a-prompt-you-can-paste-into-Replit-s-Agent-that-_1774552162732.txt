@@ -1,0 +1,214 @@
+Here’s a prompt you can paste into Replit’s Agent that bakes these principles and specs into the codebase as non‑negotiable constraints.
+
+You can use it as a “master brief” before any major change:
+
+Prompt for Replit Agent – Embed ADHD/ENFP Design Principles
+I’m building a personal task/workflow app for an ADHD, ENFP‑style user.
+From now on, please treat the following design principles and specs as hard requirements when modifying the code (backend, frontend, copy, and layout).
+
+1. Core design principles (must influence all UX decisions)
+External brain, not just a list
+
+The app is an external executive‑function system: capture → structure → schedule tasks so the user’s brain doesn’t have to hold everything.
+
+Avoid raw endless lists as the main view; always aim to show structure (time, flows, groupings).
+
+Time must be visual and tangible
+
+Tasks should “live in time,” not only as static list items.
+
+Use simple visual time blocks (e.g., Morning / Afternoon / Evening, or a basic timeline) and timers to combat time blindness.
+
+Micro‑steps over big tasks
+
+Every task must be breakable into 2–5 minute micro‑steps (subtasks).
+
+The UI should encourage adding and checking off micro‑steps to reduce overwhelm.
+
+Now / Next / Later instead of giant backlogs
+
+The user should see only a very small set of visible items at any moment (Now + Next + a tiny Today list).
+
+Big backlogs must be visually collapsed or moved to separate screens so the main views never feel like a wall of obligations.
+
+Immediate feedback and gentle rewards
+
+Every completed micro‑step or focus block should give instant, gentle visual feedback (progress bar, subtle color shift, small icon), not loud gamification.
+
+Reward streaks and progress, not perfection.
+
+Anxiety‑reducing, non‑shaming language
+
+No “failure” or harsh states. Avoid guilt‑inducing copy.
+
+Use language like “Moved to Later”, “We’ll try again tomorrow”, “Touched today”, etc.
+
+Low cognitive load at every step
+
+Fewer choices per screen, strong defaults, and simple templates.
+
+Avoid forcing many fields to be filled; use opinionated defaults and minimal required inputs.
+
+Energy‑based, flexible structure
+
+Support energy/mood tags on tasks (creative / admin / social / low‑energy).
+
+Use flexible blocks, not only rigid hour‑by‑hour schedules.
+
+Visual, accessible, ADHD‑friendly UI
+
+Clear hierarchy, limited palette, obvious affordances, minimal motion.
+
+Everything important must be understandable at a glance.
+
+Consistency over perfection
+
+Emphasize “you showed up today” and partial progress instead of all‑or‑nothing completion.
+2. Non‑negotiable functional + UX specs
+
+Please ensure or refactor the app so it supports the following. If something is not yet implemented, plan it in a way that fits the existing FastAPI/Jinja2 structure.
+2.1 Daily Flow structure (Morning Check‑In, Focus Mode, Evening Reset)
+
+Morning Check‑In (start‑of‑day flow)
+
+Must have a fast brain dump input: one big text field where the user can dump messy notes/tasks.
+
+There must be a way to turn the dump into structured tasks + micro‑steps (manual for now is fine; later we can add AI).
+
+User must be able to select up to 3 “Must‑Do” tasks plus a few “Nice‑to‑Do” tasks for today.
+
+These tasks must be placed into a visual day structure (e.g., Morning / Afternoon / Evening slots or a simple timeline).
+Focus Mode
+
+Focus screen must show only one active task at a time (no large lists visible).
+
+It must include a visual timer (countdown with progress bar or ring).
+
+Must provide one‑tap Done and simple Pause/Stop controls.
+
+On completion:
+Give instant visual feedback (e.g., progress bar increment, quick highlight, small checkmark animation).
+
+Offer a clear Next suggestion (Next task or “Take a break”).
+Evening Reset
+
+
+Must show a simple view comparing Planned vs Touched/Done tasks for the day, using non‑judgmental language.
+
+Must support one‑tap actions to:
+Roll remaining tasks to tomorrow or
+
+Move them to Later (not today).
+
+
+Must visually highlight wins, including partial progress (e.g., “3 of 5 Must‑Do tasks touched today”).
+2.2 Tasks, micro‑steps, and Now/Next/Later
+
+Tasks + micro‑steps
+
+Data model must allow each task to have child micro‑steps (subtasks) that can be very small (2–5 minutes).
+
+UI must make it easy to add, reorder, and complete micro‑steps from the task view and/or Focus Mode.
+Now / Next / Later state
+
+Each task or micro‑step must support a simple state among:
+Now
+
+Next
+
+Later Today
+
+Later (not today)
+
+
+The primary Today view (e.g., My Day / Focus) must show only:
+current Now task,
+
+at most one Next, and
+
+a capped number of visible Today items (for example 3–6 total).
+
+
+All other tasks should be collapsed or in secondary views (Kanban/Tasks page).
+Energy/mood tags
+
+Tasks (and/or Focus blocks) must support simple energy tags like creative, admin, social, low_energy.
+
+These tags must be visible near the task title to help the user choose tasks that fit their current energy.
+2.3 Visual and interaction rules
+
+Layout
+
+Each screen must have one primary focus area (e.g., current task in Focus Mode, Must‑Dos in My Day).
+
+Secondary info must be collapsible or on a different screen.
+
+Use clear visual hierarchy: large, high‑contrast text for the current task/section; smaller, lighter text for secondary context.
+Colors
+
+Use a calm neutral background (light or dark) with at most two main accent colors:
+one for active/focus states,
+
+one for success/progress.
+
+
+Maintain good contrast and avoid very neon/saturated backgrounds.
+
+Do not rely on color alone for state; always pair with an icon or label.
+Motion and feedback
+
+No looping or flashing animations.
+
+Completion feedback must be short and gentle (quick color shift, progress bar increment, one‑shot checkmark, etc.).
+Copy / wording
+
+Errors or missed tasks should use non‑judgmental phrases like:
+“We’ll try again tomorrow.”
+
+“Moved to Later.”
+
+
+Progress text should emphasize effort and showing up, e.g. “You focused for 20 minutes” or “You touched 3 important tasks today,” not just “3/5 done.”
+2.4 Cognitive load and automation
+
+Provide opinionated defaults:
+Default focus block length (e.g., 25 minutes) with a small set of alternatives (e.g., 15 / 25 / 45), not a free text field.
+
+
+Allow common routines to be saved as templates:
+e.g., “Morning Startup,” “Weekly Review,” each a set of steps/tasks that can be scheduled.
+
+
+Include a mechanism (even if simple) to convert messy brain‑dump input into structured tasks + steps:
+For example, parse lines into tasks, or offer checkboxes next to each line to “make this a task.”
+
+Later we can plug AI into this, so design the code to make that extension easy.
+2.5 Habit and consistency
+
+
+Track whether the user showed up today:
+For example, if they opened Focus Mode, completed a micro‑step, or did the Morning Check‑In.
+
+
+Maintain a streak metric based on show‑ups, not perfect completion.
+
+In the UI, display streaks and “days showed up” in a kind, encouraging way, never as punishment.
+Implementation guidance
+
+When you propose or implement changes, check them against these principles. Prefer refactors that move the app closer to:
+small visible sets of tasks (Now / Next / small Today list),
+
+strong Morning–Focus–Evening daily rhythm,
+
+micro‑steps, visual time, and low cognitive load.
+
+
+Keep using the existing stack (FastAPI + SQLite + Jinja2) and current routes (/task-manager/my-day, /task-manager/kanban, etc.), but you may:
+add new endpoints/templates for Morning Check‑In, Focus Mode, and Evening Reset,
+
+adjust current pages to respect these constraints.
+
+
+When you finish a change, summarize how the new behavior satisfies these principles and specs.
+Please confirm you understand these as the persistent design contract for future modifications of this project.
+
