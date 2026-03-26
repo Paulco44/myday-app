@@ -1,6 +1,6 @@
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, date, time as dtime
+from datetime import datetime, date, timedelta
 from typing import Optional, List
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
@@ -19,8 +19,12 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 STATUSES = ["backlog", "todo", "doing", "waiting", "done"]
 STATUS_LABELS = {"backlog": "Backlog", "todo": "To Do", "doing": "Doing", "waiting": "Waiting", "done": "Done"}
 
+MUST_DO_CAP = 5
 
-def ensure_settings(db: Session):
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def ensure_settings(db: Session) -> models.Settings:
     settings = db.query(models.Settings).first()
     if not settings:
         settings = models.Settings(
@@ -31,6 +35,75 @@ def ensure_settings(db: Session):
         db.add(settings)
         db.commit()
     return settings
+
+
+def get_or_create_daily_log(db: Session, for_date: date) -> models.DailyLog:
+    log = db.query(models.DailyLog).filter(models.DailyLog.date == for_date).first()
+    if not log:
+        log = models.DailyLog(date=for_date)
+        db.add(log)
+        db.commit()
+        db.refresh(log)
+    return log
+
+
+def mark_today_started(db: Session, for_date: date) -> None:
+    log = get_or_create_daily_log(db, for_date)
+    if not log.started:
+        log.started = True
+        log.started_at = datetime.utcnow()
+        db.commit()
+
+
+def mark_today_completed(db: Session, for_date: date) -> None:
+    log = get_or_create_daily_log(db, for_date)
+    if not log.has_completed_task:
+        log.has_completed_task = True
+        db.commit()
+
+
+def compute_streak(db: Session) -> int:
+    """Count consecutive days (ending today or yesterday) with started or has_completed_task."""
+    streak = 0
+    check = date.today()
+    for _ in range(365):
+        log = db.query(models.DailyLog).filter(models.DailyLog.date == check).first()
+        if log and (log.started or log.has_completed_task):
+            streak += 1
+            check -= timedelta(days=1)
+        else:
+            break
+    return streak
+
+
+def build_suggestions(db: Session, today: date) -> list:
+    """Return suggestions ordered: overdue → due today → high-priority no-date."""
+    base_filter = [models.Task.is_today == False, models.Task.status != "done"]
+
+    overdue = (
+        db.query(models.Task)
+        .filter(*base_filter, models.Task.due_date < today)
+        .order_by(models.Task.due_date.asc())
+        .all()
+    )
+    due_today = (
+        db.query(models.Task)
+        .filter(*base_filter, models.Task.due_date == today)
+        .all()
+    )
+    high_no_date = (
+        db.query(models.Task)
+        .filter(*base_filter, models.Task.priority == "high", models.Task.due_date == None)
+        .all()
+    )
+
+    seen: set = set()
+    result = []
+    for task in overdue + due_today + high_no_date:
+        if task.id not in seen:
+            seen.add(task.id)
+            result.append(task)
+    return result
 
 
 @asynccontextmanager
@@ -85,19 +158,10 @@ async def my_day(request: Request, db: Session = Depends(get_db)):
         .all()
     )
 
-    suggestions = (
-        db.query(models.Task)
-        .filter(
-            models.Task.is_today == False,
-            models.Task.status != "done",
-            or_(
-                models.Task.due_date <= today,
-                models.Task.priority == "high",
-            ),
-        )
-        .order_by(models.Task.due_date.asc().nullslast(), models.Task.priority.desc())
-        .all()
-    )
+    must_do_active = [t for t in today_tasks if t.status != "done"]
+    must_do_active_count = len(must_do_active)
+
+    suggestions = build_suggestions(db, today)
 
     overdue_count = (
         db.query(models.Task)
@@ -113,17 +177,31 @@ async def my_day(request: Request, db: Session = Depends(get_db)):
         .count()
     )
 
+    daily_log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    today_started = daily_log.started if daily_log else False
+    streak = compute_streak(db)
+
     return templates.TemplateResponse(
         request, "my_day.html",
         {
             "today_tasks": today_tasks,
+            "must_do_active_count": must_do_active_count,
             "suggestions": suggestions,
             "overdue_count": overdue_count,
             "completed_today": completed_today,
+            "today_started": today_started,
+            "streak": streak,
+            "must_do_cap": MUST_DO_CAP,
             "today": today,
             "base": BASE,
         },
     )
+
+
+@app.post(f"{BASE}/my-day/start-today")
+async def start_today(db: Session = Depends(get_db)):
+    mark_today_started(db, date.today())
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/set-today")
@@ -133,6 +211,7 @@ async def set_today(task_id: int, db: Session = Depends(get_db)):
         db_task.is_today = True
         db_task.updated_at = datetime.utcnow()
         db.commit()
+        mark_today_started(db, date.today())
     return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
 
 
@@ -184,6 +263,7 @@ async def update_status(
         db_task.updated_at = datetime.utcnow()
         if status == "done" and not db_task.completed_at:
             db_task.completed_at = datetime.utcnow()
+            mark_today_completed(db, date.today())
         elif status != "done":
             db_task.completed_at = None
         db.commit()

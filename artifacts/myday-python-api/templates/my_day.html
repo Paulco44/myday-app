@@ -9,69 +9,126 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #1a202c; min-height: 100vh; }
 
     /* ── Nav ── */
-    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; gap: 0; height: 3.25rem; }
+    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
     .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
-    .nav-links { display: flex; gap: 0; }
+    .nav-links { display: flex; }
     .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
     .nav-links a:hover { color: #1a202c; }
     .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
 
     main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
-    .page-header { margin-bottom: 1.5rem; }
-    .page-header h1 { font-size: 1.6rem; font-weight: 800; }
-    .page-header p { color: #64748b; margin-top: .25rem; font-size: .9rem; }
+
+    /* ── Header row ── */
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .page-header-left h1 { font-size: 1.6rem; font-weight: 800; }
+    .page-header-left .date { color: #64748b; margin-top: .2rem; font-size: .9rem; }
+
+    /* Start Today button */
+    .btn-start {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: .5rem;
+      padding: .6rem 1.3rem;
+      font-size: .92rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .btn-start:hover { opacity: .88; }
+    .started-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      background: #d1fae5;
+      color: #065f46;
+      border-radius: .5rem;
+      padding: .5rem 1rem;
+      font-size: .85rem;
+      font-weight: 700;
+    }
+
+    /* ── Must Do counter + cap warning ── */
+    .must-do-row { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .must-do-counter { font-size: .88rem; font-weight: 600; color: #475569; }
+    .must-do-counter .num { color: #4f46e5; }
+    .cap-hint { font-size: .82rem; color: #64748b; font-style: italic; }
+    .cap-good { font-size: .82rem; color: #16a34a; font-weight: 600; }
+    .cap-warn {
+      background: #fef9c3;
+      border: 1px solid #fde047;
+      color: #854d0e;
+      border-radius: .45rem;
+      padding: .5rem .9rem;
+      font-size: .82rem;
+      font-weight: 600;
+      width: 100%;
+    }
+    .cap-warn.danger { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
 
     /* ── Stats bar ── */
-    .stats-bar { display: flex; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
-    .stat-pill { display: flex; align-items: center; gap: .5rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; padding: .5rem .9rem; font-size: .82rem; font-weight: 600; }
-    .stat-pill .num { font-size: 1.1rem; font-weight: 700; }
+    .stats-bar { display: flex; gap: .75rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+    .stat-pill { display: flex; align-items: center; gap: .45rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; padding: .45rem .85rem; font-size: .82rem; font-weight: 600; }
+    .stat-pill .num { font-size: 1.05rem; font-weight: 700; }
     .stat-pill.danger .num { color: #dc2626; }
     .stat-pill.success .num { color: #16a34a; }
     .stat-pill.info .num { color: #4f46e5; }
+    .stat-pill.streak .num { color: #d97706; }
 
-    /* ── Section cards ── */
+    /* ── Section ── */
     .section { margin-bottom: 2rem; }
-    .section-head { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+    .section-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .85rem; }
     .section-head h2 { font-size: 1rem; font-weight: 700; }
     .section-head .count { background: #e0e7ff; color: #3730a3; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; }
+    .section-head .urgency-key { margin-left: auto; font-size: .73rem; color: #94a3b8; display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+    .urgency-key span { display: inline-flex; align-items: center; gap: .2rem; }
 
-    .task-list { display: flex; flex-direction: column; gap: .5rem; }
+    /* ── Task cards ── */
+    .task-list { display: flex; flex-direction: column; gap: .45rem; }
     .task-card {
       background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: .6rem;
-      padding: .8rem 1rem;
+      padding: .75rem 1rem;
       display: flex;
       align-items: center;
       gap: .75rem;
     }
-    .task-card.done-card { opacity: .6; }
+    .task-card.done-card { opacity: .55; }
+    .task-card.overdue-card { border-left: 3px solid #dc2626; }
+    .task-card.due-today-card { border-left: 3px solid #d97706; }
     .task-card-body { flex: 1; min-width: 0; }
-    .task-title { font-weight: 600; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .task-meta { margin-top: .2rem; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .task-title { font-weight: 600; font-size: .91rem; line-height: 1.3; }
+    .task-meta { margin-top: .2rem; display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
 
-    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 600; }
+    .badge { display: inline-block; padding: .12rem .48rem; border-radius: 999px; font-size: .7rem; font-weight: 600; }
     .badge-todo     { background: #e0e7ff; color: #3730a3; }
     .badge-doing    { background: #fef3c7; color: #92400e; }
     .badge-done     { background: #d1fae5; color: #065f46; }
     .badge-backlog  { background: #f1f5f9; color: #64748b; }
     .badge-waiting  { background: #fce7f3; color: #9d174d; }
-    .badge-overdue  { background: #fee2e2; color: #dc2626; }
 
-    .pri-high   { color: #dc2626; font-weight: 700; font-size: .78rem; }
-    .pri-medium { color: #d97706; font-size: .78rem; }
-    .pri-low    { color: #6b7280; font-size: .78rem; }
+    .pri-high   { color: #dc2626; font-weight: 700; font-size: .75rem; }
+    .pri-medium { color: #d97706; font-size: .75rem; }
+    .pri-low    { color: #94a3b8; font-size: .75rem; }
 
-    .task-due { font-size: .78rem; color: #94a3b8; }
-    .task-due.overdue { color: #dc2626; font-weight: 600; }
+    .tag-overdue  { background: #fee2e2; color: #dc2626; font-size: .7rem; font-weight: 700; padding: .1rem .45rem; border-radius: 999px; }
+    .tag-today    { background: #fef9c3; color: #854d0e; font-size: .7rem; font-weight: 700; padding: .1rem .45rem; border-radius: 999px; }
+    .tag-due      { font-size: .73rem; color: #94a3b8; }
 
-    .btn { padding: .4rem .85rem; border-radius: .4rem; font-size: .8rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; text-decoration: none; display: inline-block; }
+    .btn { padding: .38rem .8rem; border-radius: .4rem; font-size: .78rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; text-decoration: none; display: inline-block; }
     .btn:hover { opacity: .85; }
-    .btn-add  { background: #e0e7ff; color: #3730a3; }
+    .btn-add  { background: #e0e7ff; color: #3730a3; white-space: nowrap; }
     .btn-rem  { background: #f1f5f9; color: #64748b; }
-    .btn-done { background: #d1fae5; color: #065f46; }
+    .btn-done { background: #d1fae5; color: #065f46; font-size: .85rem; padding: .38rem .7rem; }
 
     .empty { text-align: center; padding: 2rem; color: #94a3b8; background: #fff; border: 1px dashed #e2e8f0; border-radius: .75rem; }
+
+    .suggestion-label { font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .08rem .4rem; border-radius: .25rem; }
+    .label-overdue { background: #fee2e2; color: #dc2626; }
+    .label-today   { background: #fef9c3; color: #854d0e; }
+    .label-high    { background: #f3e8ff; color: #7c3aed; }
   </style>
 </head>
 <body>
@@ -85,24 +142,53 @@
   </nav>
 
   <main>
+    <!-- Header row with Start Today button -->
     <div class="page-header">
-      <h1>☀️ My Day</h1>
-      <p>{{ today.strftime('%A, %B %-d, %Y') }}</p>
+      <div class="page-header-left">
+        <h1>☀️ My Day</h1>
+        <div class="date">{{ today.strftime('%A, %B %-d, %Y') }}</div>
+      </div>
+      {% if not today_started %}
+      <form method="post" action="{{ base }}/my-day/start-today">
+        <button class="btn-start" type="submit">▶ Start Today</button>
+      </form>
+      {% else %}
+      <div class="started-badge">✓ Today Started</div>
+      {% endif %}
     </div>
 
+    <!-- Must Do counter + soft cap feedback -->
+    <div class="must-do-row">
+      <span class="must-do-counter">Must Do selected: <span class="num">{{ must_do_active_count }}</span> / {{ must_do_cap }}</span>
+
+      {% if must_do_active_count == 0 %}
+        <span class="cap-hint">Add 3–5 tasks to focus on today.</span>
+      {% elif must_do_active_count <= 3 %}
+        <span class="cap-hint">You can still add a couple more Must Do tasks if helpful (aim for 3–5).</span>
+      {% elif must_do_active_count <= 5 %}
+        <span class="cap-good">✓ You're at a good focus range ({{ must_do_active_count }} tasks).</span>
+      {% endif %}
+    </div>
+    {% if must_do_active_count > 5 %}
+    <div class="cap-warn {% if must_do_active_count > 7 %}danger{% endif %}">
+      ⚠ You have {{ must_do_active_count }} tasks in Today. For ADHD focus, it's recommended to keep 3–5 Must Do items. Consider trimming your list.
+    </div>
+    {% endif %}
+
     <!-- Stats bar -->
-    <div class="stats-bar">
-      <div class="stat-pill info">
-        <span class="num">{{ today_tasks | length }}</span>
-        <span>focused today</span>
+    <div class="stats-bar" style="margin-top:1rem;">
+      <div class="stat-pill streak">
+        <span>🔥</span>
+        <span class="num">{{ streak }}</span>
+        <span>day streak</span>
+      </div>
+      <div class="stat-pill success">
+        <span class="num">{{ completed_today }}</span>
+        <span>completed today</span>
       </div>
       <div class="stat-pill {% if overdue_count > 0 %}danger{% else %}success{% endif %}">
         <span class="num">{{ overdue_count }}</span>
         <span>overdue</span>
-      </div>
-      <div class="stat-pill success">
-        <span class="num">{{ completed_today }}</span>
-        <span>done today</span>
       </div>
     </div>
 
@@ -123,14 +209,18 @@
               <span class="badge badge-{{ task.status }}">{{ task.status }}</span>
               <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
               {% if task.due_date %}
-              <span class="task-due {% if task.due_date < today and task.status != 'done' %}overdue{% endif %}">
-                {{ task.due_date.strftime('Due %b %-d') }}
-              </span>
+                {% if task.due_date < today and task.status != 'done' %}
+                  <span class="tag-overdue">Overdue {{ task.due_date.strftime('%b %-d') }}</span>
+                {% elif task.due_date == today %}
+                  <span class="tag-today">Due today</span>
+                {% else %}
+                  <span class="tag-due">{{ task.due_date.strftime('Due %b %-d') }}</span>
+                {% endif %}
               {% endif %}
-              {% if task.project %}<span style="font-size:.78rem;color:#94a3b8;">{{ task.project.name }}</span>{% endif %}
+              {% if task.project %}<span style="font-size:.73rem;color:#94a3b8;">{{ task.project.name }}</span>{% endif %}
             </div>
           </div>
-          <div style="display:flex;gap:.4rem;">
+          <div style="display:flex;gap:.35rem;">
             {% if task.status != 'done' %}
             <form method="post" action="{{ base }}/tasks/{{ task.id }}/status">
               <input type="hidden" name="status" value="done" />
@@ -159,30 +249,35 @@
       <div class="section-head">
         <h2>Suggestions</h2>
         <span class="count">{{ suggestions | length }}</span>
+        <div class="urgency-key">
+          <span><span class="suggestion-label label-overdue">overdue</span></span>
+          <span><span class="suggestion-label label-today">due today</span></span>
+          <span><span class="suggestion-label label-high">high priority</span></span>
+        </div>
       </div>
       {% if suggestions %}
       <div class="task-list">
         {% for task in suggestions %}
-        <div class="task-card">
+        {% set is_overdue = task.due_date and task.due_date < today %}
+        {% set is_due_today = task.due_date and task.due_date == today %}
+        <div class="task-card {% if is_overdue %}overdue-card{% elif is_due_today %}due-today-card{% endif %}">
           <div class="task-card-body">
             <div class="task-title">{{ task.title }}</div>
             <div class="task-meta">
+              {% if is_overdue %}
+                <span class="suggestion-label label-overdue">overdue {{ task.due_date.strftime('%b %-d') }}</span>
+              {% elif is_due_today %}
+                <span class="suggestion-label label-today">due today</span>
+              {% elif task.priority == 'high' %}
+                <span class="suggestion-label label-high">high priority</span>
+              {% endif %}
               <span class="badge badge-{{ task.status }}">{{ task.status }}</span>
               <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
-              {% if task.due_date %}
-                {% if task.due_date < today %}
-                  <span class="badge badge-overdue">Overdue {{ task.due_date.strftime('%b %-d') }}</span>
-                {% elif task.due_date == today %}
-                  <span class="task-due" style="color:#d97706;font-weight:600;">Due today</span>
-                {% else %}
-                  <span class="task-due">{{ task.due_date.strftime('Due %b %-d') }}</span>
-                {% endif %}
-              {% endif %}
-              {% if task.project %}<span style="font-size:.78rem;color:#94a3b8;">{{ task.project.name }}</span>{% endif %}
+              {% if task.project %}<span style="font-size:.73rem;color:#94a3b8;">{{ task.project.name }}</span>{% endif %}
             </div>
           </div>
           <form method="post" action="{{ base }}/tasks/{{ task.id }}/set-today">
-            <button class="btn btn-add" type="submit">+ Add to Today</button>
+            <button class="btn btn-add" type="submit">+ Today</button>
           </form>
         </div>
         {% endfor %}

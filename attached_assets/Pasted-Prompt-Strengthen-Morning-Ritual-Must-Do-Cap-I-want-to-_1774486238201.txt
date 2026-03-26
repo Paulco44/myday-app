@@ -1,0 +1,95 @@
+Prompt – Strengthen Morning Ritual & Must-Do Cap
+I want to refine the My Day page and behavior to match an ADHD-friendly “3–5 Must Do tasks” morning ritual.
+
+Please make the following changes on top of the existing /task-manager/my-day implementation:
+
+Add a “Start Today” flow on My Day
+On my_day.html, at the top of the page, add:
+A prominent button labeled “Start Today” (only shown if it hasn’t been clicked yet for the current day), and
+
+A small text indicator: Must Do selected: X / 5, where X is the current number of tasks with is_today = True and not done.
+
+
+When “Start Today” is clicked:
+It should just reload the My Day page, but we can treat that as the start of the ritual in the backend (e.g., record in a simple daily log as described below).
+
+
+
+Enforce a soft cap of 5 “Today” tasks
+On the My Day page, calculate how many tasks have is_today = True and are not done.
+
+If that number is:
+0–3: show a subtle suggestion like “You can still add a couple more Must Do tasks if helpful (aim for 3).”
+
+4–5: show something like “You’re at a good focus range (4–5 tasks).”
+
+More than 5: show a warning banner in a noticeable color (e.g., yellow/red) with text like:
+“You have {{ count }} tasks in Today. For ADHD focus, it’s recommended to keep 3–5 Must Do items. Consider trimming your list.”
+
+
+This is a soft limit: do not block adding more tasks, just display the warning.
+
+
+Suggestions tuned for “Must Do 3–5”
+In the Suggestions section on My Day, adjust the logic to prioritize:
+Overdue tasks (due_date < today, not done),
+
+Due-today tasks,
+
+High-priority tasks with no due date and not done.
+
+
+Order them in that priority (overdue first, then due today, then high-priority no-date).
+
+Keep the existing “Add to Today” button for each suggested task, which sets is_today = True and reloads the page.
+
+
+Simple daily log for streak tracking (in code)
+Implement a simple mechanism to record that “today has started” when:
+The user clicks the “Start Today” button OR
+
+The first task is marked is_today = True for that calendar day.
+
+
+For now, you can:
+Either add a very simple daily_log table with columns: id, date, started (bool), has_completed_today_task (bool), or
+
+Reuse the existing Settings model plus an in-code helper, whichever is simpler to implement cleanly.
+
+
+Use this daily log to compute a streak of consecutive days where started == True (or where at least one Today task was completed); for now, we just need a function that returns the current streak length.
+
+On My Day, display: Streak: X days near the top, using that computed value.
+
+
+Display completed-today count
+On My Day, show a small stat:
+“Completed Today: N” → count of tasks where completed_at is today (local date) regardless of is_today.
+
+
+Place this near the streak indicator or in the stats bar that already exists.
+
+
+Explain briefly
+Which files you updated (likely models.py, maybe a new daily_log model, main.py, and templates/my_day.html).
+
+How the new My Day behavior works:
+How the “Start Today” button behaves.
+
+How the Must Do counter and soft cap warning work.
+
+How the streak is calculated in simple terms.
+Please keep the UX simple and text-based; no need for heavy styling yet. Focus on making the My Day page clearly show:
+
+
+
+Streak,
+
+Completed Today count,
+
+Must Do selected X / 5,
+
+Soft warning if more than 5 Today tasks,
+
+Clear Suggestions ordered by urgency.
+

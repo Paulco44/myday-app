@@ -97,3 +97,14 @@ class Settings(Base):
     morning_ritual_time = Column(String, default="08:30")
     wip_limit_doing = Column(Integer, default=3)
     default_priority = Column(String, default="medium")
+
+
+class DailyLog(Base):
+    """One row per calendar day. Tracks morning ritual start and completions."""
+    __tablename__ = "daily_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, unique=True, nullable=False, index=True)
+    started = Column(Boolean, default=False)
+    started_at = Column(DateTime, nullable=True)
+    has_completed_task = Column(Boolean, default=False)
