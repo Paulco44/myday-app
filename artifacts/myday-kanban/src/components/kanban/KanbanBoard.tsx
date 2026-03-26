@@ -13,7 +13,6 @@ import {
   closestCenter,
   pointerWithin,
   rectIntersection,
-  UniqueIdentifier,
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 
@@ -27,15 +26,14 @@ import {
 } from "@workspace/api-client-react";
 import type { Column, Card } from "@workspace/api-client-react/src/generated/api.schemas";
 import { KanbanColumn, toColDndId, fromColDndId } from "./KanbanColumn";
-import { KanbanCard, toCardDndId, fromCardDndId } from "./KanbanCard";
 import { KanbanColumnPreview } from "./KanbanColumnPreview";
 import { KanbanCardPreview } from "./KanbanCardPreview";
+import { fromCardDndId } from "./KanbanCard";
 import { CreateColumnDialog } from "./CreateColumnDialog";
 import { EditCardSheet } from "./EditCardSheet";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
-// Larger activation distance to distinguish intentional drags from clicks.
 const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 10 } };
 
 export function KanbanBoard() {
@@ -52,7 +50,6 @@ export function KanbanBoard() {
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
 
-  // Refs give callbacks stable access to the latest state (avoids stale closures).
   const columnsRef = useRef<Column[]>([]);
   const cardsRef = useRef<Card[]>([]);
 
@@ -72,7 +69,6 @@ export function KanbanBoard() {
     }
   }, [serverCards]);
 
-  // columnsId uses NAMESPACED IDs matching what useSortable registers.
   const columnsId = useMemo(() => columns.map((col) => toColDndId(col.id)), [columns]);
 
   const sensors = useSensors(
@@ -80,13 +76,10 @@ export function KanbanBoard() {
     useSensor(KeyboardSensor)
   );
 
-  // Custom collision detection:
-  //   Columns → only consider other column droppables (cards are invisible to column drag).
-  //   Cards   → pointer-within first (easy drop into empty columns), then rect-intersection.
+  // Columns → only match other column droppables.
+  // Cards   → pointer-within first (easy empty-column entry), then rect-intersection.
   const collisionDetection: CollisionDetection = useCallback((args) => {
-    const activeType = args.active.data.current?.type;
-
-    if (activeType === "Column") {
+    if (args.active.data.current?.type === "Column") {
       return closestCenter({
         ...args,
         droppableContainers: args.droppableContainers.filter(
@@ -94,13 +87,11 @@ export function KanbanBoard() {
         ),
       });
     }
-
-    const pointerHits = pointerWithin(args);
-    if (pointerHits.length > 0) return pointerHits;
-    return rectIntersection(args);
+    const hits = pointerWithin(args);
+    return hits.length > 0 ? hits : rectIntersection(args);
   }, []);
 
-  // ── All hooks before any conditional return ─────────────────────────────────
+  // ── All hooks before conditional return ────────────────────────────────────
 
   const onDragStart = useCallback((event: DragStartEvent) => {
     if (event.active.data.current?.type === "Column") {
@@ -112,40 +103,43 @@ export function KanbanBoard() {
 
   const onDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over) return;
-    if (active.id === over.id) return;
-
-    // Only cards are rearranged during drag-over. Columns wait for drag-end.
+    if (!over || active.id === over.id) return;
     if (active.data.current?.type !== "Card") return;
 
     const activeNumId = fromCardDndId(active.id);
-    const isOverACard = over.data.current?.type === "Card";
-    const isOverAColumn = over.data.current?.type === "Column";
 
-    if (isOverACard) {
+    // Card → Card: only act when crossing a column boundary.
+    // Same-column reordering is handled visually by verticalListSortingStrategy
+    // via CSS transforms — no state update needed, which means no re-renders.
+    if (over.data.current?.type === "Card") {
       const overNumId = fromCardDndId(over.id);
       setCards((prev) => {
         const ai = prev.findIndex((t) => t.id === activeNumId);
         const oi = prev.findIndex((t) => t.id === overNumId);
         if (ai === -1 || oi === -1) return prev;
+        if (prev[ai].columnId === prev[oi].columnId) return prev; // same column — skip
 
-        let next = prev;
-        if (prev[ai].columnId !== prev[oi].columnId) {
-          next = prev.map((c, i) => (i === ai ? { ...c, columnId: prev[oi].columnId } : c));
-        }
-        const moved = arrayMove(next, ai, oi);
+        // Cross-column: move the card to the target column and insert at target card's slot.
+        const withNewCol = prev.map((c, i) =>
+          i === ai ? { ...c, columnId: prev[oi].columnId } : c
+        );
+        const newAi = withNewCol.findIndex((c) => c.id === activeNumId);
+        const newOi = withNewCol.findIndex((c) => c.id === overNumId);
+        const moved = arrayMove(withNewCol, newAi, newOi);
         cardsRef.current = moved;
         return moved;
       });
     }
 
-    if (isOverAColumn) {
+    // Card → empty Column: move card into the column.
+    if (over.data.current?.type === "Column") {
       const overColNumId = fromColDndId(over.id);
       setCards((prev) => {
         const ai = prev.findIndex((t) => t.id === activeNumId);
-        if (ai === -1) return prev;
-        if (prev[ai].columnId === overColNumId) return prev;
-        const next = prev.map((c, i) => (i === ai ? { ...c, columnId: overColNumId } : c));
+        if (ai === -1 || prev[ai].columnId === overColNumId) return prev;
+        const next = prev.map((c, i) =>
+          i === ai ? { ...c, columnId: overColNumId } : c
+        );
         cardsRef.current = next;
         return next;
       });
@@ -160,13 +154,11 @@ export function KanbanBoard() {
     if (!over) return;
     if (active.id === over.id) return;
 
-    // ── Column reorder ────────────────────────────────────────────────────────
+    // ── Column reorder ──────────────────────────────────────────────────────
     if (active.data.current?.type === "Column") {
       const prev = columnsRef.current;
-      const activeNumId = fromColDndId(active.id);
-      const overNumId = fromColDndId(over.id);
-      const ai = prev.findIndex((c) => c.id === activeNumId);
-      const oi = prev.findIndex((c) => c.id === overNumId);
+      const ai = prev.findIndex((c) => c.id === fromColDndId(active.id));
+      const oi = prev.findIndex((c) => c.id === fromColDndId(over.id));
       if (ai === -1 || oi === -1) return;
 
       const next: Column[] = arrayMove([...prev], ai, oi).map((col, i) => ({
@@ -176,27 +168,44 @@ export function KanbanBoard() {
       setColumns(next);
       columnsRef.current = next;
 
-      // Only update columns whose position actually changed.
       const changed = next.filter((col, i) => prev[i]?.id !== col.id);
       if (changed.length === 0) return;
 
       let pending = changed.length;
       const onDone = () => {
-        pending -= 1;
-        if (pending === 0) queryClient.invalidateQueries({ queryKey: getGetColumnsQueryKey() });
+        if (--pending === 0) {
+          queryClient.invalidateQueries({ queryKey: getGetColumnsQueryKey() });
+        }
       };
       changed.forEach((col) =>
-        updateColumn({ id: col.id, data: { position: col.position } }, { onSuccess: onDone, onError: onDone })
+        updateColumn(
+          { id: col.id, data: { position: col.position } },
+          { onSuccess: onDone, onError: onDone }
+        )
       );
       return;
     }
 
-    // ── Card drop ─────────────────────────────────────────────────────────────
+    // ── Card drop ───────────────────────────────────────────────────────────
     if (active.data.current?.type === "Card") {
       const activeNumId = fromCardDndId(active.id);
-      const current = cardsRef.current;
-      const ai = current.findIndex((c) => c.id === activeNumId);
+      let current = cardsRef.current;
+      let ai = current.findIndex((c) => c.id === activeNumId);
       if (ai === -1) return;
+
+      // Within-column reorder: onDragOver skipped this, so commit here.
+      if (over.data.current?.type === "Card") {
+        const overNumId = fromCardDndId(over.id);
+        const oi = current.findIndex((c) => c.id === overNumId);
+        if (oi !== -1 && ai !== oi && current[ai].columnId === current[oi].columnId) {
+          const reordered = arrayMove([...current], ai, oi);
+          setCards(reordered);
+          cardsRef.current = reordered;
+          current = reordered;
+          ai = oi;
+        }
+      }
+
       const card = current[ai];
       updateCard(
         { id: card.id, data: { columnId: card.columnId, position: ai } },
@@ -243,11 +252,7 @@ export function KanbanBoard() {
 
           <CreateColumnDialog highestPosition={highestColPos} />
 
-          {/*
-            DragOverlay uses PREVIEW components (no useSortable inside),
-            eliminating duplicate draggable/droppable registrations that
-            caused the wrong-object detection bug.
-          */}
+          {/* Preview components have no useSortable — no duplicate registrations */}
           <DragOverlay>
             {activeColumn && (
               <KanbanColumnPreview
@@ -256,7 +261,7 @@ export function KanbanBoard() {
               />
             )}
             {activeCard && (
-              <div className="rotate-2 scale-105 shadow-xl opacity-95 rounded-xl">
+              <div className="rotate-2 scale-105 opacity-95 rounded-xl">
                 <KanbanCardPreview card={activeCard} />
               </div>
             )}
