@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -14,7 +14,14 @@ import {
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
 
-import { useGetColumns, useGetCards, useUpdateCard, useUpdateColumn, getGetCardsQueryKey, getGetColumnsQueryKey } from "@workspace/api-client-react";
+import {
+  useGetColumns,
+  useGetCards,
+  useUpdateCard,
+  useUpdateColumn,
+  getGetCardsQueryKey,
+  getGetColumnsQueryKey,
+} from "@workspace/api-client-react";
 import type { Column, Card } from "@workspace/api-client-react/src/generated/api.schemas";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCard } from "./KanbanCard";
@@ -30,17 +37,9 @@ export function KanbanBoard() {
   const { data: serverColumns, isLoading: isLoadingColumns } = useGetColumns();
   const { data: serverCards, isLoading: isLoadingCards } = useGetCards();
 
-  const { mutate: updateCard } = useUpdateCard({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCardsQueryKey() }),
-    },
-  });
-
-  const { mutate: updateColumn } = useUpdateColumn({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetColumnsQueryKey() }),
-    },
-  });
+  // No auto-invalidate on success — we invalidate manually after all mutations fire.
+  const { mutate: updateCard } = useUpdateCard();
+  const { mutate: updateColumn } = useUpdateColumn();
 
   const [columns, setColumns] = useState<Column[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -48,15 +47,24 @@ export function KanbanBoard() {
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
 
+  // Refs give callbacks stable access to the latest state without stale closures
+  // and without adding state to useCallback dependency arrays.
+  const columnsRef = useRef(columns);
+  const cardsRef = useRef(cards);
+
   useEffect(() => {
     if (serverColumns) {
-      setColumns([...serverColumns].sort((a, b) => a.position - b.position));
+      const sorted = [...serverColumns].sort((a, b) => a.position - b.position);
+      setColumns(sorted);
+      columnsRef.current = sorted;
     }
   }, [serverColumns]);
 
   useEffect(() => {
     if (serverCards) {
-      setCards([...serverCards].sort((a, b) => a.position - b.position));
+      const sorted = [...serverCards].sort((a, b) => a.position - b.position);
+      setCards(sorted);
+      cardsRef.current = sorted;
     }
   }, [serverCards]);
 
@@ -67,7 +75,7 @@ export function KanbanBoard() {
     useSensor(KeyboardSensor)
   );
 
-  // ── All useCallback hooks must be declared before any conditional return ──
+  // ── Drag handlers — all declared before any conditional return ──────────────
 
   const onDragStart = useCallback((event: DragStartEvent) => {
     if (event.active.data.current?.type === "Column") {
@@ -91,25 +99,33 @@ export function KanbanBoard() {
 
     if (!isActiveACard) return;
 
-    if (isActiveACard && isOverACard) {
+    if (isOverACard) {
       setCards((prev) => {
         const activeIndex = prev.findIndex((t) => t.id === activeId);
         const overIndex = prev.findIndex((t) => t.id === overId);
+        if (activeIndex === -1 || overIndex === -1) return prev;
+
+        let next = prev;
         if (prev[activeIndex].columnId !== prev[overIndex].columnId) {
-          const next = [...prev];
-          next[activeIndex] = { ...next[activeIndex], columnId: prev[overIndex].columnId };
-          return arrayMove(next, activeIndex, overIndex);
+          next = prev.map((c, i) =>
+            i === activeIndex ? { ...c, columnId: prev[overIndex].columnId } : c
+          );
         }
-        return arrayMove(prev, activeIndex, overIndex);
+        const moved = arrayMove(next, activeIndex, overIndex);
+        cardsRef.current = moved;
+        return moved;
       });
     }
 
-    if (isActiveACard && isOverAColumn) {
+    if (isOverAColumn) {
       setCards((prev) => {
         const activeIndex = prev.findIndex((t) => t.id === activeId);
-        const next = [...prev];
-        next[activeIndex] = { ...next[activeIndex], columnId: overId as number };
-        return arrayMove(next, activeIndex, activeIndex);
+        if (activeIndex === -1) return prev;
+        const next = prev.map((c, i) =>
+          i === activeIndex ? { ...c, columnId: overId as number } : c
+        );
+        cardsRef.current = next;
+        return next;
       });
     }
   }, []);
@@ -125,34 +141,61 @@ export function KanbanBoard() {
     const overId = over.id;
     if (activeId === overId) return;
 
+    // ── Column reorder ──────────────────────────────────────────────────────
     if (active.data.current?.type === "Column") {
-      setColumns((prev) => {
-        const activeIndex = prev.findIndex((col) => col.id === activeId);
-        const overIndex = prev.findIndex((col) => col.id === overId);
-        const next = arrayMove(prev, activeIndex, overIndex);
-        next.forEach((col, i) => { col.position = i; });
-        updateColumn({ id: activeId as number, data: { position: overIndex } });
-        return next;
+      const prev = columnsRef.current;
+      const activeIndex = prev.findIndex((c) => c.id === activeId);
+      const overIndex = prev.findIndex((c) => c.id === overId);
+      if (activeIndex === -1 || overIndex === -1) return;
+
+      // Compute new order with fresh positions
+      const next: Column[] = arrayMove([...prev], activeIndex, overIndex).map(
+        (col, i) => ({ ...col, position: i })
+      );
+
+      setColumns(next);
+      columnsRef.current = next;
+
+      // Find which positions actually changed and persist each one.
+      // Track how many are still pending; invalidate once all are done.
+      const changed = next.filter((col, i) => prev[i]?.id !== col.id);
+      if (changed.length === 0) return;
+
+      let pending = changed.length;
+      const onDone = () => {
+        pending -= 1;
+        if (pending === 0) {
+          queryClient.invalidateQueries({ queryKey: getGetColumnsQueryKey() });
+        }
+      };
+
+      changed.forEach((col) => {
+        updateColumn(
+          { id: col.id, data: { position: col.position } },
+          { onSuccess: onDone, onError: onDone }
+        );
       });
       return;
     }
 
+    // ── Card drop ───────────────────────────────────────────────────────────
     if (active.data.current?.type === "Card") {
-      setCards((prev) => {
-        const activeIndex = prev.findIndex((t) => t.id === activeId);
-        const card = prev[activeIndex];
-        if (card) {
-          updateCard({ id: card.id, data: { columnId: card.columnId, position: activeIndex } });
-        }
-        return prev;
-      });
+      const current = cardsRef.current;
+      const activeIndex = current.findIndex((c) => c.id === activeId);
+      if (activeIndex === -1) return;
+      const card = current[activeIndex];
+
+      updateCard(
+        { id: card.id, data: { columnId: card.columnId, position: activeIndex } },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCardsQueryKey() }) }
+      );
     }
-  }, [updateCard, updateColumn]);
+  }, [updateCard, updateColumn, queryClient]);
 
   const handleCardClick = useCallback((card: Card) => setEditingCard(card), []);
   const handleEditClose = useCallback((open: boolean) => { if (!open) setEditingCard(null); }, []);
 
-  // ── Conditional render after all hooks ──
+  // ── Conditional render after all hooks ──────────────────────────────────────
 
   if (isLoadingColumns || isLoadingCards) {
     return (
