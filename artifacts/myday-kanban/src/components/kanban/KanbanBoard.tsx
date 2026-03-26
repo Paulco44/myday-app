@@ -255,7 +255,11 @@ export function KanbanBoard() {
                 cards={cards.filter((c) => c.columnId === activeColumn.id)}
               />
             )}
-            {activeCard && <KanbanCardPreview card={activeCard} />}
+            {activeCard && (
+              <div className="rotate-2 scale-105 shadow-xl opacity-95 rounded-xl">
+                <KanbanCardPreview card={activeCard} />
+              </div>
+            )}
           </DragOverlay>
         </DndContext>
       </div>

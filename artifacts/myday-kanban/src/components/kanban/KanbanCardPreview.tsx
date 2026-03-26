@@ -17,7 +17,7 @@ export function KanbanCardPreview({ card }: KanbanCardPreviewProps) {
   const isOverdue = card.dueDate && new Date(card.dueDate) < new Date();
 
   return (
-    <div className="mb-3 bg-card border border-border/60 rounded-xl p-4 shadow-xl rotate-2 opacity-95">
+    <div className="mb-3 bg-card border border-border/60 rounded-xl p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2 mb-2">
         <h4 className="font-medium text-sm text-foreground leading-tight line-clamp-2">
           {card.title}
