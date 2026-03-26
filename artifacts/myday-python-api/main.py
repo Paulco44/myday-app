@@ -3,9 +3,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 from typing import Optional, List
 
-from fastapi import FastAPI, Depends, HTTPException, Request, Form
+from fastapi import FastAPI, Depends, HTTPException, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import or_
+from sqlalchemy import or_, text as sa_text
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -19,9 +19,14 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 STATUSES = ["backlog", "todo", "doing", "waiting", "done"]
 STATUS_LABELS = {"backlog": "Backlog", "todo": "To Do", "doing": "Doing", "waiting": "Waiting", "done": "Done"}
 
-MUST_DO_CAP = 5
+MUST_DO_CAP = 6
+TODAY_VISIBLE_CAP = 4  # max Later Today tasks shown before "+N more"
+SUGGESTIONS_CAP = 7
 
-# Month number → active_<month> attribute name
+FOCUS_STATES = ["now", "next", "later_today", "later"]
+TIME_BLOCKS = ["morning", "afternoon", "evening"]
+ENERGY_TAGS = ["creative", "admin", "social", "low_energy"]
+
 MONTH_FIELD = {
     1: "active_jan", 2: "active_feb", 3: "active_mar", 4: "active_apr",
     5: "active_may", 6: "active_jun", 7: "active_jul", 8: "active_aug",
@@ -34,6 +39,33 @@ MONTH_NAMES = {
 }
 MONTH_ABBR = ["jan", "feb", "mar", "apr", "may", "jun",
                "jul", "aug", "sep", "oct", "nov", "dec"]
+
+
+# ─── DB Migration helpers ─────────────────────────────────────────────────────
+
+def run_migrations():
+    """Add new columns to existing tables safely (SQLite idempotent ALTER TABLE)."""
+    task_cols = [
+        ("focus_state", "TEXT"),
+        ("time_block", "TEXT"),
+        ("energy_tag", "TEXT"),
+    ]
+    log_cols = [
+        ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
+    ]
+    with engine.connect() as conn:
+        for col, col_type in task_cols:
+            try:
+                conn.execute(sa_text(f"ALTER TABLE tasks ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
+        for col, col_type in log_cols:
+            try:
+                conn.execute(sa_text(f"ALTER TABLE daily_logs ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -69,6 +101,15 @@ def mark_today_started(db: Session, for_date: date) -> None:
         db.commit()
 
 
+def mark_morning_checkin(db: Session, for_date: date) -> None:
+    log = get_or_create_daily_log(db, for_date)
+    log.has_morning_checkin = True
+    if not log.started:
+        log.started = True
+        log.started_at = datetime.utcnow()
+    db.commit()
+
+
 def mark_today_completed(db: Session, for_date: date) -> None:
     log = get_or_create_daily_log(db, for_date)
     if not log.has_completed_task:
@@ -77,7 +118,6 @@ def mark_today_completed(db: Session, for_date: date) -> None:
 
 
 def compute_streak(db: Session) -> int:
-    """Count consecutive days (ending today or yesterday) with started or has_completed_task."""
     streak = 0
     check = date.today()
     for _ in range(365):
@@ -90,10 +130,12 @@ def compute_streak(db: Session) -> int:
     return streak
 
 
-def build_suggestions(db: Session, today: date) -> list:
-    """Return suggestions ordered: overdue → due today → high-priority no-date."""
-    base_filter = [models.Task.is_today == False, models.Task.status != "done"]
-
+def build_suggestions(db: Session, today: date, exclude_ids: set) -> list:
+    base_filter = [
+        models.Task.is_today == False,
+        models.Task.status != "done",
+        models.Task.focus_state != "later",
+    ]
     overdue = (
         db.query(models.Task)
         .filter(*base_filter, models.Task.due_date < today)
@@ -110,27 +152,32 @@ def build_suggestions(db: Session, today: date) -> list:
         .filter(*base_filter, models.Task.priority == "high", models.Task.due_date == None)
         .all()
     )
-
-    seen: set = set()
+    seen: set = set(exclude_ids)
     result = []
     for task in overdue + due_today + high_no_date:
         if task.id not in seen:
             seen.add(task.id)
             result.append(task)
-    return result
+    return result[:SUGGESTIONS_CAP]
+
+
+def clear_focus_state(db: Session, state: str, exclude_id: Optional[int] = None):
+    """Ensure only one task holds a given focus_state at a time."""
+    q = db.query(models.Task).filter(models.Task.focus_state == state)
+    if exclude_id:
+        q = q.filter(models.Task.id != exclude_id)
+    for t in q.all():
+        t.focus_state = "later_today" if t.is_today else None
+    db.commit()
 
 
 def get_cop_initiatives_this_month(db: Session, leader_name: str = "Paul") -> list:
-    """Return CoP initiatives active this month where leader contains leader_name."""
     month_num = date.today().month
     field_name = MONTH_FIELD[month_num]
     month_col = getattr(models.CoPInitiative, field_name)
     return (
         db.query(models.CoPInitiative)
-        .filter(
-            month_col == True,
-            models.CoPInitiative.leader.ilike(f"%{leader_name}%"),
-        )
+        .filter(month_col == True, models.CoPInitiative.leader.ilike(f"%{leader_name}%"))
         .order_by(models.CoPInitiative.topic, models.CoPInitiative.topic_description)
         .all()
     )
@@ -139,6 +186,7 @@ def get_cop_initiatives_this_month(db: Session, leader_name: str = "Paul") -> li
 @asynccontextmanager
 async def lifespan(app):
     models.Base.metadata.create_all(bind=engine)
+    run_migrations()
     db = SessionLocal()
     try:
         ensure_settings(db)
@@ -174,25 +222,67 @@ async def home(request: Request, db: Session = Depends(get_db)):
     )
 
 
+# ─── Morning Check-In ────────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/morning-checkin", response_class=HTMLResponse)
+async def morning_checkin_get(request: Request):
+    return templates.TemplateResponse(request, "morning_checkin.html", {"base": BASE})
+
+
+@app.post(f"{BASE}/morning-checkin/process")
+async def morning_checkin_process(
+    brain_dump: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    lines = [line.strip() for line in brain_dump.splitlines() if line.strip()]
+    for line in lines:
+        task = models.Task(
+            title=line,
+            status="todo",
+            is_today=False,
+            focus_state="later_today",
+            source_type="brain_dump",
+        )
+        db.add(task)
+    db.commit()
+    mark_morning_checkin(db, date.today())
+    return RedirectResponse(url=f"{BASE}/my-day?from_brain_dump=1", status_code=303)
+
+
 # ─── My Day ──────────────────────────────────────────────────────────────────
 
 @app.get(f"{BASE}/my-day", response_class=HTMLResponse)
-async def my_day(request: Request, db: Session = Depends(get_db)):
+async def my_day(
+    request: Request,
+    from_brain_dump: int = Query(default=0),
+    db: Session = Depends(get_db),
+):
     today = date.today()
     today_start = datetime(today.year, today.month, today.day)
 
-    today_tasks = (
+    # All today tasks not done
+    active_today = (
         db.query(models.Task)
-        .filter(models.Task.is_today == True)
-        .order_by(models.Task.status, models.Task.priority.desc())
+        .filter(models.Task.is_today == True, models.Task.status != "done")
+        .order_by(models.Task.priority.desc())
         .all()
     )
+    active_today_ids = {t.id for t in active_today}
 
-    must_do_active = [t for t in today_tasks if t.status != "done"]
-    must_do_active_count = len(must_do_active)
+    # Focus state buckets
+    now_task = next((t for t in active_today if t.focus_state == "now"), None)
+    next_task = next((t for t in active_today if t.focus_state == "next"), None)
+    later_today_all = [t for t in active_today if t.focus_state in ("later_today", None)]
+    later_today_tasks = later_today_all[:TODAY_VISIBLE_CAP]
+    later_today_overflow = max(0, len(later_today_all) - TODAY_VISIBLE_CAP)
 
-    suggestions = build_suggestions(db, today)
+    # Time block buckets (all today active tasks)
+    morning_tasks = [t for t in active_today if t.time_block == "morning"]
+    afternoon_tasks = [t for t in active_today if t.time_block == "afternoon"]
+    evening_tasks = [t for t in active_today if t.time_block == "evening"]
+    unblocked_today = [t for t in active_today if not t.time_block]
 
+    # Stats
     overdue_count = (
         db.query(models.Task)
         .filter(models.Task.due_date < today, models.Task.status != "done")
@@ -206,29 +296,51 @@ async def my_day(request: Request, db: Session = Depends(get_db)):
         )
         .count()
     )
-
     daily_log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
     today_started = daily_log.started if daily_log else False
     streak = compute_streak(db)
 
+    # Suggestions (exclude already-today tasks)
+    suggestions = build_suggestions(db, today, active_today_ids)
+
     cop_initiatives = get_cop_initiatives_this_month(db, "Paul")
     current_month_name = MONTH_NAMES[today.month]
+
+    # All done tasks today (for done section)
+    done_today = (
+        db.query(models.Task)
+        .filter(models.Task.is_today == True, models.Task.status == "done")
+        .all()
+    )
 
     return templates.TemplateResponse(
         request, "my_day.html",
         {
-            "today_tasks": today_tasks,
-            "must_do_active_count": must_do_active_count,
+            "now_task": now_task,
+            "next_task": next_task,
+            "later_today_tasks": later_today_tasks,
+            "later_today_overflow": later_today_overflow,
+            "morning_tasks": morning_tasks,
+            "afternoon_tasks": afternoon_tasks,
+            "evening_tasks": evening_tasks,
+            "unblocked_today": unblocked_today,
+            "active_today": active_today,
+            "done_today": done_today,
             "suggestions": suggestions,
             "overdue_count": overdue_count,
             "completed_today": completed_today,
             "today_started": today_started,
             "streak": streak,
-            "must_do_cap": MUST_DO_CAP,
             "today": today,
             "base": BASE,
             "cop_initiatives": cop_initiatives,
             "current_month_name": current_month_name,
+            "from_brain_dump": bool(from_brain_dump),
+            "must_do_cap": MUST_DO_CAP,
+            "today_total": len(active_today),
+            "focus_states": FOCUS_STATES,
+            "time_blocks": TIME_BLOCKS,
+            "energy_tags": ENERGY_TAGS,
         },
     )
 
@@ -240,10 +352,18 @@ async def start_today(db: Session = Depends(get_db)):
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/set-today")
-async def set_today(task_id: int, db: Session = Depends(get_db)):
+async def set_today(
+    task_id: int,
+    focus_state: str = Form(default="later_today"),
+    time_block: Optional[str] = Form(default=None),
+    db: Session = Depends(get_db),
+):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if db_task:
         db_task.is_today = True
+        db_task.focus_state = focus_state or "later_today"
+        if time_block:
+            db_task.time_block = time_block
         db_task.updated_at = datetime.utcnow()
         db.commit()
         mark_today_started(db, date.today())
@@ -255,8 +375,50 @@ async def unset_today(task_id: int, db: Session = Depends(get_db)):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if db_task:
         db_task.is_today = False
+        db_task.focus_state = None
         db_task.updated_at = datetime.utcnow()
         db.commit()
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/focus-state")
+async def set_focus_state(
+    task_id: int,
+    focus_state: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Enforce single "now" and single "next"
+    if focus_state in ("now", "next"):
+        clear_focus_state(db, focus_state, exclude_id=task_id)
+
+    db_task.focus_state = focus_state
+    if focus_state == "later":
+        db_task.is_today = False
+    elif focus_state in ("now", "next", "later_today"):
+        db_task.is_today = True
+        mark_today_started(db, date.today())
+
+    db_task.updated_at = datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/time-block")
+async def set_time_block(
+    task_id: int,
+    time_block: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db_task.time_block = time_block if time_block != "none" else None
+    db_task.updated_at = datetime.utcnow()
+    db.commit()
     return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
 
 
@@ -352,7 +514,6 @@ async def create_task_form(
             parsed_due = date.fromisoformat(due_date)
         except ValueError:
             pass
-
     pid = int(project_id) if project_id and project_id.strip() else None
     task = models.Task(title=title, priority=priority, due_date=parsed_due, status=status, project_id=pid)
     db.add(task)
@@ -410,29 +571,15 @@ async def cop_admin_create(
     db: Session = Depends(get_db),
 ):
     def to_bool(v): return v is not None and v.lower() in ("on", "true", "1", "yes")
-
     initiative = models.CoPInitiative(
-        effort=effort or None,
-        topic=topic or None,
-        topic_description=topic_description or None,
-        subtopic=subtopic or None,
-        type_of_effort=type_of_effort or None,
-        focus_market=focus_market or None,
-        leader=leader or None,
-        cop_collaboration=cop_collaboration or None,
-        notes=notes or None,
-        active_jan=to_bool(active_jan),
-        active_feb=to_bool(active_feb),
-        active_mar=to_bool(active_mar),
-        active_apr=to_bool(active_apr),
-        active_may=to_bool(active_may),
-        active_jun=to_bool(active_jun),
-        active_jul=to_bool(active_jul),
-        active_aug=to_bool(active_aug),
-        active_sep=to_bool(active_sep),
-        active_oct=to_bool(active_oct),
-        active_nov=to_bool(active_nov),
-        active_dec=to_bool(active_dec),
+        effort=effort or None, topic=topic or None,
+        topic_description=topic_description or None, subtopic=subtopic or None,
+        type_of_effort=type_of_effort or None, focus_market=focus_market or None,
+        leader=leader or None, cop_collaboration=cop_collaboration or None, notes=notes or None,
+        active_jan=to_bool(active_jan), active_feb=to_bool(active_feb), active_mar=to_bool(active_mar),
+        active_apr=to_bool(active_apr), active_may=to_bool(active_may), active_jun=to_bool(active_jun),
+        active_jul=to_bool(active_jul), active_aug=to_bool(active_aug), active_sep=to_bool(active_sep),
+        active_oct=to_bool(active_oct), active_nov=to_bool(active_nov), active_dec=to_bool(active_dec),
     )
     db.add(initiative)
     db.commit()
@@ -471,6 +618,7 @@ def list_tasks(
     status: Optional[str] = None,
     project_id: Optional[int] = None,
     is_today: Optional[bool] = None,
+    focus_state: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(models.Task)
@@ -480,6 +628,8 @@ def list_tasks(
         query = query.filter(models.Task.project_id == project_id)
     if is_today is not None:
         query = query.filter(models.Task.is_today == is_today)
+    if focus_state is not None:
+        query = query.filter(models.Task.focus_state == focus_state)
     return query.order_by(models.Task.created_at.desc()).all()
 
 

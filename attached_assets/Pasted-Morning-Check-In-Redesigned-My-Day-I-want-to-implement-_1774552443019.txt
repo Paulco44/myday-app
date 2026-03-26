@@ -1,0 +1,195 @@
+Morning Check‑In + Redesigned My Day
+I want to implement the next sprint from our design contract: Morning Check‑In + redesigned My Day for an ADHD/ENFP user.
+
+Please work within the existing FastAPI + SQLite + Jinja2 app under /task-manager.
+
+1. Extend the Task model for Now/Next/Later and time blocks
+In models.py:
+Add these fields to the Task model:
+focus_state (string, nullable) with allowed values: "now", "next", "later_today", "later", or None.
+
+time_block (string, nullable) with allowed values: "morning", "afternoon", "evening", or None.
+
+energy_tag (string, nullable) with values like "creative", "admin", "social", "low_energy" (no strict enforcement needed yet; we’ll use enums later if helpful).
+
+
+Make sure database migrations are handled (for SQLite + SQLAlchemy you can use simple ALTER TABLE via SQLAlchemy patterns or recreate tables if needed, as long as you don’t break existing basic data).
+
+
+Update any relevant Pydantic schemas (TaskCreate, TaskUpdate, TaskRead) in schemas.py to include:
+focus_state
+
+time_block
+
+energy_tag
+
+
+Ensure /task-manager/tasks API endpoints can read/write these fields.
+2. Create a Morning Check‑In screen (brain dump → tasks)
+
+Routes:
+Add a new route GET /task-manager/morning-checkin that renders a new template templates/morning_checkin.html.
+
+Add a POST /task-manager/morning-checkin/process route that:
+Accepts a large brain_dump text field (multiline textarea).
+
+Splits the text into lines.
+
+For each non‑empty line, creates a new Task with:
+title = that line (trimmed).
+
+description empty by default.
+
+status set to "backlog" or "todo" (choose a sensible default).
+
+is_today initially False.
+
+focus_state initially "later_today" (or None if you prefer to choose in the next step).
+
+time_block initially None.
+
+
+After creating the tasks, redirect to the My Day page with a query flag like ?from_brain_dump=true so the UI can highlight that this is the structuring step.
+
+
+
+Template templates/morning_checkin.html:
+Simple, low‑cognitive‑load layout:
+Title: “Morning Check‑In – Brain Dump”.
+
+One large textarea for brain_dump with a placeholder like:
+“Dump anything in your head: tasks, worries, ideas. One per line is ideal, but messy is fine.”
+
+A short note emphasizing non‑judgment:
+“This is not a to‑do list yet. We’ll sort and pick just a few Must‑Dos on the next screen.”
+
+A single primary button: “Turn this into tasks”.
+
+
+Add a small link back to My Day and Tasks in the navbar.
+3. Redesign My Day around Now / Next / Later + time blocks
+
+On /task-manager/my-day:
+
+
+Backend changes (in main.py):
+When handling GET /task-manager/my-day, compute:
+today_must_do = tasks where is_today = True and not done (you can further filter or sort by focus_state if helpful).
+
+now_task = at most one task (choose the one with focus_state = "now" and not done; if none, None).
+
+next_task = at most one task with focus_state = "next" and not done.
+
+later_today_tasks = tasks with focus_state = "later_today" and not done (cap the number passed to the template, e.g. top 3–5).
+
+suggested_tasks (reuse / extend existing Suggestions logic, but now only show up to a limited number to keep the page light).
+
+
+Also compute a simple time‑block grouping for Today tasks:
+morning_tasks, afternoon_tasks, evening_tasks based on time_block for tasks that are is_today = True and not done.
+
+
+
+My Day template layout (templates/my_day.html):
+Keep the stats bar and CoP panel you already added, but restructure the core area into:
+a) Current focus strip (top center):
+If now_task exists, show a large card: task title, energy tag, and time block.
+
+If no now_task, show a friendly prompt like:
+“Pick a Now task to focus on next.”
+
+Include buttons next to candidate tasks later in the page to “Set as Now”.
+b) Now / Next / Later Today panel:
+
+A small panel that shows:
+Now (0 or 1 task, big emphasis).
+
+Next (0 or 1 task).
+
+Later Today (a small capped list, e.g. up to 3–4 tasks).
+
+
+Each item should show:
+Title.
+
+Energy tag (if any).
+
+Time block.
+c) Time blocks for Today:
+
+
+A simple three‑column or three‑row section labeled:
+Morning
+
+Afternoon
+
+Evening
+
+
+Show the tasks scheduled into each block (based on time_block), but keep the number visible small. If there are more, show something like “+2 more” with a collapsible detail to avoid a wall of text.
+d) Suggestions (for picking Must‑Dos):
+
+Keep a Suggestions section but:
+Show only a limited number (e.g. max 5–7 suggestions).
+
+Provide buttons like:
+“Add to Today” (sets is_today = True, assigns a default focus_state = "later_today" if none, and optionally prompts for a time block).
+
+“Set as Now” or “Set as Next” (if within cap constraints).
+
+
+
+
+
+Actions / endpoints:
+Add POST endpoints to:
+Update focus_state for a task (/task-manager/tasks/{id}/focus-state).
+
+Update time_block for a task (/task-manager/tasks/{id}/time-block).
+
+
+In the My Day template, add small forms or buttons:
+“Set as Now” → sets focus_state = "now" (and optionally unsets any other task currently in now to keep only one).
+
+“Set as Next” → sets focus_state = "next" (again, ensure only one Next at a time).
+
+“Move to Later Today” → sets focus_state = "later_today".
+
+“Move to Later” → sets focus_state = "later" and is_today = False.
+
+
+Respect the contract that My Day should show only a limited total of visible Today tasks (e.g., if there are more than 6 tasks marked for today, show a warning banner and collapse the overflow into a “+N more” link).
+
+
+Keep copy non‑judgmental:
+Use friendly text like:
+“Let’s pick just a few things to care about today.”
+
+“This one is parked for Later; we’ll revisit it when it matters.”
+
+
+Avoid harsh/negative wording when tasks overflow or remain unfinished.
+4. Navigation and wiring
+
+
+Add a clear link/button in the navbar (or My Day) to go to the Morning Check‑In screen (/task-manager/morning-checkin).
+
+From Morning Check‑In, after processing the brain dump, redirect to My Day so the user can pick Must‑Dos and assign Now/Next/Later + time blocks.
+
+Ensure existing features (streaks, CoP panel, Kanban, Tasks page) remain functional.
+5. Final explanation
+
+When you’re done, please summarize:
+
+Which models, routes, and templates you changed or added.
+
+How Morning Check‑In works (input → tasks → My Day).
+
+How the new My Day view enforces:
+Now / Next / Later Today / Later,
+
+small visible task set,
+
+Morning/Afternoon/Evening time blocks.
+
+

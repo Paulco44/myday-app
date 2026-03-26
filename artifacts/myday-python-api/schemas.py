@@ -34,6 +34,9 @@ class TaskCreate(BaseModel):
     is_today: bool = False
     source_type: str = "self"
     source_ref: Optional[str] = None
+    focus_state: Optional[str] = None
+    time_block: Optional[str] = None
+    energy_tag: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -48,6 +51,9 @@ class TaskUpdate(BaseModel):
     completed_at: Optional[datetime] = None
     source_type: Optional[str] = None
     source_ref: Optional[str] = None
+    focus_state: Optional[str] = None
+    time_block: Optional[str] = None
+    energy_tag: Optional[str] = None
 
 
 class TaskRead(BaseModel):
@@ -65,6 +71,9 @@ class TaskRead(BaseModel):
     is_today: bool
     source_type: str
     source_ref: Optional[str]
+    focus_state: Optional[str]
+    time_block: Optional[str]
+    energy_tag: Optional[str]
 
     class Config:
         from_attributes = True

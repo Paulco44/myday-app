@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Morning Check-In — MyDay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fafafa;
+      color: #1a202c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Nav ── */
+    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; flex-shrink: 0; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-links { display: flex; }
+    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
+    .nav-links a:hover { color: #1a202c; }
+    .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+
+    /* ── Page ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 3rem 1.5rem;
+    }
+
+    .checkin-card {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* ── Greeting ── */
+    .greeting { margin-bottom: 2rem; }
+    .greeting-eyebrow {
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #f59e0b;
+      margin-bottom: .4rem;
+    }
+    .greeting h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #1a202c;
+    }
+    .greeting .subtitle {
+      margin-top: .5rem;
+      color: #64748b;
+      font-size: .95rem;
+      line-height: 1.55;
+    }
+
+    /* ── Brain dump area ── */
+    .dump-section { margin-bottom: 1.5rem; }
+    .dump-label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: .6rem;
+    }
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      border: 2px solid #e2e8f0;
+      border-radius: .75rem;
+      padding: 1rem 1.1rem;
+      font-size: 1rem;
+      line-height: 1.65;
+      color: #1a202c;
+      background: #fff;
+      resize: vertical;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      font-family: inherit;
+    }
+    textarea:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+    textarea::placeholder { color: #94a3b8; }
+
+    /* ── Reassurance note ── */
+    .reassurance {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: .6rem;
+      padding: .75rem 1rem;
+      font-size: .84rem;
+      color: #166534;
+      line-height: 1.5;
+      margin-bottom: 1.75rem;
+      display: flex;
+      gap: .6rem;
+      align-items: flex-start;
+    }
+    .reassurance .icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+
+    /* ── Tips ── */
+    .tips {
+      display: flex;
+      gap: .65rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .tip-pill {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: .3rem .85rem;
+      font-size: .78rem;
+      color: #475569;
+    }
+
+    /* ── Submit ── */
+    .submit-row {
+      display: flex;
+      gap: .85rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: .6rem;
+      padding: .8rem 1.8rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn-primary:hover { opacity: .9; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-skip {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: .88rem;
+      font-weight: 500;
+    }
+    .btn-skip:hover { color: #64748b; }
+
+    /* ── Steps hint ── */
+    .steps-hint {
+      margin-top: 2.5rem;
+      display: flex;
+      gap: 0;
+      align-items: center;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    .step .num {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .72rem;
+      font-weight: 700;
+    }
+    .step.active .num { background: #4f46e5; color: #fff; }
+    .step.inactive .num { background: #e2e8f0; color: #94a3b8; }
+    .step.active { color: #4f46e5; }
+    .step.inactive { color: #94a3b8; }
+    .step-arrow { color: #d1d5db; margin: 0 .6rem; font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/morning-checkin" class="active">Check In</a>
+      <a href="{{ base }}/kanban">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/cop-admin">CoP Admin</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="checkin-card">
+      <div class="greeting">
+        <div class="greeting-eyebrow">☀️ Morning Check-In</div>
+        <h1>What's on your mind?</h1>
+        <p class="subtitle">
+          Dump everything out of your head — tasks, worries, ideas, half-formed thoughts.
+          One per line is great, but messy is totally fine.
+        </p>
+      </div>
+
+      <form method="post" action="{{ base }}/morning-checkin/process">
+        <div class="dump-section">
+          <label class="dump-label" for="brain-dump">Brain dump</label>
+          <textarea
+            id="brain-dump"
+            name="brain_dump"
+            placeholder="Send the email about the project update&#10;Call back Sam&#10;Worried about the deadline next week&#10;Need to review the quarterly report&#10;Pick up groceries&#10;..."
+            autofocus
+          ></textarea>
+        </div>
+
+        <div class="reassurance">
+          <span class="icon">💚</span>
+          <span>
+            <strong>This is not a to-do list yet.</strong>
+            We'll help you pick just 3 things to focus on after this.
+            Everything else gets parked safely — you won't lose it.
+          </span>
+        </div>
+
+        <div class="tips">
+          <span class="tip-pill">One idea per line</span>
+          <span class="tip-pill">Worries count too</span>
+          <span class="tip-pill">No grammar needed</span>
+          <span class="tip-pill">Fast is fine</span>
+        </div>
+
+        <div class="submit-row">
+          <button class="btn-primary" type="submit">Turn this into tasks →</button>
+          <a class="btn-skip" href="{{ base }}/my-day">Skip for now</a>
+        </div>
+      </form>
+
+      <div class="steps-hint">
+        <div class="step active">
+          <div class="num">1</div>
+          Brain dump
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step inactive">
+          <div class="num">2</div>
+          Pick 3 Must-Dos
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step inactive">
+          <div class="num">3</div>
+          Focus
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

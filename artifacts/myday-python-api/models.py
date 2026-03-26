@@ -37,6 +37,11 @@ class Task(Base):
     source_type = Column(String, default="self")
     source_ref = Column(String, nullable=True)
 
+    # New fields for Now/Next/Later, time blocks, and energy
+    focus_state = Column(String, nullable=True)   # now | next | later_today | later | None
+    time_block = Column(String, nullable=True)    # morning | afternoon | evening | None
+    energy_tag = Column(String, nullable=True)    # creative | admin | social | low_energy | None
+
     project = relationship("Project", back_populates="tasks")
     subtasks = relationship("Subtask", back_populates="task", cascade="all, delete-orphan")
     task_tags = relationship("TaskTag", back_populates="task", cascade="all, delete-orphan")
@@ -108,6 +113,7 @@ class DailyLog(Base):
     started = Column(Boolean, default=False)
     started_at = Column(DateTime, nullable=True)
     has_completed_task = Column(Boolean, default=False)
+    has_morning_checkin = Column(Boolean, default=False)  # did the brain-dump check-in today
 
 
 class CoPInitiative(Base):
