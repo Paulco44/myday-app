@@ -56,6 +56,7 @@ export function KanbanColumn({ column, cards, onCardClick }: KanbanColumnProps) 
       ref={setNodeRef}
       style={style}
       {...attributes}
+      tabIndex={-1}
       {...listeners}
       className="shrink-0 w-[300px] flex flex-col bg-secondary/30 rounded-2xl border border-border/50 shadow-sm max-h-full overflow-hidden touch-none select-none"
     >

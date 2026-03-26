@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -72,8 +71,7 @@ export function KanbanBoard() {
   const columnsId = useMemo(() => columns.map((col) => toColDndId(col.id)), [columns]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
-    useSensor(KeyboardSensor)
+    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS)
   );
 
   // Columns → only match other column droppables.

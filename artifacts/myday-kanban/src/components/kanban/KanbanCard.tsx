@@ -48,6 +48,7 @@ export function KanbanCard({ card, onClick }: KanbanCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
+      tabIndex={-1}
       {...listeners}
       onClick={() => onClick(card)}
       className="cursor-grab active:cursor-grabbing touch-none"
