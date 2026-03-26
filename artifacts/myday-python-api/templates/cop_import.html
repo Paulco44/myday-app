@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoP CSV Import — MyDay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1a202c; min-height: 100vh; }
+
+    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-links { display: flex; }
+    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; }
+    .nav-links a:hover { color: #1a202c; }
+    .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+    .nav-links a.checkin { color: #f59e0b; font-weight: 600; }
+
+    main { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: .35rem; }
+    .subtitle { color: #64748b; font-size: .9rem; margin-bottom: 2rem; }
+
+    /* ── Card ── */
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: .85rem; padding: 1.6rem 1.75rem; margin-bottom: 1.5rem; }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
+    .card p { font-size: .88rem; color: #475569; line-height: 1.6; margin-bottom: .85rem; }
+    .card p:last-child { margin-bottom: 0; }
+
+    /* ── Steps list ── */
+    ol { padding-left: 1.35rem; }
+    ol li { font-size: .88rem; color: #475569; line-height: 1.65; margin-bottom: .3rem; }
+    code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: .3rem; padding: .05rem .35rem; font-family: monospace; font-size: .82rem; color: #1a202c; }
+
+    /* ── Import button ── */
+    .import-form { margin-bottom: 1rem; }
+    .btn-import { background: #4f46e5; color: #fff; border: none; border-radius: .55rem; padding: .75rem 1.9rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn-import:hover { opacity: .88; }
+
+    /* ── Result box ── */
+    .result-box { border-radius: .65rem; padding: 1.2rem 1.4rem; }
+    .result-box.success { background: #f0fdf4; border: 1px solid #86efac; }
+    .result-box.warning { background: #fffbeb; border: 1px solid #fde68a; }
+    .result-box.error { background: #fef2f2; border: 1px solid #fca5a5; }
+
+    .result-headline { font-size: 1.05rem; font-weight: 700; margin-bottom: .5rem; }
+    .result-box.success .result-headline { color: #15803d; }
+    .result-box.warning .result-headline { color: #92400e; }
+    .result-box.error .result-headline { color: #b91c1c; }
+
+    .result-stats { font-size: .85rem; color: #374151; line-height: 1.7; margin-bottom: .5rem; }
+    .result-errors { font-size: .8rem; color: #b91c1c; margin-top: .6rem; }
+    .result-errors li { margin-bottom: .2rem; }
+
+    .after-links { margin-top: 1.25rem; display: flex; gap: .9rem; flex-wrap: wrap; }
+    .after-links a { background: #4f46e5; color: #fff; border-radius: .45rem; padding: .5rem 1.2rem; font-size: .88rem; font-weight: 700; text-decoration: none; transition: opacity .15s; }
+    .after-links a:hover { opacity: .88; }
+    .after-links a.ghost { background: #fff; border: 1px solid #e2e8f0; color: #374151; }
+    .after-links a.ghost:hover { background: #f8fafc; }
+
+    .path-hint { font-size: .8rem; font-family: monospace; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: .4rem; padding: .5rem .85rem; color: #374151; word-break: break-all; margin-top: .5rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/morning-checkin" class="checkin">✦ Check In</a>
+      <a href="{{ base }}/kanban">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/cop-admin" >CoP Admin</a>
+    </div>
+  </nav>
+
+  <main>
+    <h1>📥 CoP CSV Import</h1>
+    <p class="subtitle">One-click bulk import from <code>cop_org_plan_pc.csv</code></p>
+
+    {% if result %}
+      <!-- ── Result panel ── -->
+      {% if result.errors and result.imported == 0 %}
+      <div class="result-box error">
+        <div class="result-headline">Import failed</div>
+        <ul class="result-errors">
+          {% for e in result.errors %}<li>{{ e }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% elif result.imported > 0 %}
+      <div class="result-box {% if result.errors %}warning{% else %}success{% endif %}">
+        <div class="result-headline">
+          {% if result.errors %}Import completed with some issues{% else %}Import successful ✓{% endif %}
+        </div>
+        <div class="result-stats">
+          <strong>{{ result.imported }}</strong> initiative{% if result.imported != 1 %}s{% endif %} imported<br>
+          <strong>{{ result.skipped }}</strong> row{% if result.skipped != 1 %}s{% endif %} skipped (no leader)<br>
+          {% if result.errors %}<strong>{{ result.errors | length }}</strong> row{% if result.errors | length != 1 %}s{% endif %} with errors{% endif %}
+        </div>
+        {% if result.errors %}
+        <ul class="result-errors">
+          {% for e in result.errors %}<li>{{ e }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      <div class="after-links">
+        <a href="{{ base }}/cop-admin">View CoP Admin →</a>
+        <a href="{{ base }}/my-day" class="ghost">My Day</a>
+        <a href="{{ base }}/cop-import" class="ghost">Import again</a>
+      </div>
+      {% else %}
+      <div class="result-box warning">
+        <div class="result-headline">Nothing imported</div>
+        <div class="result-stats">
+          {{ result.skipped }} rows skipped (all lacked a "Leader / Responsible" value).<br>
+          Check that the CSV has the correct column names and that your rows have a leader.
+        </div>
+      </div>
+      {% endif %}
+
+    {% else %}
+      <!-- ── Pre-import instructions ── -->
+      <div class="card">
+        <h2>Before you run</h2>
+        <ol>
+          <li>Export or save your CoP Org Plan as <strong>cop_org_plan_pc.csv</strong> (UTF-8).</li>
+          <li>
+            Upload the file to the <strong>project root</strong> in Replit — that is the top-level folder (same level as <code>replit.md</code>).
+            <div class="path-hint">{{ csv_path }}</div>
+          </li>
+          <li>
+            Make sure the CSV header row contains these columns (exact text matters):<br>
+            <code>Effort</code> &nbsp;
+            <code>Topic</code> &nbsp;
+            <code>Topic Description</code> &nbsp;
+            <code>Sub topic/ Application</code> &nbsp;
+            <code>Type of K.O / Effort</code> &nbsp;
+            <code>Focus Market</code> &nbsp;
+            <code>Leader / Responsible</code> &nbsp;
+            <code>Notas</code> &nbsp;
+            <code>Jan</code> … <code>Dec</code>
+          </li>
+          <li>Month cells should contain <code>x</code> (any case) when active, otherwise leave blank.</li>
+          <li>Rows with an empty "Leader / Responsible" column are skipped automatically.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>Run the import</h2>
+        <p>Clicking the button below reads the CSV once and inserts every valid row into the database. You can run it multiple times — each run <em>adds</em> new rows (it does not deduplicate or replace existing ones). Clear the table in CoP Admin first if you need a clean slate.</p>
+        <form class="import-form" method="post" action="{{ base }}/cop-import">
+          <button class="btn-import" type="submit">▶ Run CoP CSV Import</button>
+        </form>
+      </div>
+    {% endif %}
+  </main>
+</body>
+</html>

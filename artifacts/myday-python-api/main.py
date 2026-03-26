@@ -1,4 +1,5 @@
 import os
+import pathlib
 from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 from typing import Optional, List
@@ -698,6 +699,38 @@ async def cop_admin_delete(initiative_id: int, db: Session = Depends(get_db)):
         db.delete(item)
         db.commit()
     return RedirectResponse(url=f"{BASE}/cop-admin", status_code=303)
+
+
+# ─── CoP CSV Import ───────────────────────────────────────────────────────────
+
+# Look for the CSV at the repo root (two levels above this file)
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+_COP_CSV = _REPO_ROOT / "cop_org_plan_pc.csv"
+
+
+@app.get(f"{BASE}/cop-import", response_class=HTMLResponse)
+async def cop_import_get(request: Request):
+    return templates.TemplateResponse(
+        request, "cop_import.html",
+        {"base": BASE, "result": None, "csv_path": str(_COP_CSV)},
+    )
+
+
+@app.post(f"{BASE}/cop-import", response_class=HTMLResponse)
+async def cop_import_post(request: Request, db: Session = Depends(get_db)):
+    from import_cop_initiatives import run_import
+    try:
+        result = run_import(db, str(_COP_CSV))
+    except FileNotFoundError as exc:
+        result = {
+            "imported": 0,
+            "skipped": 0,
+            "errors": [str(exc)],
+        }
+    return templates.TemplateResponse(
+        request, "cop_import.html",
+        {"base": BASE, "result": result, "csv_path": str(_COP_CSV)},
+    )
 
 
 # ─── Projects API ─────────────────────────────────────────────────────────────
