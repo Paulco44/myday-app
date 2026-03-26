@@ -46,7 +46,7 @@ export function EditCardSheet({ card, open, onOpenChange }: { card: Card | null,
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    values: {
+    defaultValues: {
       title: card?.title || "",
       description: card?.description || "",
       priority: (card?.priority as any) || "none",

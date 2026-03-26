@@ -270,6 +270,7 @@ export function KanbanBoard() {
       </div>
 
       <EditCardSheet
+        key={editingCard?.id ?? "none"}
         card={editingCard}
         open={!!editingCard}
         onOpenChange={handleEditClose}
