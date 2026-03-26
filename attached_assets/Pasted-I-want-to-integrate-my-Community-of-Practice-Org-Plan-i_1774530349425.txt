@@ -1,0 +1,106 @@
+I want to integrate my Community of Practice Org Plan into the existing task manager as a read‑only CoP initiatives panel on the My Day page.
+
+Please do the following:
+
+Create a CoPInitiative model and table
+
+Add a new SQLAlchemy model CoPInitiative in models.py (and include it in Base metadata) with roughly these fields:
+
+id (int, primary key)
+
+effort (string, nullable) — e.g., "1.0", "2.0", "3.0"
+
+topic (string, nullable) — e.g., "Human Capital", "Leadership", "Future of work"
+
+topic_description (string, nullable) — e.g., "Performance Competencies"
+
+subtopic (string, nullable) — e.g., "ECO 2.0"
+
+type_of_effort (string, nullable) — e.g., "Insight", "PD", "Assessment tool", "App"
+
+focus_market (string, nullable) — e.g., "PR", "All"
+
+leader (string, nullable) — e.g., "Paul", "Andrea", etc.
+
+cop_collaboration (string, nullable)
+
+notes (string, nullable)
+
+active_jan … active_dec (12 boolean fields, default False) to indicate whether the initiative is active in each month.
+
+Ensure the table is created in the existing SQLite database (e.g., by including it in the metadata and any create_all logic).
+
+Add basic CRUD endpoints for CoPInitiative (API only, for now)
+
+In schemas.py, create simple Pydantic models, for example:
+
+CoPInitiativeBase / CoPInitiativeCreate / CoPInitiativeRead.
+
+In main.py, under the /task-manager prefix:
+
+GET /task-manager/cop-initiatives → list all initiatives.
+
+POST /task-manager/cop-initiatives → create a new initiative.
+
+(Optional) PUT /task-manager/cop-initiatives/{id} and DELETE /task-manager/cop-initiatives/{id} for later editing.
+
+Keep these endpoints simple; they’re mainly to allow population via Swagger for now.
+
+Add a very simple CoP admin/list page
+
+Create a new template templates/cop_initiatives.html that:
+
+Shows a table listing all CoP initiatives (id, topic, topic_description, subtopic, type_of_effort, leader, and which months are active).
+
+Includes a very simple form at the top (or a separate “Add initiative” section) that lets me manually add a new initiative with:
+
+topic, topic_description, subtopic, type_of_effort, leader, focus_market, notes
+
+checkboxes for the 12 months (Jan–Dec) to set active flags.
+
+Add a route GET /task-manager/cop-admin that:
+
+Fetches all initiatives from the DB and renders cop_initiatives.html.
+
+Add a POST handler that the form submits to, to create a new initiative and redirect back to /task-manager/cop-admin.
+
+Add a “CoP Org Plan – Current Month” panel on My Day
+
+On the /task-manager/my-day route in main.py:
+
+Determine the current month (based on server date).
+
+Query CoPInitiative for initiatives where:
+
+leader contains or equals "Paul" (case-insensitive is fine), and
+
+The corresponding active_<month> boolean is True (e.g., active_mar for March).
+
+Pass this filtered list to the My Day template context (e.g., cop_initiatives_current_month).
+
+In templates/my_day.html, add a new section near the top (for example, below the stats bar) titled:
+
+“CoP Org Plan – This Month (Your initiatives)”
+
+In that section:
+
+For each initiative in cop_initiatives_current_month, display a compact line such as:
+
+[{topic}] {topic_description} — {subtopic} — {type_of_effort} — maybe the first part of notes if present.
+
+If there are no initiatives for the current month, show a small message like “No CoP initiatives active for you this month.”
+
+Navigation
+
+Add a link in the global navbar (on the task-manager templates) to the CoP admin page, e.g. “CoP Admin” pointing to /task-manager/cop-admin.
+
+Explain briefly
+
+Which files you updated (models, schemas, main routes, templates).
+
+How I can:
+
+Go to /task-manager/cop-admin to manually enter a few CoP initiatives I own.
+
+Then see those initiatives appear on /task-manager/my-day under the CoP Org Plan panel when their month flags are active.
+Please implement this in the existing repo without breaking current My Day, Kanban, or Tasks behavior.

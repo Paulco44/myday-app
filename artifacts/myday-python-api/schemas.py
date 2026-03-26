@@ -68,3 +68,81 @@ class TaskRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ─── CoP Initiative ──────────────────────────────────────────────────────────
+
+class CoPInitiativeCreate(BaseModel):
+    effort: Optional[str] = None
+    topic: Optional[str] = None
+    topic_description: Optional[str] = None
+    subtopic: Optional[str] = None
+    type_of_effort: Optional[str] = None
+    focus_market: Optional[str] = None
+    leader: Optional[str] = None
+    cop_collaboration: Optional[str] = None
+    notes: Optional[str] = None
+    active_jan: bool = False
+    active_feb: bool = False
+    active_mar: bool = False
+    active_apr: bool = False
+    active_may: bool = False
+    active_jun: bool = False
+    active_jul: bool = False
+    active_aug: bool = False
+    active_sep: bool = False
+    active_oct: bool = False
+    active_nov: bool = False
+    active_dec: bool = False
+
+
+class CoPInitiativeUpdate(BaseModel):
+    effort: Optional[str] = None
+    topic: Optional[str] = None
+    topic_description: Optional[str] = None
+    subtopic: Optional[str] = None
+    type_of_effort: Optional[str] = None
+    focus_market: Optional[str] = None
+    leader: Optional[str] = None
+    cop_collaboration: Optional[str] = None
+    notes: Optional[str] = None
+    active_jan: Optional[bool] = None
+    active_feb: Optional[bool] = None
+    active_mar: Optional[bool] = None
+    active_apr: Optional[bool] = None
+    active_may: Optional[bool] = None
+    active_jun: Optional[bool] = None
+    active_jul: Optional[bool] = None
+    active_aug: Optional[bool] = None
+    active_sep: Optional[bool] = None
+    active_oct: Optional[bool] = None
+    active_nov: Optional[bool] = None
+    active_dec: Optional[bool] = None
+
+
+class CoPInitiativeRead(BaseModel):
+    id: int
+    effort: Optional[str]
+    topic: Optional[str]
+    topic_description: Optional[str]
+    subtopic: Optional[str]
+    type_of_effort: Optional[str]
+    focus_market: Optional[str]
+    leader: Optional[str]
+    cop_collaboration: Optional[str]
+    notes: Optional[str]
+    active_jan: bool
+    active_feb: bool
+    active_mar: bool
+    active_apr: bool
+    active_may: bool
+    active_jun: bool
+    active_jul: bool
+    active_aug: bool
+    active_sep: bool
+    active_oct: bool
+    active_nov: bool
+    active_dec: bool
+
+    class Config:
+        from_attributes = True

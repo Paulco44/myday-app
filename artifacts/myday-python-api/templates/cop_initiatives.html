@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoP Admin — MyDay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #1a202c; min-height: 100vh; }
+
+    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-links { display: flex; }
+    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
+    .nav-links a:hover { color: #1a202c; }
+    .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: .4rem; }
+    .page-sub { color: #64748b; font-size: .9rem; margin-bottom: 2rem; }
+
+    /* ── Add form ── */
+    .add-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: .75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .add-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: #374151; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+    .form-field { display: flex; flex-direction: column; gap: .3rem; }
+    .form-field label { font-size: .75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+    .form-field input[type="text"],
+    .form-field textarea {
+      border: 1px solid #e2e8f0;
+      border-radius: .4rem;
+      padding: .45rem .65rem;
+      font-size: .85rem;
+      font-family: inherit;
+      background: #f8fafc;
+      transition: border-color .15s;
+    }
+    .form-field input:focus,
+    .form-field textarea:focus { outline: none; border-color: #4f46e5; background: #fff; }
+    .form-field textarea { resize: vertical; min-height: 60px; }
+
+    .months-row { margin-bottom: 1rem; }
+    .months-row label { font-size: .75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: .4rem; }
+    .months-grid { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .month-cb { display: flex; align-items: center; gap: .3rem; font-size: .82rem; background: #f1f5f9; border-radius: .35rem; padding: .3rem .6rem; cursor: pointer; user-select: none; }
+    .month-cb input { accent-color: #4f46e5; cursor: pointer; }
+
+    .btn-submit {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: .45rem;
+      padding: .6rem 1.4rem;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn-submit:hover { opacity: .88; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    .section-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .85rem; }
+    .section-head h2 { font-size: 1rem; font-weight: 700; }
+    .count-badge { background: #e0e7ff; color: #3730a3; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; background: #fff; border-radius: .75rem; overflow: hidden; border: 1px solid #e2e8f0; }
+    thead { background: #f8fafc; }
+    th { text-align: left; padding: .65rem .85rem; font-size: .72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    td { padding: .6rem .85rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .month-dots { display: flex; flex-wrap: wrap; gap: 3px; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; font-size: .6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
+    .dot.on { background: #4f46e5; color: #fff; }
+    .dot.off { background: #f1f5f9; color: #cbd5e1; }
+
+    .btn-del {
+      background: #fee2e2;
+      color: #dc2626;
+      border: none;
+      border-radius: .35rem;
+      padding: .25rem .55rem;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn-del:hover { opacity: .8; }
+
+    .empty { text-align: center; padding: 2.5rem; color: #94a3b8; background: #fff; border: 1px dashed #e2e8f0; border-radius: .75rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/kanban">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/cop-admin" class="active">CoP Admin</a>
+    </div>
+  </nav>
+
+  <main>
+    <h1>🤝 CoP Org Plan — Admin</h1>
+    <p class="page-sub">Manage Community of Practice initiatives. Initiatives active in the current month where leader is "Paul" appear on the My Day page.</p>
+
+    <!-- Add Initiative Form -->
+    <div class="add-card">
+      <h2>➕ Add Initiative</h2>
+      <form method="post" action="{{ base }}/cop-admin">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Effort</label>
+            <input type="text" name="effort" placeholder="e.g. 1.0, 2.0" />
+          </div>
+          <div class="form-field">
+            <label>Topic</label>
+            <input type="text" name="topic" placeholder="e.g. Human Capital" />
+          </div>
+          <div class="form-field">
+            <label>Topic Description</label>
+            <input type="text" name="topic_description" placeholder="e.g. Performance Competencies" />
+          </div>
+          <div class="form-field">
+            <label>Subtopic</label>
+            <input type="text" name="subtopic" placeholder="e.g. ECO 2.0" />
+          </div>
+          <div class="form-field">
+            <label>Type of Effort</label>
+            <input type="text" name="type_of_effort" placeholder="e.g. Insight, PD, App" />
+          </div>
+          <div class="form-field">
+            <label>Focus Market</label>
+            <input type="text" name="focus_market" placeholder="e.g. PR, All" />
+          </div>
+          <div class="form-field">
+            <label>Leader</label>
+            <input type="text" name="leader" placeholder="e.g. Paul" />
+          </div>
+          <div class="form-field">
+            <label>CoP Collaboration</label>
+            <input type="text" name="cop_collaboration" placeholder="Other CoP groups" />
+          </div>
+          <div class="form-field" style="grid-column: span 2;">
+            <label>Notes</label>
+            <textarea name="notes" placeholder="Optional notes..."></textarea>
+          </div>
+        </div>
+
+        <div class="months-row">
+          <label>Active Months</label>
+          <div class="months-grid">
+            {% for m in month_abbr %}
+            <label class="month-cb">
+              <input type="checkbox" name="active_{{ m }}" value="on" />
+              {{ m | capitalize }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button class="btn-submit" type="submit">Add Initiative</button>
+      </form>
+    </div>
+
+    <!-- Initiatives Table -->
+    <div class="section-head">
+      <h2>All Initiatives</h2>
+      <span class="count-badge">{{ initiatives | length }}</span>
+    </div>
+
+    {% if initiatives %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Topic</th>
+            <th>Description</th>
+            <th>Subtopic</th>
+            <th>Type</th>
+            <th>Market</th>
+            <th>Leader</th>
+            <th>Effort</th>
+            <th>Active Months</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for init in initiatives %}
+          <tr>
+            <td style="color:#94a3b8;">{{ init.id }}</td>
+            <td><strong>{{ init.topic or '—' }}</strong></td>
+            <td>{{ init.topic_description or '—' }}</td>
+            <td>{{ init.subtopic or '—' }}</td>
+            <td>{{ init.type_of_effort or '—' }}</td>
+            <td>{{ init.focus_market or '—' }}</td>
+            <td>{{ init.leader or '—' }}</td>
+            <td style="text-align:center;">{{ init.effort or '—' }}</td>
+            <td>
+              <div class="month-dots">
+                {% for m in month_abbr %}
+                {% set is_on = init['active_' + m] %}
+                <span class="dot {% if is_on %}on{% else %}off{% endif %}" title="{{ m | capitalize }}">{{ m[0] }}</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td style="max-width:180px;color:#64748b;font-size:.78rem;">{{ (init.notes or '')[:80] }}{% if init.notes and init.notes|length > 80 %}…{% endif %}</td>
+            <td>
+              <form method="post" action="{{ base }}/cop-admin/{{ init.id }}/delete" onsubmit="return confirm('Delete this initiative?')">
+                <button class="btn-del" type="submit">✕</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">
+      <p style="font-size:1.4rem;">📋</p>
+      <p style="margin-top:.4rem;">No initiatives yet. Add one above.</p>
+    </div>
+    {% endif %}
+  </main>
+</body>
+</html>

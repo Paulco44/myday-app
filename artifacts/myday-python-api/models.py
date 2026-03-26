@@ -108,3 +108,32 @@ class DailyLog(Base):
     started = Column(Boolean, default=False)
     started_at = Column(DateTime, nullable=True)
     has_completed_task = Column(Boolean, default=False)
+
+
+class CoPInitiative(Base):
+    """Community of Practice initiative."""
+    __tablename__ = "cop_initiatives"
+
+    id = Column(Integer, primary_key=True, index=True)
+    effort = Column(String, nullable=True)
+    topic = Column(String, nullable=True)
+    topic_description = Column(String, nullable=True)
+    subtopic = Column(String, nullable=True)
+    type_of_effort = Column(String, nullable=True)
+    focus_market = Column(String, nullable=True)
+    leader = Column(String, nullable=True)
+    cop_collaboration = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    active_jan = Column(Boolean, default=False)
+    active_feb = Column(Boolean, default=False)
+    active_mar = Column(Boolean, default=False)
+    active_apr = Column(Boolean, default=False)
+    active_may = Column(Boolean, default=False)
+    active_jun = Column(Boolean, default=False)
+    active_jul = Column(Boolean, default=False)
+    active_aug = Column(Boolean, default=False)
+    active_sep = Column(Boolean, default=False)
+    active_oct = Column(Boolean, default=False)
+    active_nov = Column(Boolean, default=False)
+    active_dec = Column(Boolean, default=False)

@@ -21,6 +21,20 @@ STATUS_LABELS = {"backlog": "Backlog", "todo": "To Do", "doing": "Doing", "waiti
 
 MUST_DO_CAP = 5
 
+# Month number → active_<month> attribute name
+MONTH_FIELD = {
+    1: "active_jan", 2: "active_feb", 3: "active_mar", 4: "active_apr",
+    5: "active_may", 6: "active_jun", 7: "active_jul", 8: "active_aug",
+    9: "active_sep", 10: "active_oct", 11: "active_nov", 12: "active_dec",
+}
+MONTH_NAMES = {
+    1: "January", 2: "February", 3: "March", 4: "April",
+    5: "May", 6: "June", 7: "July", 8: "August",
+    9: "September", 10: "October", 11: "November", 12: "December",
+}
+MONTH_ABBR = ["jan", "feb", "mar", "apr", "may", "jun",
+               "jul", "aug", "sep", "oct", "nov", "dec"]
+
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,6 +120,22 @@ def build_suggestions(db: Session, today: date) -> list:
     return result
 
 
+def get_cop_initiatives_this_month(db: Session, leader_name: str = "Paul") -> list:
+    """Return CoP initiatives active this month where leader contains leader_name."""
+    month_num = date.today().month
+    field_name = MONTH_FIELD[month_num]
+    month_col = getattr(models.CoPInitiative, field_name)
+    return (
+        db.query(models.CoPInitiative)
+        .filter(
+            month_col == True,
+            models.CoPInitiative.leader.ilike(f"%{leader_name}%"),
+        )
+        .order_by(models.CoPInitiative.topic, models.CoPInitiative.topic_description)
+        .all()
+    )
+
+
 @asynccontextmanager
 async def lifespan(app):
     models.Base.metadata.create_all(bind=engine)
@@ -181,6 +211,9 @@ async def my_day(request: Request, db: Session = Depends(get_db)):
     today_started = daily_log.started if daily_log else False
     streak = compute_streak(db)
 
+    cop_initiatives = get_cop_initiatives_this_month(db, "Paul")
+    current_month_name = MONTH_NAMES[today.month]
+
     return templates.TemplateResponse(
         request, "my_day.html",
         {
@@ -194,6 +227,8 @@ async def my_day(request: Request, db: Session = Depends(get_db)):
             "must_do_cap": MUST_DO_CAP,
             "today": today,
             "base": BASE,
+            "cop_initiatives": cop_initiatives,
+            "current_month_name": current_month_name,
         },
     )
 
@@ -334,6 +369,85 @@ async def delete_task_form(task_id: int, db: Session = Depends(get_db)):
     return RedirectResponse(url=f"{BASE}/tasks-page", status_code=303)
 
 
+# ─── CoP Admin (HTML) ─────────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/cop-admin", response_class=HTMLResponse)
+async def cop_admin(request: Request, db: Session = Depends(get_db)):
+    initiatives = (
+        db.query(models.CoPInitiative)
+        .order_by(models.CoPInitiative.topic, models.CoPInitiative.topic_description)
+        .all()
+    )
+    return templates.TemplateResponse(
+        request, "cop_initiatives.html",
+        {"initiatives": initiatives, "base": BASE, "month_abbr": MONTH_ABBR},
+    )
+
+
+@app.post(f"{BASE}/cop-admin")
+async def cop_admin_create(
+    effort: Optional[str] = Form(None),
+    topic: Optional[str] = Form(None),
+    topic_description: Optional[str] = Form(None),
+    subtopic: Optional[str] = Form(None),
+    type_of_effort: Optional[str] = Form(None),
+    focus_market: Optional[str] = Form(None),
+    leader: Optional[str] = Form(None),
+    cop_collaboration: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    active_jan: Optional[str] = Form(None),
+    active_feb: Optional[str] = Form(None),
+    active_mar: Optional[str] = Form(None),
+    active_apr: Optional[str] = Form(None),
+    active_may: Optional[str] = Form(None),
+    active_jun: Optional[str] = Form(None),
+    active_jul: Optional[str] = Form(None),
+    active_aug: Optional[str] = Form(None),
+    active_sep: Optional[str] = Form(None),
+    active_oct: Optional[str] = Form(None),
+    active_nov: Optional[str] = Form(None),
+    active_dec: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    def to_bool(v): return v is not None and v.lower() in ("on", "true", "1", "yes")
+
+    initiative = models.CoPInitiative(
+        effort=effort or None,
+        topic=topic or None,
+        topic_description=topic_description or None,
+        subtopic=subtopic or None,
+        type_of_effort=type_of_effort or None,
+        focus_market=focus_market or None,
+        leader=leader or None,
+        cop_collaboration=cop_collaboration or None,
+        notes=notes or None,
+        active_jan=to_bool(active_jan),
+        active_feb=to_bool(active_feb),
+        active_mar=to_bool(active_mar),
+        active_apr=to_bool(active_apr),
+        active_may=to_bool(active_may),
+        active_jun=to_bool(active_jun),
+        active_jul=to_bool(active_jul),
+        active_aug=to_bool(active_aug),
+        active_sep=to_bool(active_sep),
+        active_oct=to_bool(active_oct),
+        active_nov=to_bool(active_nov),
+        active_dec=to_bool(active_dec),
+    )
+    db.add(initiative)
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/cop-admin", status_code=303)
+
+
+@app.post(f"{BASE}/cop-admin/{{initiative_id}}/delete")
+async def cop_admin_delete(initiative_id: int, db: Session = Depends(get_db)):
+    item = db.query(models.CoPInitiative).filter(models.CoPInitiative.id == initiative_id).first()
+    if item:
+        db.delete(item)
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/cop-admin", status_code=303)
+
+
 # ─── Projects API ─────────────────────────────────────────────────────────────
 
 @app.get(f"{BASE}/projects", response_model=List[schemas.ProjectRead])
@@ -397,6 +511,44 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
     db.delete(db_task)
+    db.commit()
+    return {"success": True}
+
+
+# ─── CoP Initiatives API ──────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/cop-initiatives", response_model=List[schemas.CoPInitiativeRead])
+def list_cop_initiatives(db: Session = Depends(get_db)):
+    return db.query(models.CoPInitiative).order_by(models.CoPInitiative.topic).all()
+
+
+@app.post(f"{BASE}/cop-initiatives", response_model=schemas.CoPInitiativeRead, status_code=201)
+def create_cop_initiative(initiative: schemas.CoPInitiativeCreate, db: Session = Depends(get_db)):
+    db_item = models.CoPInitiative(**initiative.model_dump())
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
+@app.put(f"{BASE}/cop-initiatives/{{initiative_id}}", response_model=schemas.CoPInitiativeRead)
+def update_cop_initiative(initiative_id: int, update: schemas.CoPInitiativeUpdate, db: Session = Depends(get_db)):
+    db_item = db.query(models.CoPInitiative).filter(models.CoPInitiative.id == initiative_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    for field, value in update.model_dump(exclude_unset=True).items():
+        setattr(db_item, field, value)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
+@app.delete(f"{BASE}/cop-initiatives/{{initiative_id}}")
+def delete_cop_initiative(initiative_id: int, db: Session = Depends(get_db)):
+    db_item = db.query(models.CoPInitiative).filter(models.CoPInitiative.id == initiative_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    db.delete(db_item)
     db.commit()
     return {"success": True}
 

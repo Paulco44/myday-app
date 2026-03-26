@@ -129,6 +129,37 @@
     .label-overdue { background: #fee2e2; color: #dc2626; }
     .label-today   { background: #fef9c3; color: #854d0e; }
     .label-high    { background: #f3e8ff; color: #7c3aed; }
+
+    /* ── CoP Panel ── */
+    .cop-panel {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #4f46e5;
+      border-radius: .6rem;
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .cop-panel-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
+    .cop-panel-head h2 { font-size: .95rem; font-weight: 700; }
+    .cop-panel-head .cop-month { font-size: .78rem; color: #64748b; font-weight: 500; }
+    .cop-panel-head a { margin-left: auto; font-size: .75rem; color: #4f46e5; text-decoration: none; font-weight: 600; }
+    .cop-panel-head a:hover { text-decoration: underline; }
+    .cop-initiative-list { display: flex; flex-direction: column; gap: .35rem; }
+    .cop-initiative-row {
+      display: flex;
+      align-items: baseline;
+      gap: .5rem;
+      padding: .4rem .5rem;
+      border-radius: .4rem;
+      font-size: .83rem;
+      line-height: 1.4;
+    }
+    .cop-initiative-row:hover { background: #f8fafc; }
+    .cop-tag { display: inline-block; padding: .1rem .45rem; border-radius: .3rem; font-size: .7rem; font-weight: 600; white-space: nowrap; }
+    .cop-tag-topic   { background: #ede9fe; color: #5b21b6; }
+    .cop-tag-type    { background: #fef3c7; color: #92400e; }
+    .cop-tag-market  { background: #d1fae5; color: #065f46; }
+    .cop-empty { font-size: .83rem; color: #94a3b8; font-style: italic; padding: .25rem 0; }
   </style>
 </head>
 <body>
@@ -138,6 +169,7 @@
       <a href="{{ base }}/my-day" class="active">My Day</a>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>
   </nav>
 
@@ -190,6 +222,33 @@
         <span class="num">{{ overdue_count }}</span>
         <span>overdue</span>
       </div>
+    </div>
+
+    <!-- CoP Org Plan Panel -->
+    <div class="cop-panel">
+      <div class="cop-panel-head">
+        <h2>🤝 CoP Org Plan – This Month</h2>
+        <span class="cop-month">{{ current_month_name }} · Your initiatives</span>
+        <a href="{{ base }}/cop-admin">Manage →</a>
+      </div>
+      {% if cop_initiatives %}
+      <div class="cop-initiative-list">
+        {% for init in cop_initiatives %}
+        <div class="cop-initiative-row">
+          {% if init.topic %}<span class="cop-tag cop-tag-topic">{{ init.topic }}</span>{% endif %}
+          <span>
+            <strong>{{ init.topic_description or init.subtopic or '(no description)' }}</strong>
+            {% if init.subtopic and init.subtopic != init.topic_description %} — {{ init.subtopic }}{% endif %}
+          </span>
+          {% if init.type_of_effort %}<span class="cop-tag cop-tag-type">{{ init.type_of_effort }}</span>{% endif %}
+          {% if init.focus_market %}<span class="cop-tag cop-tag-market">{{ init.focus_market }}</span>{% endif %}
+          {% if init.notes %}<span style="font-size:.78rem;color:#94a3b8;">{{ init.notes[:60] }}{% if init.notes|length > 60 %}…{% endif %}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="cop-empty">No CoP initiatives active for you this month. <a href="{{ base }}/cop-admin" style="color:#4f46e5;">Add some →</a></p>
+      {% endif %}
     </div>
 
     <!-- Today's Must Do -->
