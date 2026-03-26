@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -10,6 +9,12 @@ import {
   DragStartEvent,
   DragOverEvent,
   DragEndEvent,
+  CollisionDetection,
+  closestCenter,
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision,
+  UniqueIdentifier,
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
@@ -30,14 +35,13 @@ import { EditCardSheet } from "./EditCardSheet";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
-const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 3 } };
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 8 } };
 
 export function KanbanBoard() {
   const queryClient = useQueryClient();
   const { data: serverColumns, isLoading: isLoadingColumns } = useGetColumns();
   const { data: serverCards, isLoading: isLoadingCards } = useGetCards();
 
-  // No auto-invalidate on success — we invalidate manually after all mutations fire.
   const { mutate: updateCard } = useUpdateCard();
   const { mutate: updateColumn } = useUpdateColumn();
 
@@ -47,10 +51,9 @@ export function KanbanBoard() {
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
 
-  // Refs give callbacks stable access to the latest state without stale closures
-  // and without adding state to useCallback dependency arrays.
-  const columnsRef = useRef(columns);
-  const cardsRef = useRef(cards);
+  // Refs give callbacks stable access to the latest state without stale closures.
+  const columnsRef = useRef<Column[]>([]);
+  const cardsRef = useRef<Card[]>([]);
 
   useEffect(() => {
     if (serverColumns) {
@@ -75,6 +78,30 @@ export function KanbanBoard() {
     useSensor(KeyboardSensor)
   );
 
+  // Custom collision detection:
+  //  - When dragging a COLUMN → only match against other column droppables (ignore cards).
+  //  - When dragging a CARD  → use pointer-within first (so empty columns are easy to drop into),
+  //    then fall back to closest center.
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    const activeType = args.active.data.current?.type;
+
+    if (activeType === "Column") {
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter(
+          (c) => c.data.current?.type === "Column"
+        ),
+      });
+    }
+
+    // For cards: try pointer-within first so we can enter empty columns easily.
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+      return pointerCollisions;
+    }
+    return rectIntersection(args);
+  }, []);
+
   // ── Drag handlers — all declared before any conditional return ──────────────
 
   const onDragStart = useCallback((event: DragStartEvent) => {
@@ -93,11 +120,11 @@ export function KanbanBoard() {
     const overId = over.id;
     if (activeId === overId) return;
 
-    const isActiveACard = active.data.current?.type === "Card";
+    // Only handle card movements during drag-over; column sorting is done in onDragEnd.
+    if (active.data.current?.type !== "Card") return;
+
     const isOverACard = over.data.current?.type === "Card";
     const isOverAColumn = over.data.current?.type === "Column";
-
-    if (!isActiveACard) return;
 
     if (isOverACard) {
       setCards((prev) => {
@@ -121,6 +148,8 @@ export function KanbanBoard() {
       setCards((prev) => {
         const activeIndex = prev.findIndex((t) => t.id === activeId);
         if (activeIndex === -1) return prev;
+        // Only move if the card isn't already in this column.
+        if (prev[activeIndex].columnId === (overId as number)) return prev;
         const next = prev.map((c, i) =>
           i === activeIndex ? { ...c, columnId: overId as number } : c
         );
@@ -145,19 +174,17 @@ export function KanbanBoard() {
     if (active.data.current?.type === "Column") {
       const prev = columnsRef.current;
       const activeIndex = prev.findIndex((c) => c.id === activeId);
+      // overId must also be a column (our collision detection ensures this).
       const overIndex = prev.findIndex((c) => c.id === overId);
       if (activeIndex === -1 || overIndex === -1) return;
 
-      // Compute new order with fresh positions
       const next: Column[] = arrayMove([...prev], activeIndex, overIndex).map(
         (col, i) => ({ ...col, position: i })
       );
-
       setColumns(next);
       columnsRef.current = next;
 
-      // Find which positions actually changed and persist each one.
-      // Track how many are still pending; invalidate once all are done.
+      // Persist all columns whose index changed.
       const changed = next.filter((col, i) => prev[i]?.id !== col.id);
       if (changed.length === 0) return;
 
@@ -168,7 +195,6 @@ export function KanbanBoard() {
           queryClient.invalidateQueries({ queryKey: getGetColumnsQueryKey() });
         }
       };
-
       changed.forEach((col) => {
         updateColumn(
           { id: col.id, data: { position: col.position } },
@@ -212,7 +238,7 @@ export function KanbanBoard() {
       <div className="flex-1 flex overflow-x-auto overflow-y-hidden p-6 gap-6 items-start h-[calc(100vh-4rem)]">
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetection}
           onDragStart={onDragStart}
           onDragOver={onDragOver}
           onDragEnd={onDragEnd}
