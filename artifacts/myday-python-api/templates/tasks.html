@@ -4,17 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tasks — MyDay</title>
+  <link rel="stylesheet" href="{{ base }}/static/style.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #1a202c; min-height: 100vh; }
 
     /* ── Nav ── */
     nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
     .nav-links { display: flex; gap: 0; }
     .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
-    .nav-links a:hover { color: #1a202c; }
-    .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
+    .nav-links a.nav-focus:hover { color: #64748b; }
 
     main { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
     h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
@@ -26,8 +29,8 @@
     @media(max-width: 480px) { .form-grid { grid-template-columns: 1fr; } }
     .field { display: flex; flex-direction: column; gap: .3rem; }
     label { font-size: .8rem; font-weight: 500; color: #64748b; }
-    input, select { padding: .5rem .75rem; border: 1px solid #cbd5e1; border-radius: .4rem; font-size: .9rem; background: #fff; color: #1a202c; }
-    input:focus, select:focus { outline: 2px solid #4f46e5; border-color: #4f46e5; }
+    input, select { padding: .5rem .75rem; border: 1px solid #cbd5e1; border-radius: .4rem; font-size: .9rem; background: #fff; color: var(--text); }
+    input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
     .btn { padding: .55rem 1.25rem; border-radius: .4rem; font-size: .9rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
     .btn:hover { opacity: .85; }
     .btn-primary { background: #4f46e5; color: #fff; }

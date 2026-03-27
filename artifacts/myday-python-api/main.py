@@ -5,7 +5,8 @@ from datetime import datetime, date, timedelta
 from typing import Optional, List
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import or_, text as sa_text
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -198,6 +199,9 @@ async def lifespan(app):
 
 app = FastAPI(title="MyDay Task Manager", lifespan=lifespan)
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+app.mount(f"{BASE}/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # ─── Health ──────────────────────────────────────────────────────────────────
@@ -839,6 +843,38 @@ def delete_cop_initiative(initiative_id: int, db: Session = Depends(get_db)):
     db.delete(db_item)
     db.commit()
     return {"success": True}
+
+
+# ─── Focus Mode ──────────────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/focus", response_class=HTMLResponse)
+def focus_mode(request: Request, db: Session = Depends(get_db)):
+    now_task = (
+        db.query(models.Task)
+        .filter(models.Task.focus_state == "now", models.Task.status != "done")
+        .first()
+    )
+    return templates.TemplateResponse(
+        request, "focus.html", {"base": BASE, "now_task": now_task}
+    )
+
+
+@app.post(f"{BASE}/focus/complete")
+def focus_complete(
+    task_id: int = Form(...),
+    duration_minutes: int = Form(default=20),
+    db: Session = Depends(get_db),
+):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if task:
+        task.updated_at = datetime.utcnow()
+        mark_today_started(db, date.today())
+        db.commit()
+    return JSONResponse({
+        "status": "ok",
+        "task_id": task_id,
+        "duration": duration_minutes,
+    })
 
 
 if __name__ == "__main__":

@@ -1,0 +1,112 @@
+I want to add a professional, ADHD‑friendly Focus Mode with preset timers, and slightly refine the My Day visuals.
+
+Please:
+
+Color palette refactor
+Create or update a global CSS file (e.g. static/style.css) and define CSS variables for:
+--bg (use #F5F5F7),
+
+--text (use #1E293B),
+
+--accent (use #2563EB or #0F766E),
+
+--success (use #16A34A),
+
+--warning (use #F97316).
+
+
+Apply these variables to the main layout and components so:
+Background is neutral and clean.
+
+Primary buttons and active elements use --accent.
+
+Success/progress states use --success.
+
+Overload/soft warnings (like too many Today tasks) use --warning but with friendly copy.
+
+
+Remove or tone down any overly bright/neon or “AI default” colors.
+
+
+Clarify “Start Today” behavior
+On My Day, adjust the text around the start button:
+Rename the button to something like “Begin Today’s Plan”.
+
+Add helper text under it:
+“This just records that you showed up and starts today’s streak. You can still plan even if you skip it.”
+
+
+Keep the existing logging logic, just make the user experience clearer.
+
+
+Add a Focus Mode screen with preset timers
+Add a route GET /task-manager/focus that:
+Looks up the current now_task (the task with focus_state = "now" and not done).
+
+If there is no now_task, shows a friendly message and a link back to My Day.
+
+If there is a now_task, renders a new template templates/focus.html showing:
+The task title prominently.
+
+Energy tag and time block, if set.
+
+A simple form or buttons to start a timer for 20, 30, or 45 minutes (default 20).
+
+
+
+Implement the timer mainly in the frontend (JavaScript):
+When a time option is selected and “Start Focus” is clicked:
+Hide extra UI and show:
+A countdown (mm:ss).
+
+A horizontal progress bar visual.
+
+Buttons: Done, Pause, Stop.
+
+
+
+Done:
+Sends a POST (e.g. /task-manager/focus/complete) that:
+Marks the now_task as “touched today” (e.g. updates updated_at and calls any existing mark_today_completed() logic, but does not have to fully complete the task unless you think that’s appropriate).
+
+
+Shows a short, gentle success message like:
+“Nice work — you focused for 20 minutes on this.”
+
+Offers buttons: “Back to My Day” and “Choose another Focus block”.
+
+
+Pause / Stop:
+Can remain client‑side only for now (stop the countdown and show a simple “Focus paused/stopped — no worries, we’ll try again later” message).
+
+
+
+
+Wire My Day → Focus
+On the My Day page:
+If there is a now_task, add a visible “Focus 20 min” button that links to /task-manager/focus.
+
+If there is no now_task, show a subtle hint near the Now slot:
+“Pick one task as Now and then start a focus block.”
+
+
+Ensure navigation in the top navbar includes a link to Focus Mode (/task-manager/focus), but treat it as secondary; primary entry should be via My Day.
+
+
+Copy and tone
+Review any new messages and ensure:
+No guilt or harshness for stopping/pausing timers.
+
+Use phrases like “We’ll pick this up later” or “Moved to Later,” not “failed” or “missed.”
+
+
+Keep the overall look more professional and less playful, but still calm, using the new palette and simple typography.
+Finally, summarize:
+
+
+Which templates and routes were added/changed.
+
+How to use Focus Mode from My Day (step by step).
+
+Where in the CSS I can tweak the colors if I want to adjust the palette slightly.
+

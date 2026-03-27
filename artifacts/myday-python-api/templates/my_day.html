@@ -4,19 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Day — MyDay</title>
+  <link rel="stylesheet" href="{{ base }}/static/style.css" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1a202c; min-height: 100vh; }
-
-    /* ── Nav ── */
-    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; position: sticky; top: 0; z-index: 50; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    /* ── Nav (uses global style.css tokens) ── */
+    nav { background: #fff; border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; position: sticky; top: 0; z-index: 50; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
     .nav-links { display: flex; }
-    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
-    .nav-links a:hover { color: #1a202c; }
-    .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
-    .nav-links a.checkin { color: #f59e0b; font-weight: 600; }
-    .nav-links a.checkin:hover { color: #d97706; }
+    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: var(--text-muted); text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .nav-links a.checkin { color: #D97706; font-weight: 600; }
+    .nav-links a.checkin:hover { color: #B45309; }
+    .nav-links a.nav-focus { font-size: .82rem; color: var(--text-faint); }
+    .nav-links a.nav-focus:hover { color: var(--text-muted); }
 
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 4rem; }
 
@@ -40,8 +40,10 @@
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .page-header-left h1 { font-size: 1.55rem; font-weight: 800; }
     .page-header-left .date { color: #64748b; margin-top: .2rem; font-size: .88rem; }
-    .btn-start { background: #4f46e5; color: #fff; border: none; border-radius: .5rem; padding: .55rem 1.2rem; font-size: .88rem; font-weight: 700; cursor: pointer; transition: opacity .15s; white-space: nowrap; text-decoration: none; }
-    .btn-start:hover { opacity: .88; }
+    .btn-start { background: var(--accent); color: #fff; border: none; border-radius: .5rem; padding: .55rem 1.2rem; font-size: .88rem; font-weight: 700; cursor: pointer; transition: opacity .15s; white-space: nowrap; text-decoration: none; }
+    .btn-start:hover { background: var(--accent-hover); opacity: 1; }
+    .btn-start-wrap { text-align: right; }
+    .btn-start-hint { font-size: .72rem; color: var(--text-faint); margin-top: .3rem; max-width: 210px; line-height: 1.4; }
     .started-badge { display: inline-flex; align-items: center; gap: .35rem; background: #d1fae5; color: #065f46; border-radius: .5rem; padding: .45rem .9rem; font-size: .82rem; font-weight: 700; }
 
     /* ── Stats strip ── */
@@ -54,11 +56,11 @@
     .stat.overdue-none .val { color: #16a34a; }
 
     /* ── CoP panel ── */
-    .cop-panel { background: #fff; border: 1px solid #e2e8f0; border-left: 4px solid #4f46e5; border-radius: .6rem; padding: .9rem 1.1rem; margin-bottom: 1.75rem; }
+    .cop-panel { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: .6rem; padding: .9rem 1.1rem; margin-bottom: 1.75rem; }
     .cop-panel-head { display: flex; align-items: center; gap: .55rem; margin-bottom: .6rem; }
     .cop-panel-head h2 { font-size: .88rem; font-weight: 700; }
     .cop-panel-head .cop-month { font-size: .75rem; color: #64748b; }
-    .cop-panel-head a { margin-left: auto; font-size: .73rem; color: #4f46e5; text-decoration: none; font-weight: 600; }
+    .cop-panel-head a { margin-left: auto; font-size: .73rem; color: var(--accent); text-decoration: none; font-weight: 600; }
     .cop-initiative-list { display: flex; flex-direction: column; gap: .25rem; }
     .cop-row { display: flex; align-items: baseline; gap: .4rem; padding: .25rem 0; font-size: .8rem; flex-wrap: wrap; }
     .cop-tag { display: inline-block; padding: .08rem .4rem; border-radius: .25rem; font-size: .68rem; font-weight: 600; white-space: nowrap; }
@@ -109,11 +111,13 @@
       margin-bottom: .55rem;
     }
     .now-meta { display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; margin-bottom: .9rem; }
-    .now-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-    .btn-done-now { background: #4f46e5; color: #fff; border: none; border-radius: .45rem; padding: .45rem 1rem; font-size: .82rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .now-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .btn-focus-now { background: var(--accent); color: #fff; border: none; border-radius: .45rem; padding: .45rem 1rem; font-size: .82rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: background .15s; display: inline-flex; align-items: center; }
+    .btn-focus-now:hover { background: var(--accent-hover); }
+    .btn-done-now { background: var(--success); color: #fff; border: none; border-radius: .45rem; padding: .45rem 1rem; font-size: .82rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
     .btn-done-now:hover { opacity: .88; }
-    .btn-later-now { background: #fff; color: #64748b; border: 1px solid #e2e8f0; border-radius: .45rem; padding: .4rem .85rem; font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; }
-    .btn-later-now:hover { background: #f1f5f9; }
+    .btn-later-now { background: #fff; color: var(--text-muted); border: 1px solid var(--border); border-radius: .45rem; padding: .4rem .85rem; font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-later-now:hover { background: var(--bg); }
 
     .now-empty {
       background: #f8fafc;
@@ -163,7 +167,7 @@
     /* state mini-buttons */
     .btn-state { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: .35rem; padding: .25rem .6rem; font-size: .72rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .1s; }
     .btn-state:hover { background: #e2e8f0; }
-    .btn-state.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+    .btn-state.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
     .btn-state.primary:hover { opacity: .88; }
     .btn-state.warn { background: #fef3c7; color: #92400e; border-color: #fde68a; }
     .btn-state.warn:hover { background: #fde68a; }
@@ -256,6 +260,7 @@
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
     </div>
   </nav>
 
@@ -279,9 +284,12 @@
         <div class="date">{{ today.strftime('%A, %B %-d, %Y') }}</div>
       </div>
       {% if not today_started %}
-      <form method="post" action="{{ base }}/my-day/start-today">
-        <button class="btn-start" type="submit">▶ Start Today</button>
-      </form>
+      <div class="btn-start-wrap">
+        <form method="post" action="{{ base }}/my-day/start-today">
+          <button class="btn-start" type="submit">▶ Begin Today's Plan</button>
+        </form>
+        <div class="btn-start-hint">Just records that you showed up — no pressure. You can still plan without it.</div>
+      </div>
       {% else %}
       <span class="started-badge">✓ Today Started</span>
       {% endif %}
@@ -347,6 +355,7 @@
         <span class="pri-{{ now_task.priority }}">{{ now_task.priority | upper }}</span>
       </div>
       <div class="now-actions">
+        <a href="{{ base }}/focus" class="btn-focus-now">⏱ Focus 20 min</a>
         <form method="post" action="{{ base }}/tasks/{{ now_task.id }}/status" style="display:inline">
           <input type="hidden" name="status" value="done" />
           <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
@@ -354,7 +363,7 @@
         </form>
         <form method="post" action="{{ base }}/tasks/{{ now_task.id }}/focus-state" style="display:inline">
           <input type="hidden" name="focus_state" value="later_today" />
-          <button class="btn-later-now" type="submit">Park for later</button>
+          <button class="btn-later-now" type="submit">Move to Later</button>
         </form>
         <a href="{{ base }}/tasks/{{ now_task.id }}/edit?back={{ base }}/my-day" style="text-decoration:none;">
           <button class="btn-state" type="button">✎ Edit</button>
@@ -364,7 +373,7 @@
     {% else %}
     <div class="now-empty">
       <div class="prompt">No active focus right now</div>
-      <div class="hint">Set a task as "Now" below to lock in your single focus — pick something small to start.</div>
+      <div class="hint">Set a task as "Now" in the plan below to lock in your single focus — then use the <a href="{{ base }}/focus" style="color:var(--accent);font-weight:600;">Focus timer</a> to start a block.</div>
     </div>
     {% endif %}
 

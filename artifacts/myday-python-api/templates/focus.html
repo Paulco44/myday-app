@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focus Mode — MyDay</title>
+  <link rel="stylesheet" href="{{ base }}/static/style.css" />
+  <style>
+    body { display: flex; flex-direction: column; }
+
+    /* ── Minimal nav ── */
+    .focus-nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      height: 3.25rem;
+      flex-shrink: 0;
+    }
+    .focus-nav .logo { font-weight: 800; font-size: 1rem; color: var(--accent); text-decoration: none; }
+    .focus-nav .exit-link { margin-left: auto; font-size: .82rem; color: var(--text-muted); text-decoration: none; font-weight: 500; }
+    .focus-nav .exit-link:hover { color: var(--text); }
+
+    /* ── Page ── */
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.25rem 4rem; }
+
+    .focus-wrap { width: 100%; max-width: 520px; }
+
+    /* ── No task state ── */
+    .no-task-box {
+      text-align: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 2.5rem 2rem;
+    }
+    .no-task-box .icon { font-size: 2.5rem; margin-bottom: .85rem; }
+    .no-task-box h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
+    .no-task-box p { color: var(--text-muted); font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.6; }
+
+    /* ── Task header card ── */
+    .task-card {
+      background: var(--focus-bg);
+      border: 2px solid var(--focus-ring);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem 1.75rem 1.25rem;
+      margin-bottom: 1.75rem;
+      text-align: center;
+    }
+    .task-card .label {
+      font-size: .7rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent-text);
+      margin-bottom: .55rem;
+    }
+    .task-card .task-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      line-height: 1.3;
+      color: var(--focus-now);
+      margin-bottom: .75rem;
+    }
+    .task-card .task-meta {
+      display: flex;
+      gap: .45rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .badge { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 600; }
+
+    /* ── Idle state ── */
+    #idle-panel { }
+    .section-label {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: .65rem;
+      text-align: center;
+    }
+    .preset-row {
+      display: flex;
+      gap: .6rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .preset-btn {
+      flex: 1;
+      max-width: 120px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: .9rem .5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      font-family: inherit;
+    }
+    .preset-btn .minutes { font-size: 1.4rem; font-weight: 800; color: var(--text); display: block; }
+    .preset-btn .preset-label { font-size: .72rem; color: var(--text-muted); display: block; margin-top: .1rem; }
+    .preset-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+    .preset-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .preset-btn.selected .minutes { color: var(--accent); }
+
+    .start-row { text-align: center; }
+    .btn-start-focus {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-lg);
+      padding: .85rem 2.5rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      font-family: inherit;
+    }
+    .btn-start-focus:hover { background: var(--accent-hover); }
+    .btn-start-focus:active { transform: scale(.98); }
+
+    /* ── Timer panel ── */
+    #timer-panel { display: none; text-align: center; }
+
+    .phase-label {
+      font-size: .7rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: .5rem;
+    }
+    .phase-running { color: var(--accent); }
+    .phase-paused  { color: var(--warning); }
+
+    .countdown {
+      font-size: 4rem;
+      font-weight: 800;
+      letter-spacing: -.04em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 1rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Progress bar */
+    .progress-track {
+      width: 100%;
+      height: .5rem;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 1.75rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 999px;
+      transition: width .5s linear;
+      width: 0%;
+    }
+
+    /* Timer action buttons */
+    .timer-actions {
+      display: flex;
+      gap: .65rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-timer {
+      border: none;
+      border-radius: var(--radius);
+      padding: .65rem 1.4rem;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .15s;
+    }
+    .btn-timer:hover { opacity: .88; }
+    .btn-done  { background: var(--success); color: #fff; }
+    .btn-pause { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-stop  { background: var(--surface); color: var(--text-muted); font-size: .82rem; padding: .55rem 1.1rem; border: 1.5px solid var(--border); }
+
+    /* ── Pause state notice ── */
+    #paused-notice {
+      display: none;
+      background: var(--warning-light);
+      border: 1px solid var(--warning-border);
+      border-radius: var(--radius-lg);
+      padding: .9rem 1.1rem;
+      font-size: .86rem;
+      color: var(--warning-text);
+      margin-top: 1rem;
+      text-align: center;
+    }
+    #paused-notice strong { font-weight: 700; }
+
+    /* ── Stopped state ── */
+    #stopped-panel {
+      display: none;
+      text-align: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      margin-top: 1rem;
+    }
+    #stopped-panel .icon { font-size: 2rem; margin-bottom: .5rem; }
+    #stopped-panel h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; }
+    #stopped-panel p { color: var(--text-muted); font-size: .86rem; margin-bottom: 1.25rem; }
+
+    /* ── Done state (after server confirms) ── */
+    #done-panel {
+      display: none;
+      text-align: center;
+      background: var(--success-light);
+      border: 1px solid var(--success-border);
+      border-radius: var(--radius-xl);
+      padding: 2.25rem 2rem;
+    }
+    #done-panel .icon { font-size: 2.5rem; margin-bottom: .65rem; }
+    #done-panel h3 { font-size: 1.15rem; font-weight: 800; color: var(--success); margin-bottom: .4rem; }
+    #done-panel .done-msg { color: #065f46; font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.55; }
+    .done-actions { display: flex; gap: .65rem; justify-content: center; flex-wrap: wrap; }
+
+    /* Error state */
+    #error-notice {
+      display: none;
+      background: var(--danger-light);
+      border: 1px solid var(--danger-border);
+      border-radius: var(--radius);
+      padding: .75rem 1rem;
+      font-size: .84rem;
+      color: var(--danger);
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Minimal nav for focus mode — fewer distractions -->
+  <nav class="focus-nav">
+    <a class="logo" href="{{ base }}/">MyDay</a>
+    <a class="exit-link" href="{{ base }}/my-day">← Exit Focus</a>
+  </nav>
+
+  <main>
+    <div class="focus-wrap">
+
+      {% if not now_task %}
+      <!-- ── No active now task ── -->
+      <div class="no-task-box">
+        <div class="icon">🎯</div>
+        <h2>No active focus task</h2>
+        <p>
+          Set one task as "Now" on your My Day page, then come back here
+          to start a focused block.
+        </p>
+        <a href="{{ base }}/my-day" class="btn btn-primary">← Back to My Day</a>
+      </div>
+
+      {% else %}
+      <!-- ── Active now task: show timer UI ── -->
+
+      <!-- Task header card (always visible) -->
+      <div class="task-card">
+        <div class="label">⚡ Now — Single Focus</div>
+        <div class="task-title">{{ now_task.title }}</div>
+        <div class="task-meta">
+          {% if now_task.energy_tag %}
+          <span class="badge etag-{{ now_task.energy_tag }}">
+            {{ now_task.energy_tag.replace('_', ' ') }}
+          </span>
+          {% endif %}
+          {% if now_task.time_block %}
+          <span class="badge tblock-{{ now_task.time_block }}">
+            {{ now_task.time_block.capitalize() }}
+          </span>
+          {% endif %}
+          {% if now_task.due_date %}
+          <span class="badge" style="background:var(--border);color:var(--text-muted);">
+            Due {{ now_task.due_date.strftime('%b %-d') }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── IDLE PANEL ── -->
+      <div id="idle-panel">
+        <div class="section-label">Choose a focus block length</div>
+        <div class="preset-row">
+          <button class="preset-btn selected" data-minutes="20" onclick="selectPreset(this)">
+            <span class="minutes">20</span>
+            <span class="preset-label">min · Quick</span>
+          </button>
+          <button class="preset-btn" data-minutes="30" onclick="selectPreset(this)">
+            <span class="minutes">30</span>
+            <span class="preset-label">min · Standard</span>
+          </button>
+          <button class="preset-btn" data-minutes="45" onclick="selectPreset(this)">
+            <span class="minutes">45</span>
+            <span class="preset-label">min · Deep</span>
+          </button>
+        </div>
+        <div class="start-row">
+          <button class="btn-start-focus" onclick="startFocus()">▶ Start Focus</button>
+        </div>
+      </div>
+
+      <!-- ── TIMER PANEL ── -->
+      <div id="timer-panel">
+        <div class="phase-label phase-running" id="phase-label">Focusing</div>
+        <div class="countdown" id="countdown">20:00</div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="timer-actions">
+          <button class="btn-timer btn-done"  onclick="doneFocus()">✓ Done</button>
+          <button class="btn-timer btn-pause" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+          <button class="btn-timer btn-stop"  onclick="stopFocus()">⏹ Stop</button>
+        </div>
+        <div id="paused-notice">
+          <strong>Paused.</strong> Take your time — we'll be right here when you're ready.
+        </div>
+      </div>
+
+      <!-- ── STOPPED PANEL ── -->
+      <div id="stopped-panel">
+        <div class="icon">☁️</div>
+        <h3>Focus stopped — no worries</h3>
+        <p>Every bit of time you put in counts. We'll pick this up later when you're ready.</p>
+        <div style="display:flex;gap:.65rem;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="resetToIdle()">Try again</button>
+          <a href="{{ base }}/my-day" class="btn btn-ghost">Back to My Day</a>
+        </div>
+      </div>
+
+      <!-- ── DONE PANEL (shown after server confirms) ── -->
+      <div id="done-panel">
+        <div class="icon">✨</div>
+        <h3 id="done-headline">Nice work — you showed up.</h3>
+        <div class="done-msg" id="done-msg">
+          You focused on this task. That's what matters.
+        </div>
+        <div class="done-actions">
+          <a href="{{ base }}/my-day?from_focus=1" class="btn btn-primary">Back to My Day</a>
+          <a href="{{ base }}/focus" class="btn btn-ghost">Another focus block</a>
+        </div>
+      </div>
+
+      <div id="error-notice"></div>
+
+      <!-- Hidden data for JS -->
+      <input type="hidden" id="task-id" value="{{ now_task.id }}" />
+      {% endif %}
+
+    </div>
+  </main>
+
+  <script>
+    // ── State ───────────────────────────────────────────────────────────────
+    let selectedMinutes = 20;
+    let totalSeconds    = 0;
+    let remainingSeconds = 0;
+    let timerInterval   = null;
+    let isPaused        = false;
+    const BASE          = "{{ base }}";
+
+    // ── Preset selection ─────────────────────────────────────────────────────
+    function selectPreset(btn) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedMinutes = parseInt(btn.dataset.minutes, 10);
+    }
+
+    // ── Start focus ──────────────────────────────────────────────────────────
+    function startFocus() {
+      totalSeconds     = selectedMinutes * 60;
+      remainingSeconds = totalSeconds;
+      isPaused         = false;
+
+      document.getElementById('idle-panel').style.display    = 'none';
+      document.getElementById('stopped-panel').style.display = 'none';
+      document.getElementById('done-panel').style.display    = 'none';
+      document.getElementById('timer-panel').style.display   = 'block';
+      document.getElementById('paused-notice').style.display = 'none';
+      document.getElementById('pause-btn').textContent       = '⏸ Pause';
+      document.getElementById('phase-label').textContent     = 'Focusing';
+      document.getElementById('phase-label').className       = 'phase-label phase-running';
+
+      updateDisplay();
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    // ── Tick ─────────────────────────────────────────────────────────────────
+    function tick() {
+      if (isPaused) return;
+      remainingSeconds--;
+      updateDisplay();
+      if (remainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        doneFocus();
+      }
+    }
+
+    // ── Update countdown & progress bar ──────────────────────────────────────
+    function updateDisplay() {
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      document.getElementById('countdown').textContent =
+        String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      const pct = ((totalSeconds - remainingSeconds) / totalSeconds) * 100;
+      document.getElementById('progress-fill').style.width = pct + '%';
+    }
+
+    // ── Pause / Resume ────────────────────────────────────────────────────────
+    function togglePause() {
+      isPaused = !isPaused;
+      const notice = document.getElementById('paused-notice');
+      const btn    = document.getElementById('pause-btn');
+      const phase  = document.getElementById('phase-label');
+      if (isPaused) {
+        notice.style.display = 'block';
+        btn.textContent      = '▶ Resume';
+        phase.textContent    = 'Paused';
+        phase.className      = 'phase-label phase-paused';
+      } else {
+        notice.style.display = 'none';
+        btn.textContent      = '⏸ Pause';
+        phase.textContent    = 'Focusing';
+        phase.className      = 'phase-label phase-running';
+      }
+    }
+
+    // ── Stop ─────────────────────────────────────────────────────────────────
+    function stopFocus() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      document.getElementById('timer-panel').style.display   = 'none';
+      document.getElementById('stopped-panel').style.display = 'block';
+    }
+
+    // ── Done — POST to server ─────────────────────────────────────────────────
+    function doneFocus() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+      const taskId          = document.getElementById('task-id')?.value;
+      const minutesFocused  = Math.ceil((totalSeconds - remainingSeconds) / 60) || selectedMinutes;
+
+      // Switch UI immediately
+      document.getElementById('timer-panel').style.display = 'none';
+
+      // POST via fetch
+      const body = new URLSearchParams({
+        task_id:          taskId || '',
+        duration_minutes: minutesFocused,
+      });
+
+      fetch(`${BASE}/focus/complete`, { method: 'POST', body })
+        .then(r => r.json())
+        .then(data => {
+          const mins = data.duration || minutesFocused;
+          document.getElementById('done-headline').textContent =
+            `Nice work — ${mins} min focused.`;
+          document.getElementById('done-msg').textContent =
+            "You showed up and put the time in. That's what matters. " +
+            "Head back to My Day when you're ready.";
+          document.getElementById('done-panel').style.display = 'block';
+        })
+        .catch(() => {
+          // Server error — still show the success message (the work happened)
+          document.getElementById('done-headline').textContent =
+            `Focus block complete — ${minutesFocused} min.`;
+          document.getElementById('done-msg').textContent =
+            "We couldn't record this on the server, but your work still counts. " +
+            "Head back to My Day.";
+          document.getElementById('done-panel').style.display = 'block';
+        });
+    }
+
+    // ── Reset to idle ─────────────────────────────────────────────────────────
+    function resetToIdle() {
+      document.getElementById('stopped-panel').style.display = 'none';
+      document.getElementById('idle-panel').style.display    = 'block';
+    }
+  </script>
+</body>
+</html>

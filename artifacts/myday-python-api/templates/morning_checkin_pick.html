@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pick Must-Dos — MyDay</title>
+  <link rel="stylesheet" href="{{ base }}/static/style.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -16,10 +17,10 @@
     }
 
     nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; flex-shrink: 0; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
     .nav-links { display: flex; }
     .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; }
-    .nav-links a:hover { color: #1a202c; }
+    .nav-links a:hover { color: var(--text); }
     .nav-links a.checkin { color: #f59e0b; font-weight: 600; border-bottom-color: #f59e0b; }
 
     main { flex: 1; max-width: 620px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; width: 100%; }
@@ -55,7 +56,7 @@
     }
     .counter-dots { display: flex; gap: .4rem; }
     .dot { width: 1.1rem; height: 1.1rem; border-radius: 50%; border: 2px solid #e2e8f0; }
-    .dot.filled { background: #4f46e5; border-color: #4f46e5; }
+    .dot.filled { background: #4f46e5; border-color: var(--accent); }
     .counter-label { font-size: .84rem; color: #475569; font-weight: 600; }
     .counter-hint { margin-left: auto; font-size: .76rem; color: #94a3b8; font-style: italic; }
 
@@ -73,7 +74,7 @@
       transition: border-color .15s, box-shadow .15s;
     }
     .pick-row.selected {
-      border-color: #4f46e5;
+      border-color: var(--accent);
       background: #f5f3ff;
       box-shadow: 0 0 0 2px rgba(79,70,229,.12);
     }
@@ -94,7 +95,7 @@
     }
     .pick-row.selected .pick-check {
       background: #4f46e5;
-      border-color: #4f46e5;
+      border-color: var(--accent);
       color: #fff;
     }
 

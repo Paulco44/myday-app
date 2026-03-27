@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Morning Check-In — MyDay</title>
+  <link rel="stylesheet" href="{{ base }}/static/style.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -17,11 +18,13 @@
 
     /* ── Nav ── */
     nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; flex-shrink: 0; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: #4f46e5; text-decoration: none; margin-right: 1.5rem; }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
     .nav-links { display: flex; }
     .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
-    .nav-links a:hover { color: #1a202c; }
-    .nav-links a.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
+    .nav-links a.nav-focus:hover { color: #64748b; }
 
     /* ── Page ── */
     main {
@@ -88,7 +91,7 @@
       font-family: inherit;
     }
     textarea:focus {
-      border-color: #4f46e5;
+      border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
     }
     textarea::placeholder { color: #94a3b8; }
