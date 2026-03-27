@@ -4,43 +4,48 @@
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  /* ── Palette ── */
-  --bg:              #F5F5F7;   /* page background         */
-  --surface:         #FFFFFF;   /* cards, panels            */
-  --border:          #E2E8F0;   /* dividers, input borders  */
-  --border-focus:    #2563EB;   /* focused input rings      */
+  /* ── Palette — Indigo & Stone ── */
+  --bg:              #F5F5F4;   /* page background (warm stone) */
+  --surface:         #FFFFFF;   /* cards, panels                */
+  --border:          #E5E7EB;   /* dividers, input borders      */
+  --border-subtle:   #E5E7EB;   /* alias for border             */
+  --border-focus:    #4F46E5;   /* focused input rings          */
 
   /* ── Text ── */
-  --text:            #1E293B;   /* primary body text        */
-  --text-muted:      #64748B;   /* secondary / captions     */
-  --text-faint:      #94A3B8;   /* placeholders, disabled   */
+  --text:            #1C1917;   /* primary body text            */
+  --text-muted:      #6B7280;   /* secondary / captions         */
+  --muted:           #6B7280;   /* alias for text-muted         */
+  --text-faint:      #9CA3AF;   /* placeholders, disabled       */
 
-  /* ── Accent (primary actions, active elements) ── */
-  --accent:          #2563EB;
-  --accent-hover:    #1D4ED8;
-  --accent-light:    #DBEAFE;
-  --accent-text:     #1E40AF;
+  /* ── Accent — Indigo (primary actions, Now, streak) ── */
+  --accent:          #4F46E5;
+  --accent-hover:    #4338CA;
+  --accent-soft:     #E0E7FF;   /* light indigo tint for Now BG */
+  --accent-light:    #E0E7FF;   /* alias                        */
+  --accent-text:     #3730A3;
+  --focus-now:       #3730A3;
 
-  /* ── Success (completed, streak, on-track) ── */
-  --success:         #16A34A;
-  --success-light:   #D1FAE5;
+  /* ── Success (completed, on-track) ── */
+  --success:         #22C55E;
+  --success-soft:    #DCFCE7;   /* light green tint             */
+  --success-light:   #DCFCE7;   /* alias                        */
   --success-border:  #86EFAC;
 
-  /* ── Warning (overload, soft nudges — never guilt) ── */
+  /* ── Warning (overload, soft nudges) ── */
   --warning:         #F97316;
-  --warning-light:   #FFF7ED;
+  --warning-soft:    #FFEDD5;   /* light orange tint            */
+  --warning-light:   #FFEDD5;   /* alias                        */
   --warning-border:  #FDBA74;
   --warning-text:    #9A3412;
 
-  /* ── Danger (overdue, errors) ── */
+  /* ── Danger (errors) ── */
   --danger:          #DC2626;
   --danger-light:    #FEF2F2;
   --danger-border:   #FCA5A5;
 
   /* ── Focus Mode specific ── */
-  --focus-bg:        #F0F4FF;
-  --focus-ring:      #93C5FD;
-  --focus-now:       #1E40AF;
+  --focus-bg:        #EEF2FF;
+  --focus-ring:      #A5B4FC;
 
   /* ── Radius & spacing ── */
   --radius-sm:       .35rem;

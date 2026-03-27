@@ -1,0 +1,167 @@
+I want you to adjust the My Day UI and color system based on this ADHD‑focused design review.
+Please work only within the existing /task-manager FastAPI + Jinja2 app.
+
+1. Make the “Now” task visually dominant
+On the My Day page (templates/my_day.html and its route in main.py):
+
+Now card styling
+For the current Now task card:
+Use a full background tint in a light indigo, not just a left border.
+
+Example: background var(--accent-soft) and a left border 4px solid var(--accent).
+
+Increase the Now task title font size to about 16–18px, bold.
+
+Keep meta (energy tag, time block) small and secondary.
+
+
+
+Add Focus CTA on the Now card
+On the Now card, add a clear button like “Start 20‑min focus”.
+
+This button should link to (or post to) the existing Focus Mode route (e.g. /task-manager/focus):
+If the Focus route already exists, use that.
+
+If not, create a simple Focus route as we discussed earlier that shows the Now task and a 20‑minute timer.
+
+
+
+Typography hierarchy
+Ensure:
+Section headers (e.g. “Now / Next / Later Today”) are slightly larger/bolder than regular task titles.
+
+Now task title is visibly larger than:
+Other task titles,
+
+Meta text,
+
+Section labels.
+2. Improve stats bar: reward vs warning
+
+On the My Day stats area (where streak, completed today, overdue are shown):
+
+
+
+
+Streak pill
+Make streak the most visually salient stat:
+Use var(--accent) as background and white text.
+
+Example: background: var(--accent); color: #FFFFFF;
+
+Keep the 🔥 icon and text like “4‑day streak”.
+
+
+
+Completed today
+Use var(--success) more clearly:
+Add a checkmark icon (✓ or similar) before the text.
+
+Slightly increase the font size relative to other stats.
+
+Optionally use a soft success background: background: var(--success-soft); color: var(--success);
+
+
+
+Overdue
+Make warnings clear but not shaming:
+Use var(--warning) for the text and var(--warning-soft) as the background tint for the overdue stat pill.
+
+Example: background: var(--warning-soft); color: var(--warning);
+3. Reduce cognitive load: collapse Suggestions + CoP
+
+
+
+Suggestions panel
+On My Day, do not show all suggestion cards by default.
+
+Instead:
+Show a small chip or bar like:
+“2 suggestions waiting” (use the real count).
+
+When the user clicks this chip, expand to show the existing suggestion task cards.
+
+On page load, the Suggestions area should be collapsed so the main visible decision surface is only:
+Now / Next / Later Today,
+
+Time blocks.
+
+
+
+
+CoP Org Plan
+Remove the CoP Org Plan list from the main execution area of My Day.
+
+Either:
+Move it into a collapsed accordion at the bottom of My Day:
+Title: “CoP Org Plan – This Month (tap to view)”.
+
+Default state: collapsed.
+
+
+Or move it to a separate page/tab, e.g. /task-manager/cop-dashboard, and link to it from the navbar.
+
+
+The main My Day content above the fold should focus on execution only (Now/Next/Later, time blocks, stats), not long‑horizon strategy.
+4. Lock in the Indigo & Stone palette using CSS variables
+
+Please centralize colors in static/style.css (or the main CSS file) using CSS custom properties, then apply them across cards, buttons, and backgrounds:
+css
+:root {
+  --bg: #F5F5F4;          /* page background */
+  --surface: #FFFFFF;     /* cards / panels */
+  --text: #1C1917;        /* main text */
+  --muted: #6B7280;       /* secondary text */
+
+  --accent: #4F46E5;      /* primary action / Now / streak */
+  --accent-soft: #E0E7FF; /* light indigo tint for Now backgrounds */
+
+  --success: #22C55E;      /* completion */
+  --success-soft: #DCFCE7;
+
+  --warning: #F97316;      /* overdue / overload */
+  --warning-soft: #FFEDD5;
+
+  --border-subtle: #E5E7EB;
+}
+
+Then:
+
+
+Set body background to var(--bg) and card panels to var(--surface) with a subtle shadow or border var(--border-subtle).
+
+Use var(--accent) for:
+Primary buttons,
+
+Now card border,
+
+Streak pill background.
+
+
+Use var(--success) / var(--success-soft) and var(--warning) / var(--warning-soft) as described above.
+
+Remove or override any previous hard‑coded bright or “AI default” colors so the app consistently uses this palette.
+5. Keep copy ADHD‑friendly
+
+When you touch any labels or messages related to:
+Overdue tasks,
+
+Suggestions,
+
+Paused/Stopped focus:
+
+
+Please ensure wording is non‑judgmental, e.g.:
+“We’ll pick this up later”
+
+“Moved to Later”
+
+“Suggestions are waiting when you’re ready”
+rather than anything that sounds like failure.
+Finally, summarize:
+
+
+Which templates (especially my_day.html) and CSS were updated.
+
+How the Now card, stats bar, Suggestions, and CoP sections now behave visually, so I can verify them.
+

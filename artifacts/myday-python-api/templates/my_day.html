@@ -47,13 +47,20 @@
     .started-badge { display: inline-flex; align-items: center; gap: .35rem; background: #d1fae5; color: #065f46; border-radius: .5rem; padding: .45rem .9rem; font-size: .82rem; font-weight: 700; }
 
     /* ── Stats strip ── */
-    .stats-strip { display: flex; gap: .6rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .stat { display: flex; align-items: center; gap: .4rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; padding: .38rem .8rem; font-size: .8rem; font-weight: 600; color: #475569; }
-    .stat .val { font-size: 1rem; font-weight: 700; }
-    .stat.streak .val { color: #d97706; }
-    .stat.done .val { color: #16a34a; }
-    .stat.overdue .val { color: #dc2626; }
-    .stat.overdue-none .val { color: #16a34a; }
+    .stats-strip { display: flex; gap: .6rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .stat { display: flex; align-items: center; gap: .4rem; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: .55rem; padding: .4rem .9rem; font-size: .82rem; font-weight: 600; color: var(--text-muted); }
+    .stat .val { font-size: 1rem; font-weight: 800; }
+    /* Streak: accent pill (most salient) */
+    .stat.streak { background: var(--accent); color: #fff; border-color: var(--accent); padding: .45rem 1rem; }
+    .stat.streak .val { color: #fff; font-size: 1.05rem; }
+    /* Done today: success tint */
+    .stat.done { background: var(--success-soft); color: var(--success); border-color: var(--success-border); }
+    .stat.done .val { color: var(--success); font-size: 1.05rem; }
+    /* Overdue: warm warning tint — information, not shame */
+    .stat.overdue { background: var(--warning-soft); color: var(--warning); border-color: var(--warning-border); }
+    .stat.overdue .val { color: var(--warning); }
+    .stat.overdue-none { background: var(--success-soft); color: var(--success); border-color: var(--success-border); }
+    .stat.overdue-none .val { color: var(--success); }
 
     /* ── CoP panel ── */
     .cop-panel { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: .6rem; padding: .9rem 1.1rem; margin-bottom: 1.75rem; }
@@ -72,9 +79,28 @@
     /* ── Section headers ── */
     .section { margin-bottom: 1.75rem; }
     .section-head { display: flex; align-items: center; gap: .55rem; margin-bottom: .85rem; }
-    .section-head h2 { font-size: .95rem; font-weight: 700; color: #1a202c; }
-    .section-head .count { background: #e0e7ff; color: #3730a3; font-size: .72rem; font-weight: 700; padding: .1rem .45rem; border-radius: 999px; }
-    .section-head .section-link { margin-left: auto; font-size: .75rem; color: #4f46e5; text-decoration: none; font-weight: 600; }
+    .section-head h2 { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+    .section-head .count { background: var(--accent-soft); color: var(--accent-text); font-size: .72rem; font-weight: 700; padding: .1rem .45rem; border-radius: 999px; }
+    .section-head .section-link { margin-left: auto; font-size: .75rem; color: var(--accent); text-decoration: none; font-weight: 600; }
+
+    /* ── CoP accordion ── */
+    .cop-accordion { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: .7rem; margin-bottom: 1.75rem; overflow: hidden; }
+    .cop-accordion summary { display: flex; align-items: center; gap: .55rem; padding: .8rem 1.1rem; cursor: pointer; font-size: .88rem; font-weight: 700; color: var(--text); list-style: none; user-select: none; }
+    .cop-accordion summary::-webkit-details-marker { display: none; }
+    .cop-accordion summary::after { content: '›'; margin-left: auto; font-size: 1.1rem; color: var(--text-muted); transition: transform .2s; }
+    .cop-accordion[open] summary::after { transform: rotate(90deg); }
+    .cop-accordion summary:hover { background: var(--bg); }
+    .cop-accordion .cop-body { padding: 0 1.1rem 1rem; border-top: 1px solid var(--border-subtle); }
+
+    /* ── Suggestions accordion ── */
+    .suggest-accordion { margin-bottom: 1.75rem; }
+    .suggest-toggle { display: flex; align-items: center; gap: .6rem; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: .6rem; padding: .65rem 1rem; cursor: pointer; width: 100%; font-family: inherit; text-align: left; font-size: .85rem; font-weight: 600; color: var(--text-muted); transition: background .15s; }
+    .suggest-toggle:hover { background: var(--bg); }
+    .suggest-toggle .suggest-badge { background: var(--accent-soft); color: var(--accent-text); font-size: .72rem; font-weight: 800; padding: .1rem .45rem; border-radius: 999px; }
+    .suggest-toggle .suggest-arrow { margin-left: auto; transition: transform .2s; }
+    .suggest-toggle.open .suggest-arrow { transform: rotate(180deg); }
+    .suggest-body { display: none; margin-top: .5rem; }
+    .suggest-body.open { display: block; }
 
     /* ── Energy tag badges ── */
     .etag { display: inline-block; padding: .1rem .42rem; border-radius: .25rem; font-size: .68rem; font-weight: 600; white-space: nowrap; }
@@ -94,41 +120,45 @@
     .pri-medium { color: #d97706; font-size: .72rem; }
     .pri-low { color: #94a3b8; font-size: .72rem; }
 
-    /* ── NOW focus strip ── */
+    /* ── NOW focus strip — visually dominant ── */
     .now-strip {
-      background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-      border: 2px solid #818cf8;
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      border-top: 1px solid var(--accent-light);
+      border-right: 1px solid var(--accent-light);
+      border-bottom: 1px solid var(--accent-light);
       border-radius: .85rem;
-      padding: 1.25rem 1.4rem;
+      padding: 1.35rem 1.5rem;
       margin-bottom: 1.75rem;
+      box-shadow: 0 1px 6px rgba(79,70,229,.08);
     }
-    .now-label { font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #4f46e5; margin-bottom: .45rem; }
+    .now-label { font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: .5rem; }
     .now-title {
-      font-size: 1.35rem;
+      font-size: 1.15rem;      /* ~18px — dominant over all other task text */
       font-weight: 800;
-      color: #1e1b4b;
+      color: var(--accent-text);
       line-height: 1.3;
-      margin-bottom: .55rem;
+      margin-bottom: .6rem;
     }
     .now-meta { display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; margin-bottom: .9rem; }
     .now-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-    .btn-focus-now { background: var(--accent); color: #fff; border: none; border-radius: .45rem; padding: .45rem 1rem; font-size: .82rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: background .15s; display: inline-flex; align-items: center; }
+    .btn-focus-now { background: var(--accent); color: #fff; border: none; border-radius: .45rem; padding: .5rem 1.1rem; font-size: .85rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: background .15s; display: inline-flex; align-items: center; gap: .3rem; }
     .btn-focus-now:hover { background: var(--accent-hover); }
-    .btn-done-now { background: var(--success); color: #fff; border: none; border-radius: .45rem; padding: .45rem 1rem; font-size: .82rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn-done-now { background: var(--success); color: #fff; border: none; border-radius: .45rem; padding: .5rem 1rem; font-size: .82rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
     .btn-done-now:hover { opacity: .88; }
-    .btn-later-now { background: #fff; color: var(--text-muted); border: 1px solid var(--border); border-radius: .45rem; padding: .4rem .85rem; font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-later-now { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: .45rem; padding: .45rem .85rem; font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; }
     .btn-later-now:hover { background: var(--bg); }
 
     .now-empty {
-      background: #f8fafc;
-      border: 2px dashed #c7d2fe;
+      background: var(--surface);
+      border: 2px dashed var(--accent-soft);
       border-radius: .85rem;
-      padding: 1.5rem 1.4rem;
+      padding: 1.4rem 1.4rem;
       text-align: center;
       margin-bottom: 1.75rem;
     }
-    .now-empty .prompt { font-size: 1rem; font-weight: 700; color: #4338ca; margin-bottom: .3rem; }
-    .now-empty .hint { font-size: .83rem; color: #64748b; }
+    .now-empty .prompt { font-size: .95rem; font-weight: 700; color: var(--accent-text); margin-bottom: .3rem; }
+    .now-empty .hint { font-size: .82rem; color: var(--text-muted); line-height: 1.5; }
 
     /* ── Overflow warning ── */
     .overflow-warn {
@@ -177,7 +207,7 @@
     .btn-park { color: #94a3b8; background: none; border: none; font-size: .72rem; font-weight: 500; cursor: pointer; padding: .1rem 0; }
     .btn-park:hover { color: #64748b; }
     .btn-edit-task { color: #94a3b8; background: none; border: none; font-size: .72rem; font-weight: 500; cursor: pointer; padding: .1rem 0; text-decoration: none; }
-    .btn-edit-task:hover { color: #4f46e5; }
+    .btn-edit-task:hover { color: var(--accent); }
 
     /* ── Time block columns ── */
     .time-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .85rem; }
@@ -193,7 +223,7 @@
     .time-col-body.afternoon { border-color: #bfdbfe; }
     .time-col-body.evening { border-color: #ddd6fe; }
 
-    .time-task { padding: .4rem .5rem; border-radius: .4rem; font-size: .8rem; font-weight: 500; background: #f8fafc; display: flex; justify-content: space-between; align-items: flex-start; gap: .3rem; }
+    .time-task { padding: .4rem .5rem; border-radius: .4rem; font-size: .8rem; font-weight: 500; background: var(--bg); display: flex; justify-content: space-between; align-items: flex-start; gap: .3rem; }
     .time-task-title { flex: 1; line-height: 1.3; }
     .time-empty { font-size: .75rem; color: #cbd5e1; text-align: center; padding: .75rem .5rem; font-style: italic; }
 
@@ -220,7 +250,7 @@
 
     .btn-add-today { background: #e0e7ff; color: #3730a3; border: none; border-radius: .4rem; padding: .3rem .75rem; font-size: .78rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .1s; }
     .btn-add-today:hover { background: #c7d2fe; }
-    .btn-set-now { background: #4f46e5; color: #fff; border: none; border-radius: .4rem; padding: .3rem .75rem; font-size: .78rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity .1s; }
+    .btn-set-now { background: var(--accent); color: #fff; border: none; border-radius: .4rem; padding: .3rem .75rem; font-size: .78rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity .1s; }
     .btn-set-now:hover { opacity: .88; }
 
     .empty-box { text-align: center; padding: 2rem 1.5rem; color: #94a3b8; background: #fff; border: 1px dashed #e2e8f0; border-radius: .75rem; font-size: .85rem; }
@@ -298,14 +328,20 @@
     <!-- ── Stats strip ── -->
     <div class="stats-strip">
       <div class="stat streak">
-        <span>🔥</span> <span class="val">{{ streak }}</span> day streak
+        🔥 <span class="val">{{ streak }}</span> day streak
       </div>
       <div class="stat done">
-        <span class="val">{{ completed_today }}</span> done today
+        ✓ <span class="val">{{ completed_today }}</span> done today
       </div>
-      <div class="stat {% if overdue_count > 0 %}overdue{% else %}overdue-none{% endif %}">
-        <span class="val">{{ overdue_count }}</span> overdue
+      {% if overdue_count > 0 %}
+      <div class="stat overdue">
+        <span class="val">{{ overdue_count }}</span> waiting for you
       </div>
+      {% else %}
+      <div class="stat overdue-none">
+        ✓ all clear
+      </div>
+      {% endif %}
     </div>
 
     <!-- ── Morning Check-In CTA (only if not done yet) ── -->
@@ -320,29 +356,35 @@
     </div>
     {% endif %}
 
-    <!-- ── CoP panel ── -->
-    <div class="cop-panel">
-      <div class="cop-panel-head">
+    <!-- ── CoP panel — collapsed accordion ── -->
+    <details class="cop-accordion">
+      <summary>
         <span>🤝</span>
-        <h2>CoP Org Plan — {{ current_month_name }}</h2>
-        <span class="cop-month">Your active initiatives</span>
-        <a href="{{ base }}/cop-admin">Manage →</a>
-      </div>
-      {% if cop_initiatives %}
-      <div class="cop-initiative-list">
-        {% for init in cop_initiatives %}
-        <div class="cop-row">
-          {% if init.topic %}<span class="cop-tag cop-tag-topic">{{ init.topic }}</span>{% endif %}
-          <span><strong>{{ init.topic_description or init.subtopic or '—' }}</strong></span>
-          {% if init.type_of_effort %}<span class="cop-tag cop-tag-type">{{ init.type_of_effort }}</span>{% endif %}
-          {% if init.focus_market %}<span class="cop-tag cop-tag-market">{{ init.focus_market }}</span>{% endif %}
+        CoP Org Plan — {{ current_month_name }}
+        {% if cop_initiatives %}
+        <span style="font-size:.72rem;font-weight:700;background:var(--accent-soft);color:var(--accent-text);padding:.1rem .45rem;border-radius:999px;margin-left:.35rem;">{{ cop_initiatives | length }}</span>
+        {% endif %}
+      </summary>
+      <div class="cop-body">
+        {% if cop_initiatives %}
+        <div class="cop-initiative-list" style="padding-top:.7rem;">
+          {% for init in cop_initiatives %}
+          <div class="cop-row">
+            {% if init.topic %}<span class="cop-tag cop-tag-topic">{{ init.topic }}</span>{% endif %}
+            <span><strong>{{ init.topic_description or init.subtopic or '—' }}</strong></span>
+            {% if init.type_of_effort %}<span class="cop-tag cop-tag-type">{{ init.type_of_effort }}</span>{% endif %}
+            {% if init.focus_market %}<span class="cop-tag cop-tag-market">{{ init.focus_market }}</span>{% endif %}
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
+        {% else %}
+        <p class="cop-empty" style="padding-top:.7rem;">No initiatives active for you this month. <a href="{{ base }}/cop-admin" style="color:var(--accent);">Add some →</a></p>
+        {% endif %}
+        <div style="margin-top:.65rem;font-size:.75rem;">
+          <a href="{{ base }}/cop-admin" style="color:var(--accent);font-weight:600;">Manage CoP initiatives →</a>
+        </div>
       </div>
-      {% else %}
-      <p class="cop-empty">No initiatives active for you this month. <a href="{{ base }}/cop-admin" style="color:#4f46e5;">Add some →</a></p>
-      {% endif %}
-    </div>
+    </details>
 
     <!-- ── NOW Focus Strip ── -->
     {% if now_task %}
@@ -455,7 +497,7 @@
         {% if later_today_overflow > 0 %}
         <div style="text-align:center;padding:.4rem;font-size:.78rem;color:#94a3b8;">
           + {{ later_today_overflow }} more parked for today —
-          <span style="color:#4f46e5;cursor:default;">they're safe, just focus on the ones above.</span>
+          <span style="color:var(--accent);cursor:default;">they're safe, just focus on the ones above.</span>
         </div>
         {% endif %}
 
@@ -464,7 +506,7 @@
       <div class="empty-box">
         <div class="icon">🎯</div>
         <div>Nothing planned yet for today.</div>
-        <div style="margin-top:.3rem;font-size:.78rem;">Add tasks from the Suggestions below, or do a <a href="{{ base }}/morning-checkin" style="color:#4f46e5;">brain dump</a> to capture everything first.</div>
+        <div style="margin-top:.3rem;font-size:.78rem;">Add tasks from the Suggestions below, or do a <a href="{{ base }}/morning-checkin" style="color:var(--accent);">brain dump</a> to capture everything first.</div>
       </div>
       {% endif %}
     </div>
@@ -484,7 +526,7 @@
               {% for t in morning_tasks %}
               <div class="time-task">
                 <span class="time-task-title">{{ t.title }}</span>
-                {% if t.focus_state == 'now' %}<span style="font-size:.65rem;color:#4f46e5;font-weight:700;">NOW</span>{% endif %}
+                {% if t.focus_state == 'now' %}<span style="font-size:.65rem;color:var(--accent);font-weight:700;">NOW</span>{% endif %}
               </div>
               {% endfor %}
             {% else %}
@@ -500,7 +542,7 @@
               {% for t in afternoon_tasks %}
               <div class="time-task">
                 <span class="time-task-title">{{ t.title }}</span>
-                {% if t.focus_state == 'now' %}<span style="font-size:.65rem;color:#4f46e5;font-weight:700;">NOW</span>{% endif %}
+                {% if t.focus_state == 'now' %}<span style="font-size:.65rem;color:var(--accent);font-weight:700;">NOW</span>{% endif %}
               </div>
               {% endfor %}
             {% else %}
@@ -516,7 +558,7 @@
               {% for t in evening_tasks %}
               <div class="time-task">
                 <span class="time-task-title">{{ t.title }}</span>
-                {% if t.focus_state == 'now' %}<span style="font-size:.65rem;color:#4f46e5;font-weight:700;">NOW</span>{% endif %}
+                {% if t.focus_state == 'now' %}<span style="font-size:.65rem;color:var(--accent);font-weight:700;">NOW</span>{% endif %}
               </div>
               {% endfor %}
             {% else %}
@@ -546,55 +588,61 @@
     </div>
     {% endif %}
 
-    <!-- ── Suggestions ── -->
-    <div class="section">
-      <div class="section-head">
-        <h2>Suggestions</h2>
-        <span class="count">{{ suggestions | length }}</span>
-        <a class="section-link" href="{{ base }}/tasks-page">All tasks →</a>
-      </div>
-      <p style="font-size:.8rem;color:#64748b;margin-bottom:.85rem;">
-        Let's pick just a few things to care about today — the rest stays safely parked.
-      </p>
-
-      {% if suggestions %}
-      <div class="suggestion-list">
-        {% for task in suggestions %}
-        {% set is_overdue = task.due_date and task.due_date < today %}
-        {% set is_due_today = task.due_date and task.due_date == today %}
-        <div class="suggestion-row {% if is_overdue %}overdue{% elif is_due_today %}due-today{% endif %}">
-          <div class="suggestion-body">
-            <div class="suggestion-title">{{ task.title }}</div>
-            <div class="suggestion-meta">
-              {% if is_overdue %}<span class="tag-overdue">Overdue {{ task.due_date.strftime('%b %-d') }}</span>
-              {% elif is_due_today %}<span class="tag-today">Due today</span>
-              {% elif task.priority == 'high' %}<span class="tag-high">High priority</span>{% endif %}
-              {% if task.energy_tag %}<span class="etag etag-{{ task.energy_tag }}">{{ task.energy_tag.replace('_',' ') }}</span>{% endif %}
-              <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
+    <!-- ── Suggestions — collapsed by default ── -->
+    {% if suggestions %}
+    <div class="suggest-accordion">
+      <button class="suggest-toggle" onclick="toggleSuggestions(this)" type="button">
+        <span>💡</span>
+        <span>{{ suggestions | length }} suggestion{% if suggestions | length != 1 %}s{% endif %} waiting — ready when you are</span>
+        <span class="suggest-badge">{{ suggestions | length }}</span>
+        <span class="suggest-arrow">▾</span>
+      </button>
+      <div class="suggest-body" id="suggest-body">
+        <div style="font-size:.78rem;color:var(--text-muted);padding:.55rem .25rem .3rem;"> 
+          Pick just a few to add to today — the rest stays safely parked.
+          <a href="{{ base }}/tasks-page" style="color:var(--accent);font-weight:600;margin-left:.5rem;">All tasks →</a>
+        </div>
+        <div class="suggestion-list">
+          {% for task in suggestions %}
+          {% set is_overdue = task.due_date and task.due_date < today %}
+          {% set is_due_today = task.due_date and task.due_date == today %}
+          <div class="suggestion-row {% if is_overdue %}overdue{% elif is_due_today %}due-today{% endif %}">
+            <div class="suggestion-body">
+              <div class="suggestion-title">{{ task.title }}</div>
+              <div class="suggestion-meta">
+                {% if is_overdue %}<span class="tag-overdue">Waiting since {{ task.due_date.strftime('%b %-d') }}</span>
+                {% elif is_due_today %}<span class="tag-today">Due today</span>
+                {% elif task.priority == 'high' %}<span class="tag-high">High priority</span>{% endif %}
+                {% if task.energy_tag %}<span class="etag etag-{{ task.energy_tag }}">{{ task.energy_tag.replace('_',' ') }}</span>{% endif %}
+                <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
+              </div>
+            </div>
+            <div class="suggestion-actions">
+              <form method="post" action="{{ base }}/tasks/{{ task.id }}/set-today">
+                <input type="hidden" name="focus_state" value="later_today" />
+                <button class="btn-add-today" type="submit">+ Today</button>
+              </form>
+              {% if not now_task %}
+              <form method="post" action="{{ base }}/tasks/{{ task.id }}/focus-state">
+                <input type="hidden" name="focus_state" value="now" />
+                <button class="btn-set-now" type="submit">Set as Now</button>
+              </form>
+              {% endif %}
             </div>
           </div>
-          <div class="suggestion-actions">
-            <form method="post" action="{{ base }}/tasks/{{ task.id }}/set-today">
-              <input type="hidden" name="focus_state" value="later_today" />
-              <button class="btn-add-today" type="submit">+ Today</button>
-            </form>
-            {% if not now_task %}
-            <form method="post" action="{{ base }}/tasks/{{ task.id }}/focus-state">
-              <input type="hidden" name="focus_state" value="now" />
-              <button class="btn-set-now" type="submit">Set as Now</button>
-            </form>
-            {% endif %}
-          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
-      {% else %}
-      <div class="empty-box">
-        <div class="icon">✨</div>
-        <div>Nothing pressing — you're on top of it.</div>
-      </div>
-      {% endif %}
     </div>
+    {% endif %}
+
+    <script>
+      function toggleSuggestions(btn) {
+        const body = document.getElementById('suggest-body');
+        const isOpen = body.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+      }
+    </script>
 
   </main>
 </body>
