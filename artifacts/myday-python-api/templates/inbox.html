@@ -154,6 +154,10 @@
         <a href="{{ base }}/inbox/archived">View {{ archived_count }} archived note{{ 's' if archived_count != 1 }}</a>
       </div>
     {% endif %}
+
+    <div class="archived-link" style="margin-top:1.5rem;">
+      <a href="{{ base }}/integrations/notion">⚙ Configure Notion import</a>
+    </div>
   </main>
 
   <script src="{{ base }}/static/app.js?v=4"></script>

@@ -79,6 +79,30 @@ class TaskRead(BaseModel):
         from_attributes = True
 
 
+# ─── Notion Integration ──────────────────────────────────────────────────────
+
+class NotionSourceCreate(BaseModel):
+    name: str
+    source_type: str = "page"   # page | database
+    notion_id: str
+    import_mode: str = "inbox"  # inbox | linked_note
+    is_active: bool = True
+
+
+class NotionSourceRead(BaseModel):
+    id: int
+    name: str
+    source_type: str
+    notion_id: str
+    import_mode: str
+    is_active: bool
+    last_imported_at: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ─── Inbox ───────────────────────────────────────────────────────────────────
 
 class WhisperIngest(BaseModel):

@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 from typing import Optional, List
 
+import notion_client as notion
+
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -1021,6 +1023,146 @@ def inbox_archive(item_id: int, db: Session = Depends(get_db)):
     item.reviewed_at = item.reviewed_at or datetime.utcnow()
     db.commit()
     return RedirectResponse(url=f"{BASE}/inbox", status_code=303)
+
+
+# ─── Notion Integration ──────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/integrations/notion", response_class=HTMLResponse)
+def notion_settings(
+    request: Request,
+    imported: Optional[int] = Query(default=None),
+    skipped: Optional[int] = Query(default=None),
+    errors: Optional[int] = Query(default=None),
+    error_msg: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    sources = (
+        db.query(models.NotionSource)
+        .order_by(models.NotionSource.created_at.asc())
+        .all()
+    )
+    inbox_count = db.query(models.InboxItem).filter(models.InboxItem.source == "notion").count()
+    last_result = None
+    if imported is not None or skipped is not None or errors is not None:
+        last_result = {
+            "imported": imported or 0,
+            "skipped": skipped or 0,
+            "errors": errors or 0,
+            "error_msg": error_msg,
+        }
+    return templates.TemplateResponse(
+        request, "integrations_notion.html",
+        {
+            "base": BASE,
+            "sources": sources,
+            "is_configured": notion.is_configured(),
+            "inbox_count": inbox_count,
+            "last_result": last_result,
+        },
+    )
+
+
+@app.post(f"{BASE}/integrations/notion/sources")
+def notion_add_source(
+    name: str = Form(...),
+    source_type: str = Form(default="page"),
+    notion_id: str = Form(...),
+    import_mode: str = Form(default="inbox"),
+    db: Session = Depends(get_db),
+):
+    clean_id = notion_id.strip().replace("-", "")
+    if not clean_id:
+        raise HTTPException(status_code=422, detail="Notion ID is required")
+    existing = db.query(models.NotionSource).filter(
+        models.NotionSource.notion_id == clean_id
+    ).first()
+    if not existing:
+        source = models.NotionSource(
+            name=name.strip(),
+            source_type=source_type,
+            notion_id=clean_id,
+            import_mode=import_mode,
+            is_active=True,
+        )
+        db.add(source)
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/integrations/notion", status_code=303)
+
+
+@app.post(f"{BASE}/integrations/notion/sources/{{source_id}}/delete")
+def notion_delete_source(source_id: int, db: Session = Depends(get_db)):
+    src = db.query(models.NotionSource).filter(models.NotionSource.id == source_id).first()
+    if src:
+        db.delete(src)
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/integrations/notion", status_code=303)
+
+
+@app.post(f"{BASE}/integrations/notion/import")
+def notion_import(
+    source_id: Optional[int] = Form(default=None),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch Notion content and create InboxItems for each new record.
+    Deduplicates by (source='notion', external_id).
+    Can import a single source or all active sources.
+    """
+    if not notion.is_configured():
+        return RedirectResponse(
+            url=f"{BASE}/integrations/notion?error_msg=NOTION_API_TOKEN+not+configured",
+            status_code=303,
+        )
+
+    if source_id:
+        sources = db.query(models.NotionSource).filter(
+            models.NotionSource.id == source_id,
+            models.NotionSource.is_active == True,
+        ).all()
+    else:
+        sources = db.query(models.NotionSource).filter(
+            models.NotionSource.is_active == True
+        ).all()
+
+    total_imported = 0
+    total_skipped = 0
+    total_errors = 0
+    first_error = None
+
+    for src in sources:
+        try:
+            if src.source_type == "database":
+                normalized_items = notion.import_database_entries(src.notion_id)
+            else:
+                normalized_items = [notion.import_page(src.notion_id)]
+        except Exception as exc:
+            total_errors += 1
+            if not first_error:
+                first_error = str(exc)[:200]
+            continue
+
+        for item_data in normalized_items:
+            ext_id = item_data.get("external_id", "")
+            duplicate = db.query(models.InboxItem).filter(
+                models.InboxItem.source == "notion",
+                models.InboxItem.external_id == ext_id,
+            ).first()
+            if duplicate:
+                total_skipped += 1
+                continue
+            inbox_item = models.InboxItem(**item_data)
+            db.add(inbox_item)
+            total_imported += 1
+
+        src.last_imported_at = datetime.utcnow()
+
+    db.commit()
+
+    params = f"imported={total_imported}&skipped={total_skipped}&errors={total_errors}"
+    if first_error:
+        import urllib.parse
+        params += f"&error_msg={urllib.parse.quote(first_error)}"
+    return RedirectResponse(url=f"{BASE}/integrations/notion?{params}", status_code=303)
 
 
 if __name__ == "__main__":

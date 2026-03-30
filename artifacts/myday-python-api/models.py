@@ -116,6 +116,20 @@ class DailyLog(Base):
     has_morning_checkin = Column(Boolean, default=False)  # did the brain-dump check-in today
 
 
+class NotionSource(Base):
+    """Notion page or database configured as an import source."""
+    __tablename__ = "notion_sources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    source_type = Column(String, nullable=False, default="page")  # page | database
+    notion_id = Column(String, nullable=False)                    # Notion page/database UUID
+    import_mode = Column(String, nullable=False, default="inbox") # inbox | linked_note
+    is_active = Column(Boolean, default=True)
+    last_imported_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class InboxItem(Base):
     """Meeting notes / Whisper-derived content waiting for triage."""
     __tablename__ = "inbox_items"
