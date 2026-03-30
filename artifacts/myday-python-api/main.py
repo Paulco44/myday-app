@@ -64,32 +64,32 @@ def run_migrations():
     project_cols = [
         ("source_ref", "TEXT"),
         ("imported_at", "TEXT"),
+        ("notion_page_id", "TEXT"),
+        ("notion_url", "TEXT"),
+        ("exported_at", "DATETIME"),
+        ("last_synced_at", "DATETIME"),
+    ]
+    note_cols = [
+        ("notion_page_id", "TEXT"),
+        ("notion_url", "TEXT"),
+        ("exported_at", "DATETIME"),
+        ("last_synced_at", "DATETIME"),
+    ]
+    table_migrations = [
+        ("tasks", task_cols),
+        ("daily_logs", log_cols),
+        ("inbox_items", inbox_cols),
+        ("projects", project_cols),
+        ("note_items", note_cols),
     ]
     with engine.connect() as conn:
-        for col, col_type in task_cols:
-            try:
-                conn.execute(sa_text(f"ALTER TABLE tasks ADD COLUMN {col} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
-        for col, col_type in log_cols:
-            try:
-                conn.execute(sa_text(f"ALTER TABLE daily_logs ADD COLUMN {col} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
-        for col, col_type in inbox_cols:
-            try:
-                conn.execute(sa_text(f"ALTER TABLE inbox_items ADD COLUMN {col} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
-        for col, col_type in project_cols:
-            try:
-                conn.execute(sa_text(f"ALTER TABLE projects ADD COLUMN {col} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
+        for table, cols in table_migrations:
+            for col, col_type in cols:
+                try:
+                    conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                    conn.commit()
+                except Exception:
+                    pass
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1140,7 +1140,183 @@ def inbox_archive(item_id: int, db: Session = Depends(get_db)):
     return RedirectResponse(url=f"{BASE}/inbox", status_code=303)
 
 
-# ─── Notion Integration ──────────────────────────────────────────────────────
+# ─── Notes (NoteItem) ─────────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/notes", response_class=HTMLResponse)
+def notes_list(request: Request, db: Session = Depends(get_db)):
+    notes = (
+        db.query(models.NoteItem)
+        .order_by(models.NoteItem.created_at.desc())
+        .all()
+    )
+    export_targets = db.query(models.NotionExportTarget).order_by(models.NotionExportTarget.created_at).all()
+    return templates.TemplateResponse(
+        request, "notes.html",
+        {"base": BASE, "notes": notes, "export_targets": export_targets, "is_notion_configured": notion.is_configured()},
+    )
+
+
+@app.get(f"{BASE}/notes/{{note_id}}", response_class=HTMLResponse)
+def note_detail(note_id: int, request: Request, db: Session = Depends(get_db)):
+    note = db.query(models.NoteItem).filter(models.NoteItem.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    inbox_item = None
+    if note.linked_inbox_id:
+        inbox_item = db.query(models.InboxItem).filter(models.InboxItem.id == note.linked_inbox_id).first()
+    export_targets = db.query(models.NotionExportTarget).order_by(models.NotionExportTarget.is_default.desc()).all()
+    return templates.TemplateResponse(
+        request, "note_detail.html",
+        {
+            "base": BASE,
+            "note": note,
+            "inbox_item": inbox_item,
+            "export_targets": export_targets,
+            "is_notion_configured": notion.is_configured(),
+            "exported": note.notion_url is not None,
+        },
+    )
+
+
+@app.post(f"{BASE}/notes/{{note_id}}/export-to-notion")
+def note_export_to_notion(
+    note_id: int,
+    target_id: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    if not notion.is_configured():
+        raise HTTPException(status_code=503, detail="Notion not configured")
+    note = db.query(models.NoteItem).filter(models.NoteItem.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    target = db.query(models.NotionExportTarget).filter(models.NotionExportTarget.id == target_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Export target not found")
+    try:
+        page = notion.export_note(note, target.notion_id, target.target_type)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    note.notion_page_id = page["id"].replace("-", "")
+    note.notion_url = page.get("url") or f"https://notion.so/{page['id'].replace('-', '')}"
+    note.exported_at = datetime.utcnow()
+    note.last_synced_at = datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/notes/{note_id}?exported=1", status_code=303)
+
+
+# ─── Project detail + Notion export ──────────────────────────────────────────
+
+@app.get(f"{BASE}/projects/{{project_id}}", response_class=HTMLResponse)
+def project_detail(project_id: int, request: Request, db: Session = Depends(get_db)):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    tasks = (
+        db.query(models.Task)
+        .filter(models.Task.project_id == project_id, models.Task.status != "done")
+        .order_by(models.Task.created_at)
+        .all()
+    )
+    first_next_task = next(
+        (t for t in tasks if t.focus_state in ("now", "next", "later")), None
+    )
+    export_targets = db.query(models.NotionExportTarget).order_by(models.NotionExportTarget.is_default.desc()).all()
+    return templates.TemplateResponse(
+        request, "project_detail.html",
+        {
+            "base": BASE,
+            "project": project,
+            "tasks": tasks,
+            "first_next_task": first_next_task,
+            "export_targets": export_targets,
+            "is_notion_configured": notion.is_configured(),
+            "exported": project.notion_url is not None,
+        },
+    )
+
+
+@app.post(f"{BASE}/projects/{{project_id}}/export-to-notion")
+def project_export_to_notion(
+    project_id: int,
+    target_id: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    if not notion.is_configured():
+        raise HTTPException(status_code=503, detail="Notion not configured")
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    target = db.query(models.NotionExportTarget).filter(models.NotionExportTarget.id == target_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Export target not found")
+    # Find the first non-done task to include as a next step
+    first_task = (
+        db.query(models.Task)
+        .filter(models.Task.project_id == project_id, models.Task.status != "done")
+        .order_by(models.Task.created_at)
+        .first()
+    )
+    first_task_title = first_task.title if first_task else None
+    try:
+        page = notion.export_project(project, first_task_title, target.notion_id, target.target_type)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    project.notion_page_id = page["id"].replace("-", "")
+    project.notion_url = page.get("url") or f"https://notion.so/{page['id'].replace('-', '')}"
+    project.exported_at = datetime.utcnow()
+    project.last_synced_at = datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/projects/{project_id}?exported=1", status_code=303)
+
+
+# ─── Notion export targets ────────────────────────────────────────────────────
+
+@app.post(f"{BASE}/integrations/notion/export-targets")
+def notion_add_export_target(
+    name: str = Form(...),
+    notion_id: str = Form(...),
+    target_type: str = Form(default="page"),
+    is_default: str = Form(default=""),
+    db: Session = Depends(get_db),
+):
+    clean_id = notion_id.strip().replace("-", "")
+    if not clean_id:
+        raise HTTPException(status_code=422, detail="Notion ID is required")
+    make_default = bool(is_default)
+    if make_default:
+        # clear existing defaults
+        db.query(models.NotionExportTarget).update({"is_default": False})
+    target = models.NotionExportTarget(
+        name=name.strip(),
+        notion_id=clean_id,
+        target_type=target_type,
+        is_default=make_default,
+    )
+    db.add(target)
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/integrations/notion#export-targets", status_code=303)
+
+
+@app.post(f"{BASE}/integrations/notion/export-targets/{{target_id}}/delete")
+def notion_delete_export_target(target_id: int, db: Session = Depends(get_db)):
+    t = db.query(models.NotionExportTarget).filter(models.NotionExportTarget.id == target_id).first()
+    if t:
+        db.delete(t)
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/integrations/notion#export-targets", status_code=303)
+
+
+@app.post(f"{BASE}/integrations/notion/export-targets/{{target_id}}/set-default")
+def notion_set_default_export_target(target_id: int, db: Session = Depends(get_db)):
+    db.query(models.NotionExportTarget).update({"is_default": False})
+    t = db.query(models.NotionExportTarget).filter(models.NotionExportTarget.id == target_id).first()
+    if t:
+        t.is_default = True
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/integrations/notion#export-targets", status_code=303)
+
+
+# ─── Notion integration settings ─────────────────────────────────────────────
 
 @app.get(f"{BASE}/integrations/notion", response_class=HTMLResponse)
 def notion_settings(
@@ -1165,6 +1341,11 @@ def notion_settings(
             "errors": errors or 0,
             "error_msg": error_msg,
         }
+    export_targets = (
+        db.query(models.NotionExportTarget)
+        .order_by(models.NotionExportTarget.is_default.desc(), models.NotionExportTarget.created_at)
+        .all()
+    )
     return templates.TemplateResponse(
         request, "integrations_notion.html",
         {
@@ -1173,6 +1354,7 @@ def notion_settings(
             "is_configured": notion.is_configured(),
             "inbox_count": inbox_count,
             "last_result": last_result,
+            "export_targets": export_targets,
         },
     )
 

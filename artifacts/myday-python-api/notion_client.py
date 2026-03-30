@@ -163,6 +163,188 @@ def normalize_database_entry(page: dict, blocks: Optional[list] = None) -> dict:
     return result
 
 
+# ─── Export helpers ──────────────────────────────────────────────────────────
+
+def text_to_blocks(text: str) -> list:
+    """
+    Convert a plain-text string to Notion paragraph blocks.
+    Respects Notion's 2000-char per rich_text item limit.
+    Safe to call for webhook sync — pure data transformation.
+    """
+    if not text:
+        return []
+    MAX_CHUNK = 1900
+    blocks = []
+    for line in text.split("\n"):
+        if not line.strip():
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {"rich_text": []},
+            })
+            continue
+        remaining = line
+        while remaining:
+            chunk = remaining[:MAX_CHUNK]
+            remaining = remaining[MAX_CHUNK:]
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": chunk}}]
+                },
+            })
+    return blocks
+
+
+def create_page(parent_id: str, title: str, children: list, parent_type: str = "page") -> dict:
+    """
+    Create a Notion page under a parent page or database.
+    Sends the first 100 blocks in the creation request (Notion limit).
+    Reusable by webhook-triggered sync.
+    """
+    clean_id = parent_id.replace("-", "")
+    if parent_type == "database":
+        parent = {"database_id": clean_id}
+        properties = {
+            "Name": {"title": [{"type": "text", "text": {"content": title[:2000]}}]}
+        }
+    else:
+        parent = {"page_id": clean_id}
+        properties = {
+            "title": [{"type": "text", "text": {"content": title[:2000]}}]
+        }
+    body: dict = {"parent": parent, "properties": properties}
+    if children:
+        body["children"] = children[:100]
+    return _request("POST", "/pages", body)
+
+
+def append_blocks(page_id: str, children: list) -> dict:
+    """Append block children to an existing Notion page (for chunked uploads)."""
+    clean_id = page_id.replace("-", "")
+    return _request("PATCH", f"/blocks/{clean_id}/children", {"children": children})
+
+
+def _push_blocks(page_id: str, blocks: list) -> None:
+    """Push all blocks to a page, chunking at 100 per request (Notion limit)."""
+    # First 100 are sent during create_page; this handles overflow.
+    for i in range(0, len(blocks), 100):
+        append_blocks(page_id, blocks[i : i + 100])
+
+
+def export_note(note, parent_id: str, parent_type: str = "page") -> dict:
+    """
+    Export a NoteItem to Notion as a new page.
+    Returns the raw Notion page response.
+    Reusable by webhook-triggered sync — call normalize_export_note() first there.
+    """
+    blocks: list = []
+
+    # ── Provenance callout ──
+    provenance_text = "Saved from MyDay"
+    if note.linked_inbox_id:
+        provenance_text += f" · Inbox item #{note.linked_inbox_id}"
+    callout: dict = {
+        "object": "block",
+        "type": "callout",
+        "callout": {
+            "icon": {"type": "emoji", "emoji": "📎"},
+            "rich_text": [{"type": "text", "text": {"content": provenance_text}}],
+            "color": "gray_background",
+        },
+    }
+    if note.external_url:
+        callout["callout"]["rich_text"].append({
+            "type": "text",
+            "text": {"content": f"\nOriginal source: {note.external_url}"},
+        })
+    blocks.append(callout)
+
+    # ── Summary quote ──
+    if note.summary:
+        blocks.append({
+            "object": "block",
+            "type": "quote",
+            "quote": {
+                "rich_text": [{"type": "text", "text": {"content": note.summary[:2000]}}],
+                "color": "default",
+            },
+        })
+
+    # ── Divider ──
+    blocks.append({"object": "block", "type": "divider", "divider": {}})
+
+    # ── Full content ──
+    if note.content:
+        blocks.extend(text_to_blocks(note.content))
+
+    # Create page with first 100 blocks; append the rest in chunks
+    page = create_page(parent_id, note.title, blocks[:100], parent_type)
+    overflow = blocks[100:]
+    if overflow:
+        page_id = page["id"].replace("-", "")
+        _push_blocks(page_id, overflow)
+
+    return page
+
+
+def export_project(project, first_task_title: Optional[str], parent_id: str, parent_type: str = "page") -> dict:
+    """
+    Export a Project to Notion as a new page (or database entry).
+    Returns the raw Notion page response.
+    Reusable by webhook-triggered sync.
+    """
+    from datetime import datetime as _dt
+    now_str = _dt.utcnow().strftime("%b %d, %Y")
+
+    blocks: list = []
+
+    # ── Provenance callout ──
+    blocks.append({
+        "object": "block",
+        "type": "callout",
+        "callout": {
+            "icon": {"type": "emoji", "emoji": "◈"},
+            "rich_text": [{"type": "text", "text": {"content": f"Project exported from MyDay on {now_str}"}}],
+            "color": "blue_background",
+        },
+    })
+
+    # ── Description ──
+    if project.description:
+        blocks.extend(text_to_blocks(project.description))
+        blocks.append({"object": "block", "type": "divider", "divider": {}})
+
+    # ── First next step ──
+    if first_task_title:
+        blocks.append({
+            "object": "block",
+            "type": "heading_3",
+            "heading_3": {
+                "rich_text": [{"type": "text", "text": {"content": "First next step"}}],
+                "color": "default",
+            },
+        })
+        blocks.append({
+            "object": "block",
+            "type": "to_do",
+            "to_do": {
+                "rich_text": [{"type": "text", "text": {"content": first_task_title}}],
+                "checked": False,
+                "color": "default",
+            },
+        })
+
+    page = create_page(parent_id, project.name, blocks[:100], parent_type)
+    overflow = blocks[100:]
+    if overflow:
+        page_id = page["id"].replace("-", "")
+        _push_blocks(page_id, overflow)
+
+    return page
+
+
 # ─── High-level import helpers (called from routes) ──────────────────────────
 
 def import_page(page_id: str) -> dict:

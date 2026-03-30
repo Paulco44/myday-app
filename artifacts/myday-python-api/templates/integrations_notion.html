@@ -116,6 +116,7 @@
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
       <a href="{{ base }}/focus" class="nav-focus">Focus</a>
     </div>
@@ -280,6 +281,80 @@
       </form>
     </div>
 
+    <!-- Export targets -->
+    <div class="card" id="export-targets">
+      <h2>Export Destinations</h2>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.6;">
+        Choose where notes and projects are sent when you click "Send to Notion".
+        Add a Notion page (content is created as a sub-page) or a database (a new entry is created).
+      </p>
+
+      {% if export_targets %}
+        {% for t in export_targets %}
+          <div class="source-row">
+            <div class="source-icon">{% if t.target_type == 'database' %}🗂{% else %}📄{% endif %}</div>
+            <div class="source-info">
+              <div class="source-name">
+                {{ t.name }}
+                {% if t.is_default %}<span style="font-size:.7rem;font-weight:700;background:var(--accent);color:#1a1a1a;border-radius:.25rem;padding:.1rem .4rem;margin-left:.4rem;">Default</span>{% endif %}
+              </div>
+              <div class="source-meta">
+                <span class="badge-type {% if t.target_type == 'database' %}badge-db{% endif %}">
+                  {{ 'Database' if t.target_type == 'database' else 'Page' }}
+                </span>
+                <span class="source-id">{{ t.notion_id[:8] }}…</span>
+                <span class="last-import">Added {{ t.created_at.strftime('%b %d, %Y') }}</span>
+              </div>
+            </div>
+            <div class="source-actions">
+              {% if not t.is_default %}
+                <form method="post" action="{{ base }}/integrations/notion/export-targets/{{ t.id }}/set-default" style="display:inline;">
+                  <button type="submit" class="btn-secondary">Set default</button>
+                </form>
+              {% endif %}
+              <form method="post" action="{{ base }}/integrations/notion/export-targets/{{ t.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove this export destination?')">
+                <button type="submit" class="btn-danger">✕</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-sources">No export destinations yet. Add one below.</div>
+      {% endif %}
+
+      <!-- Add export target form -->
+      <div style="margin-top:1.25rem;padding-top:1.1rem;border-top:1px solid var(--border);">
+        <p style="font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.85rem;">Add destination</p>
+        <form class="add-form" method="post" action="{{ base }}/integrations/notion/export-targets">
+          <div class="form-row">
+            <div>
+              <label for="exp-name">Display name</label>
+              <input id="exp-name" name="name" type="text" placeholder="e.g. MyDay Exports" required />
+            </div>
+            <div>
+              <label for="exp-type">Destination type</label>
+              <select id="exp-type" name="target_type">
+                <option value="page">Page — exports as sub-page</option>
+                <option value="database">Database — exports as new entry</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="exp-id">Notion page / database ID or URL</label>
+            <input id="exp-id" name="notion_id" type="text" placeholder="https://notion.so/… or 32-char ID" required />
+            <p class="form-hint" style="margin-top:.3rem;">The page or database must be shared with your integration (⋯ → Connect to).</p>
+          </div>
+          <label style="display:flex;align-items:center;gap:.55rem;font-size:.85rem;color:var(--text-muted);cursor:pointer;">
+            <input type="checkbox" name="is_default" value="yes" style="width:1rem;height:1rem;accent-color:var(--accent);" />
+            Make this the default export destination
+          </label>
+          <div class="add-form-submit">
+            <button type="submit" class="btn-import">Add destination</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- How it works -->
     <div class="card">
       <h2>How it works</h2>
@@ -310,18 +385,17 @@
   </main>
 
   <script>
-    // Strip Notion URL to bare ID when pasted into the notion_id field
-    const idInput = document.getElementById('src-id');
-    if (idInput) {
-      idInput.addEventListener('change', function () {
+    function bindNotionIdStrip(inputId) {
+      const el = document.getElementById(inputId);
+      if (!el) return;
+      el.addEventListener('change', function () {
         const val = this.value.trim();
-        // Extract 32-char hex ID from URL like notion.so/Title-abc123... or directly
         const match = val.match(/([a-f0-9]{32})/i) || val.match(/([a-f0-9-]{36})/i);
-        if (match) {
-          this.value = match[1].replace(/-/g, '');
-        }
+        if (match) this.value = match[1].replace(/-/g, '');
       });
     }
+    bindNotionIdStrip('src-id');
+    bindNotionIdStrip('exp-id');
   </script>
   <script src="{{ base }}/static/app.js?v=4"></script>
 </body>

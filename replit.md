@@ -162,6 +162,33 @@ Pipeline for Whisper-derived meeting notes before they become tasks.
 
 **Rules:** Visiting detail page auto-transitions status new → reviewing. Promoting always sets task focus_state="later" (never Now). No auto-task creation on ingest. Designed to be extensible for Notion later.
 
+### Notion Export (Phase 4)
+MyDay stays the execution source of truth. Notion export is one-directional — no task state is synced back.
+
+**NotionExportTarget model** — `notion_export_targets` table: id, name, notion_id, target_type (page|database), is_default, created_at. Configured on the Integrations > Notion settings page under "Export Destinations". Separate from NotionSource (import) to keep concerns clean.
+
+**Exported fields on NoteItem and Project**: `notion_page_id`, `notion_url`, `exported_at`, `last_synced_at`.
+
+**notion_client.py export functions** (all reusable for future webhook sync):
+- `text_to_blocks(text)` — converts plain text to Notion paragraph blocks, chunked at 1900 chars to respect Notion's per-item limit
+- `create_page(parent_id, title, children, parent_type)` — creates a page under a page or database; sends first 100 blocks in creation request (Notion limit)
+- `append_blocks(page_id, children)` — appends more blocks to an existing page
+- `_push_blocks(page_id, blocks)` — chunks overflow blocks at 100 per request automatically
+- `export_note(note, parent_id, parent_type)` — creates a Notion page with provenance callout, summary quote, divider, full content
+- `export_project(project, first_task_title, parent_id, parent_type)` — creates a Notion page with provenance callout, description, first next-step to-do block
+
+**Routes:**
+- `GET /task-manager/notes` — list all NoteItems
+- `GET /task-manager/notes/{id}` — note detail with Notion export UI
+- `POST /task-manager/notes/{id}/export-to-notion` — export note to Notion; stores page_id/url
+- `GET /task-manager/projects/{id}` — project detail with open tasks + Notion export UI
+- `POST /task-manager/projects/{id}/export-to-notion` — export project to Notion
+- `POST /task-manager/integrations/notion/export-targets` — add export destination
+- `POST /task-manager/integrations/notion/export-targets/{id}/delete` — remove destination
+- `POST /task-manager/integrations/notion/export-targets/{id}/set-default` — set default
+
+**Export UI pattern:** "Send to Notion" button → select destination → redirect back with `?exported=1` → inline success notice with "Open in Notion" link auto-dismissed after 6 s. Already-exported items show "Open in Notion" link + re-export collapsible. Notes is in the global nav on all templates.
+
 ### API Endpoints
 - `GET /task-manager/` — Home page (HTML)
 - `GET /task-manager/my-day` — My Day view (HTML)

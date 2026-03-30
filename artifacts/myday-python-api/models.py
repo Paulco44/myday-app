@@ -14,6 +14,14 @@ class Project(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    # Provenance (Phase 3)
+    source_ref = Column(String, nullable=True)
+    imported_at = Column(String, nullable=True)
+    # Notion export (Phase 4)
+    notion_page_id = Column(String, nullable=True)
+    notion_url = Column(String, nullable=True)
+    exported_at = Column(DateTime, nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
 
     tasks = relationship("Task", back_populates="project")
     recurring_tasks = relationship("RecurringTask", back_populates="project")
@@ -119,7 +127,7 @@ class DailyLog(Base):
 class NoteItem(Base):
     """
     A saved reference note — promoted from Inbox or created directly.
-    Preserves source provenance for future Notion export.
+    Preserves source provenance; supports Notion export.
     """
     __tablename__ = "note_items"
 
@@ -133,6 +141,11 @@ class NoteItem(Base):
     linked_inbox_id = Column(Integer, nullable=True)  # inbox_items.id (no FK — SQLite compat)
     imported_at = Column(DateTime, nullable=True)     # when imported into MyDay
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Notion export
+    notion_page_id = Column(String, nullable=True)
+    notion_url = Column(String, nullable=True)
+    exported_at = Column(DateTime, nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
 
 
 class NotionSource(Base):
@@ -197,3 +210,19 @@ class CoPInitiative(Base):
     active_oct = Column(Boolean, default=False)
     active_nov = Column(Boolean, default=False)
     active_dec = Column(Boolean, default=False)
+
+
+class NotionExportTarget(Base):
+    """
+    A configured Notion destination for exporting notes and projects.
+    Separate from NotionSource (import) to keep concerns clean.
+    Webhook sync can reuse the same notion_client helpers later.
+    """
+    __tablename__ = "notion_export_targets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    notion_id = Column(String, nullable=False)      # page or database UUID (no dashes)
+    target_type = Column(String, nullable=False, default="page")  # page | database
+    is_default = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

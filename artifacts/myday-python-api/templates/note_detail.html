@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ note.title }} — Notes — MyDay</title>
+  <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=4" />
+  <style>
+    main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+    .back-link { display: inline-flex; align-items: center; gap: .3rem; color: var(--text-muted); text-decoration: none; font-size: .85rem; font-weight: 600; margin-bottom: 1.25rem; transition: color .15s; }
+    .back-link:hover { color: var(--accent); }
+
+    /* ── Header ── */
+    .note-header { margin-bottom: 1.5rem; }
+    .note-header h1 { font-size: 1.45rem; font-weight: 800; line-height: 1.35; margin-bottom: .5rem; }
+    .meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .8rem; color: var(--text-muted); }
+
+    /* ── Badges ── */
+    .badge { display: inline-flex; align-items: center; gap: .22rem; padding: .17rem .5rem; border-radius: .35rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
+    .badge-notion { background: #f0f4ff; color: #3b4fcc; }
+    html.dark .badge-notion { background: #1e2a5e; color: #93c5fd; }
+    .badge-whisper { background: #ede9fe; color: #7c3aed; }
+    html.dark .badge-whisper { background: #3b0764; color: #c4b5fd; }
+    .badge-self { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+    .badge-exported { background: var(--success-soft); color: var(--success); }
+
+    /* ── Notices ── */
+    .notice { border-radius: .65rem; padding: .85rem 1.15rem; display: flex; align-items: flex-start; gap: .75rem; font-size: .88rem; font-weight: 600; margin-bottom: 1.25rem; }
+    .notice-ok { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); }
+    .notice a { color: inherit; text-decoration: none; font-weight: 700; border-bottom: 1px solid currentColor; }
+
+    /* ── Summary ── */
+    .summary-block { background: var(--success-soft); border-left: 3px solid var(--success); border-radius: 0 .5rem .5rem 0; padding: .85rem 1rem; margin-bottom: 1.1rem; }
+    .summary-block .label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--success); margin-bottom: .4rem; }
+    .summary-block p { font-size: .9rem; line-height: 1.65; color: var(--text); }
+
+    /* ── Content ── */
+    .content-block { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; margin-bottom: 1.25rem; overflow: hidden; }
+    .content-toggle { width: 100%; background: none; border: none; padding: .9rem 1.35rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: .84rem; font-weight: 600; color: var(--text-muted); font-family: inherit; text-align: left; }
+    .content-toggle:hover { color: var(--text); }
+    .content-toggle .icon { transition: transform .2s; font-style: normal; }
+    .content-toggle[aria-expanded="true"] .icon { transform: rotate(90deg); }
+    .content-body { padding: 0 1.35rem 1.15rem; font-size: .88rem; line-height: 1.75; color: var(--text); white-space: pre-wrap; word-break: break-word; display: none; }
+    .content-body.open { display: block; }
+
+    /* ── Source link ── */
+    .source-link { display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: .45rem; padding: .3rem .7rem; margin-bottom: 1.25rem; text-decoration: none; }
+    .source-link:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Notion export card ── */
+    .export-card { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; overflow: hidden; margin-bottom: 1rem; }
+    .export-card-header { padding: 1.1rem 1.35rem .85rem; border-bottom: 1px solid var(--border); }
+    .export-card-header h2 { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+    .export-card-body { padding: 1rem 1.35rem 1.25rem; }
+
+    .export-status { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+    .status-dot-ok { width: 9px; height: 9px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+    .status-label { font-size: .88rem; font-weight: 700; }
+    .status-meta { font-size: .78rem; color: var(--text-muted); }
+    .btn-notion-open { display: inline-flex; align-items: center; gap: .4rem; background: var(--bg); border: 1px solid var(--border); border-radius: .45rem; padding: .48rem 1rem; font-size: .85rem; font-weight: 700; color: var(--text); text-decoration: none; transition: border-color .15s, color .15s; }
+    .btn-notion-open:hover { border-color: var(--accent); color: var(--accent); }
+
+    .export-form { display: flex; flex-direction: column; gap: .65rem; }
+    .export-form label { font-size: .78rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: .2rem; }
+    .export-form select { background: var(--bg); border: 1px solid var(--border); border-radius: .45rem; padding: .52rem .8rem; font-size: .88rem; color: var(--text); font-family: inherit; width: 100%; box-sizing: border-box; }
+    .export-form select:focus { outline: none; border-color: var(--accent); }
+    .btn-export { background: #1a1a1a; color: #fff; border: none; border-radius: .5rem; padding: .58rem 1.25rem; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: .45rem; transition: opacity .15s; }
+    html.dark .btn-export { background: #fff; color: #1a1a1a; }
+    .btn-export:hover { opacity: .8; }
+    .btn-export-again { background: transparent; border: 1px solid var(--border); border-radius: .4rem; padding: .35rem .8rem; font-size: .78rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; margin-top: .5rem; transition: background .15s, color .15s; }
+    .btn-export-again:hover { background: var(--bg); color: var(--text); }
+
+    .setup-hint { font-size: .84rem; color: var(--text-muted); line-height: 1.6; }
+    .setup-hint a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .setup-hint a:hover { text-decoration: underline; }
+    .form-hint { font-size: .74rem; color: var(--text-faint); }
+
+    /* ── Inbox provenance ── */
+    .provenance-row { display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: .45rem; padding: .3rem .7rem; margin-bottom: 1.1rem; }
+    .provenance-row a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
+      <a href="{{ base }}/kanban">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/notes" class="active">Notes</a>
+      <a href="{{ base }}/cop-admin">CoP Admin</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-noise" id="btn-noise" onclick="toggleNoise()">🎧 Noise</button>
+      <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">🌙 Dark</button>
+    </div>
+  </nav>
+
+  <main>
+    <a class="back-link" href="{{ base }}/notes">← Back to Notes</a>
+
+    {% set just_exported = request.query_params.get('exported') == '1' %}
+
+    <!-- ── Success toast ── -->
+    {% if just_exported %}
+      <div class="notice notice-ok" id="export-toast">
+        <span>✓</span>
+        <div>
+          Sent to Notion.
+          {% if note.notion_url %}<a href="{{ note.notion_url }}" target="_blank" rel="noopener">Open in Notion →</a>{% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- ── Header ── -->
+    <div class="note-header">
+      <h1>{{ note.title }}</h1>
+      <div class="meta-row">
+        {% if note.source == 'notion' %}
+          <span class="badge badge-notion">◻ Notion</span>
+        {% elif note.source == 'whisper' %}
+          <span class="badge badge-whisper">🎙 Whisper</span>
+        {% else %}
+          <span class="badge badge-self">📝 Manual</span>
+        {% endif %}
+        {% if note.notion_url %}
+          <span class="badge badge-exported">✓ In Notion</span>
+        {% endif %}
+        <span>{{ note.created_at.strftime('%a, %b %d, %Y') }}</span>
+        {% if note.imported_at %}
+          <span>Imported {{ note.imported_at.strftime('%b %d') }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Source / provenance links ── -->
+    {% if note.external_url %}
+      <a class="source-link" href="{{ note.external_url }}" target="_blank" rel="noopener">
+        ◻ View original source →
+      </a>
+    {% endif %}
+
+    {% if inbox_item %}
+      <div>
+        <span class="provenance-row">
+          📥 From inbox: <a href="{{ base }}/inbox/{{ inbox_item.id }}">{{ inbox_item.title }}</a>
+        </span>
+      </div>
+    {% endif %}
+
+    <!-- ── Summary ── -->
+    {% if note.summary %}
+      <div class="summary-block">
+        <div class="label">✦ Summary</div>
+        <p>{{ note.summary }}</p>
+      </div>
+    {% endif %}
+
+    <!-- ── Full content (collapsible) ── -->
+    {% if note.content %}
+      <div class="content-block">
+        <button class="content-toggle" id="content-btn" aria-expanded="false" onclick="toggleContent()">
+          <span>📝 Full content</span>
+          <span class="icon">▶</span>
+        </button>
+        <div class="content-body" id="content-body">{{ note.content }}</div>
+      </div>
+    {% endif %}
+
+    <!-- ── Notion export panel ── -->
+    <div class="export-card">
+      <div class="export-card-header">
+        <h2>◻ Notion export</h2>
+      </div>
+      <div class="export-card-body">
+
+        {% if not is_notion_configured %}
+          <p class="setup-hint">
+            Notion isn't connected yet.
+            <a href="{{ base }}/integrations/notion">Set it up →</a>
+          </p>
+
+        {% elif note.notion_url and not just_exported %}
+          <!-- Already exported -->
+          <div class="export-status">
+            <span class="status-dot-ok"></span>
+            <div>
+              <div class="status-label">Exported to Notion</div>
+              <div class="status-meta">{{ note.exported_at.strftime('%b %d, %Y at %I:%M %p') if note.exported_at else '' }}</div>
+            </div>
+          </div>
+          <a class="btn-notion-open" href="{{ note.notion_url }}" target="_blank" rel="noopener">
+            ◻ Open in Notion →
+          </a>
+
+          {% if export_targets %}
+            <details style="margin-top:1.1rem;">
+              <summary style="font-size:.8rem;color:var(--text-muted);cursor:pointer;font-weight:600;">Re-export to a different destination…</summary>
+              <div style="margin-top:.75rem;">
+                <form class="export-form" method="post" action="{{ base }}/notes/{{ note.id }}/export-to-notion">
+                  <div>
+                    <label for="target-id-re">Export destination</label>
+                    <select id="target-id-re" name="target_id" required>
+                      {% for t in export_targets %}
+                        <option value="{{ t.id }}" {% if t.is_default %}selected{% endif %}>
+                          {{ t.name }} ({{ t.target_type }}){% if t.is_default %} ★{% endif %}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <p class="form-hint">This creates a new Notion page — it does not update the existing one.</p>
+                  <div><button type="submit" class="btn-export-again">Export again →</button></div>
+                </form>
+              </div>
+            </details>
+          {% endif %}
+
+        {% elif export_targets %}
+          <!-- Ready to export -->
+          <form class="export-form" method="post" action="{{ base }}/notes/{{ note.id }}/export-to-notion">
+            <div>
+              <label for="target-id">Export destination</label>
+              <select id="target-id" name="target_id" required>
+                {% for t in export_targets %}
+                  <option value="{{ t.id }}" {% if t.is_default %}selected{% endif %}>
+                    {{ t.name }} ({{ t.target_type }}){% if t.is_default %} ★{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <p class="form-hint">Creates a new Notion page with the note's content and provenance.</p>
+            <div>
+              <button type="submit" class="btn-export">◻ Send to Notion</button>
+            </div>
+          </form>
+
+        {% else %}
+          <!-- Configured but no export targets -->
+          <p class="setup-hint">
+            Notion is connected, but you haven't added an export destination yet.
+            <a href="{{ base }}/integrations/notion#export-targets">Add one →</a>
+          </p>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    function toggleContent() {
+      const btn = document.getElementById('content-btn');
+      const body = document.getElementById('content-body');
+      const open = body.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+    }
+    // Auto-dismiss export toast after 6 s
+    const toast = document.getElementById('export-toast');
+    if (toast) setTimeout(() => { toast.style.transition = 'opacity .5s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 6000);
+  </script>
+  <script src="{{ base }}/static/app.js?v=4"></script>
+</body>
+</html>
