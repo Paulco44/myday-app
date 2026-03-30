@@ -1,0 +1,50 @@
+"I want to align our current MVP with ADHD-centered UI/UX research to reduce 'Executive Function Tax' and 'Time Blindness.'
+
+Please audit the current codebase and identify where we are currently failing in these areas:
+
+Typography: Are we using Lexend? Is line-height at 1.75?
+
+Cognitive Load: Are tasks 'chunked' into cards, or is it a dense list? Is there 'Progressive Disclosure' (hiding details)?
+
+Color Contrast: Are we using an 'Off-Black' background (#1A1A1A) with high-contrast accents (#FFCC00)?
+
+Feedback: Do we have immediate visual/haptic micro-rewards for task completion?
+
+Do not write any code yet. Just provide a summary of what needs to change based on our current files."
+
+Step 2: The "Visual Foundation" Wave
+Once you agree with its audit, paste this to handle the "Look and Feel":
+
+"Let's implement the Visual Foundation changes.
+
+Update the global CSS/Tailwind configuration to use Lexend as the primary font.
+
+Set a global line-height of 1.75 and letter-spacing: 0.025em.
+
+Update the theme to an 'Off-Black' background (#1A1A1A) with High-Contrast Yellow (#FFCC00) for primary buttons and Teal (#2DD4BF) for success states.
+
+Ensure all text is left-aligned—strictly avoid justified text."
+
+Step 3: The "ADHD Logic" Wave
+This adds the specialized ADHD features to your existing components:
+
+"Now, let's update the task components for better Executive Function support:
+
+Chunking: Ensure the task list displays items as distinct cards with clear whitespace between them.
+
+Progressive Disclosure: Hide task notes, subtasks, and tags by default. Only show them when a task is clicked or expanded.
+
+Time Blindness: Add a 'Visual Countdown' component (a shrinking disk or circle) to the active task timer instead of just showing digital numbers.
+
+Auto-Save: Implement debounced auto-save on all text inputs so no thoughts are lost if I get distracted."
+
+Step 4: The "Dopamine & Focus" Wave
+This adds the sensory elements that make the tool "sticky" for ADHD brains:
+
+"Final polish for Engagement and Focus:
+
+Add a subtle 'bloom' or 'confetti' animation (using Framer Motion) when a task is checked off.
+
+Integrate a simple 'Brown Noise' toggle in the header or sidebar that plays a continuous loop for deep work.
+
+Ensure the 'Add Task' button is always accessible via a single global hotkey or a fixed floating button for low-friction entry."
