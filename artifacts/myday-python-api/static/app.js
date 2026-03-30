@@ -1,16 +1,69 @@
 // ─── MyDay shared: theme + brown noise ──────────────────────────────────────
 
-// ── Theme toggle ────────────────────────────────────────────────────────────
+// Dark-mode CSS variable values applied directly to <html> as inline style.
+// Inline style has the highest cascade priority, guaranteeing they override
+// any hardcoded values in inline <style> blocks or external stylesheets.
+const DARK_VARS = {
+  '--bg':             '#1A1A1A',
+  '--surface':        '#242424',
+  '--border':         '#3A3A3A',
+  '--border-subtle':  '#333333',
+  '--border-focus':   '#FFCC00',
+  '--text':           '#F5F5F0',
+  '--text-muted':     '#A3A3A3',
+  '--muted':          '#A3A3A3',
+  '--text-faint':     '#6B7280',
+  '--accent':         '#FFCC00',
+  '--accent-hover':   '#F0BB00',
+  '--accent-soft':    '#2D2800',
+  '--accent-light':   '#2D2800',
+  '--accent-text':    '#FFDD55',
+  '--focus-now':      '#FFDD55',
+  '--success':        '#2DD4BF',
+  '--success-soft':   '#0A2929',
+  '--success-light':  '#0A2929',
+  '--success-border': '#2DD4BF',
+  '--warning':        '#F97316',
+  '--warning-soft':   '#2D1200',
+  '--warning-light':  '#2D1200',
+  '--warning-border': '#F97316',
+  '--warning-text':   '#FDBA74',
+  '--danger':         '#EF4444',
+  '--danger-light':   '#2D0A0A',
+  '--danger-border':  '#EF4444',
+  '--focus-bg':       '#1A1A00',
+  '--focus-ring':     '#FFCC00',
+  '--ctrl-bg':        '#333333',
+  '--ctrl-hover':     '#444444',
+};
+
+function applyTheme(isDark) {
+  const root = document.documentElement;
+  if (isDark) {
+    root.classList.add('dark');
+    for (const [prop, val] of Object.entries(DARK_VARS)) {
+      root.style.setProperty(prop, val);
+    }
+  } else {
+    root.classList.remove('dark');
+    for (const prop of Object.keys(DARK_VARS)) {
+      root.style.removeProperty(prop);
+    }
+  }
+}
+
 function toggleTheme() {
-  const isDark = document.documentElement.classList.toggle('dark');
+  const isDark = !document.documentElement.classList.contains('dark');
+  applyTheme(isDark);
   try { localStorage.setItem('myday-theme', isDark ? 'dark' : 'light'); } catch(e) {}
   updateThemeBtn();
 }
+
 function updateThemeBtn() {
   const btn = document.getElementById('theme-btn');
   if (!btn) return;
   const isDark = document.documentElement.classList.contains('dark');
-  btn.innerHTML = isDark ? '☀️ Light' : '🌙 Dark';
+  btn.innerHTML = isDark ? '&#9728;&#65039; Light' : '&#127769; Dark';
   btn.classList.toggle('active', isDark);
 }
 
@@ -62,14 +115,23 @@ function toggleNoise() {
 function updateNoiseBtn() {
   const btn = document.getElementById('noise-btn');
   if (!btn) return;
-  btn.innerHTML = _noiseActive ? '🎧 On' : '🎧 Noise';
+  btn.innerHTML = _noiseActive ? '&#127911; On' : '&#127911; Noise';
   btn.classList.toggle('active', _noiseActive);
 }
 
 // ── Init on every page ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Re-apply full theme (CSS vars + class) from saved preference.
+  // The anti-flicker script in <head> adds the class, but this sets the
+  // CSS variables which are the actual mechanism for all element colors.
+  try {
+    applyTheme(localStorage.getItem('myday-theme') === 'dark');
+  } catch(e) {}
+
   updateThemeBtn();
   updateNoiseBtn();
+
+  // Auto-resume noise preference on first interaction
   try {
     if (localStorage.getItem('myday-noise') === '1') {
       const resume = () => { startNoise(); updateNoiseBtn(); document.removeEventListener('click', resume); };

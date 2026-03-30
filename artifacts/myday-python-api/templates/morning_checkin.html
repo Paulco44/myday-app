@@ -6,20 +6,20 @@
   <title>Morning Check-In — MyDay</title>
     <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css" />
+<link rel="stylesheet" href="{{ base }}/static/style.css?v=4" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #fafafa;
-      color: #1a202c;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
     /* ── Nav ── */
-    nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; flex-shrink: 0; }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; flex-shrink: 0; }
     .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
     .nav-links { display: flex; }
     .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
@@ -267,6 +267,6 @@
       </div>
     </div>
   </main>
-<script src="{{ base }}/static/app.js"></script>
+<script src="{{ base }}/static/app.js?v=4"></script>
 </body>
 </html>
