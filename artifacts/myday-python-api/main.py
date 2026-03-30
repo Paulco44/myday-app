@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 from contextlib import asynccontextmanager
@@ -890,6 +891,136 @@ def focus_complete(
         "task_id": task_id,
         "duration": duration_minutes,
     })
+
+
+# ─── Meeting Inbox ───────────────────────────────────────────────────────────
+
+INBOX_STATUSES = ["new", "reviewing", "promoted", "archived"]
+
+
+@app.get(f"{BASE}/inbox", response_class=HTMLResponse)
+def inbox_list(request: Request, db: Session = Depends(get_db)):
+    items = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.status != "archived")
+        .order_by(models.InboxItem.created_at.desc())
+        .all()
+    )
+    archived_count = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.status == "archived")
+        .count()
+    )
+    return templates.TemplateResponse(
+        request, "inbox.html",
+        {"base": BASE, "items": items, "archived_count": archived_count},
+    )
+
+
+@app.get(f"{BASE}/inbox/archived", response_class=HTMLResponse)
+def inbox_archived(request: Request, db: Session = Depends(get_db)):
+    items = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.status == "archived")
+        .order_by(models.InboxItem.created_at.desc())
+        .all()
+    )
+    return templates.TemplateResponse(
+        request, "inbox.html",
+        {"base": BASE, "items": items, "archived_count": len(items), "show_archived": True},
+    )
+
+
+@app.get(f"{BASE}/inbox/{{item_id}}", response_class=HTMLResponse)
+def inbox_detail(item_id: int, request: Request, db: Session = Depends(get_db)):
+    item = db.query(models.InboxItem).filter(models.InboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inbox item not found")
+    if item.status == "new":
+        item.status = "reviewing"
+        item.reviewed_at = datetime.utcnow()
+        db.commit()
+        db.refresh(item)
+    actions = []
+    if item.suggested_actions_json:
+        try:
+            actions = json.loads(item.suggested_actions_json)
+        except Exception:
+            actions = []
+    linked_task = None
+    if item.linked_task_id:
+        linked_task = db.query(models.Task).filter(models.Task.id == item.linked_task_id).first()
+    projects = db.query(models.Project).filter(models.Project.is_active == True).all()
+    return templates.TemplateResponse(
+        request, "inbox_detail.html",
+        {
+            "base": BASE,
+            "item": item,
+            "actions": actions,
+            "linked_task": linked_task,
+            "projects": projects,
+        },
+    )
+
+
+@app.post(f"{BASE}/inbox/ingest/whisper")
+def ingest_whisper(payload: schemas.WhisperIngest, db: Session = Depends(get_db)):
+    actions_json = json.dumps(payload.suggested_actions or [])
+    item = models.InboxItem(
+        source="whisper",
+        source_type="meeting",
+        external_id=payload.external_id,
+        title=payload.title,
+        raw_content=payload.raw_content,
+        summary=payload.summary,
+        suggested_actions_json=actions_json,
+        status="new",
+        created_at=payload.source_created_at or datetime.utcnow(),
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return JSONResponse({"status": "ok", "id": item.id, "title": item.title}, status_code=201)
+
+
+@app.post(f"{BASE}/inbox/{{item_id}}/promote-task")
+def inbox_promote_task(
+    item_id: int,
+    title: str = Form(...),
+    description: str = Form(default=""),
+    project_id: Optional[int] = Form(default=None),
+    db: Session = Depends(get_db),
+):
+    item = db.query(models.InboxItem).filter(models.InboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inbox item not found")
+    task = models.Task(
+        title=title,
+        description=description or None,
+        project_id=project_id or None,
+        source_type="inbox",
+        source_ref=f"inbox:{item_id}",
+        focus_state="later",
+        status="todo",
+    )
+    db.add(task)
+    db.flush()
+    item.status = "promoted"
+    item.linked_task_id = task.id
+    item.reviewed_at = item.reviewed_at or datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/inbox/{item_id}", status_code=303)
+
+
+@app.post(f"{BASE}/inbox/{{item_id}}/archive")
+def inbox_archive(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(models.InboxItem).filter(models.InboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inbox item not found")
+    item.status = "archived"
+    item.reviewed_at = item.reviewed_at or datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/inbox", status_code=303)
 
 
 if __name__ == "__main__":

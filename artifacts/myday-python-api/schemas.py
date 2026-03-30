@@ -79,6 +79,37 @@ class TaskRead(BaseModel):
         from_attributes = True
 
 
+# ─── Inbox ───────────────────────────────────────────────────────────────────
+
+class WhisperIngest(BaseModel):
+    title: str
+    raw_content: Optional[str] = None
+    summary: Optional[str] = None
+    suggested_actions: Optional[List[str]] = []
+    external_id: Optional[str] = None
+    source_created_at: Optional[datetime] = None
+
+
+class InboxItemRead(BaseModel):
+    id: int
+    source: str
+    source_type: str
+    external_id: Optional[str]
+    title: str
+    raw_content: Optional[str]
+    summary: Optional[str]
+    suggested_actions_json: Optional[str]
+    status: str
+    created_at: datetime
+    reviewed_at: Optional[datetime]
+    linked_task_id: Optional[int]
+    linked_project_id: Optional[int]
+    linked_note_url: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
 # ─── CoP Initiative ──────────────────────────────────────────────────────────
 
 class CoPInitiativeCreate(BaseModel):

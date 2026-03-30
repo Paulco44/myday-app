@@ -116,6 +116,26 @@ class DailyLog(Base):
     has_morning_checkin = Column(Boolean, default=False)  # did the brain-dump check-in today
 
 
+class InboxItem(Base):
+    """Meeting notes / Whisper-derived content waiting for triage."""
+    __tablename__ = "inbox_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source = Column(String, nullable=False, default="whisper")
+    source_type = Column(String, nullable=False, default="meeting")
+    external_id = Column(String, nullable=True)
+    title = Column(String, nullable=False)
+    raw_content = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)
+    suggested_actions_json = Column(Text, nullable=True)  # JSON-encoded list[str]
+    status = Column(String, nullable=False, default="new")  # new|reviewing|promoted|archived
+    created_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+    linked_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    linked_project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    linked_note_url = Column(String, nullable=True)
+
+
 class CoPInitiative(Base):
     """Community of Practice initiative."""
     __tablename__ = "cop_initiatives"

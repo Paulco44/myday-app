@@ -121,23 +121,55 @@ artifacts-monorepo/
 
 ### Models (SQLAlchemy)
 - **Project** — id, name, description, is_active
-- **Task** — id, title, description, project_id, owner, status, priority, due_date, is_today, source_type, source_ref, created_at, updated_at, completed_at
+- **Task** — id, title, description, project_id, owner, status, priority, due_date, is_today, source_type, source_ref, focus_state, time_block, energy_tag, created_at, updated_at, completed_at
 - **Subtask** — id, task_id, title, is_done, created_at, completed_at
 - **Tag** — id, name (unique)
 - **TaskTag** — id, task_id, tag_id (many-to-many join)
 - **RecurringTask** — id, title, description, project_id, priority, recurrence_type, recurrence_rule, active
 - **Settings** — id, morning_ritual_time, wip_limit_doing, default_priority
+- **DailyLog** — id, date, started, started_at, has_completed_task, has_morning_checkin
+- **CoPInitiative** — id, effort, topic, topic_description, subtopic, type_of_effort, focus_market, leader, cop_collaboration, notes, active_jan…active_dec
+- **InboxItem** — id, source, source_type, external_id, title, raw_content, summary, suggested_actions_json, status (new|reviewing|promoted|archived), created_at, reviewed_at, linked_task_id, linked_project_id, linked_note_url
+
+### Meeting Inbox (Phase 1)
+Pipeline for Whisper-derived meeting notes before they become tasks.
+
+**Ingest endpoint (POST JSON):** `POST /task-manager/inbox/ingest/whisper`
+```json
+{
+  "title": "Meeting title",
+  "raw_content": "Full transcript…",
+  "summary": "1–2 sentence summary",
+  "suggested_actions": ["Action 1", "Action 2"],
+  "external_id": "optional-dedup-id",
+  "source_created_at": "2026-03-30T10:30:00"
+}
+```
+**UI routes:**
+- `GET /task-manager/inbox` — Inbox list (active items)
+- `GET /task-manager/inbox/archived` — Archived notes
+- `GET /task-manager/inbox/{id}` — Detail: transcript + summary + suggested actions + promote/archive buttons
+- `POST /task-manager/inbox/{id}/promote-task` — Creates a Task with focus_state="later"; marks item as "promoted"
+- `POST /task-manager/inbox/{id}/archive` — Archives note without creating a task
+
+**Rules:** Visiting detail page auto-transitions status new → reviewing. Promoting always sets task focus_state="later" (never Now). No auto-task creation on ingest. Designed to be extensible for Notion later.
 
 ### API Endpoints
 - `GET /task-manager/` — Home page (HTML)
+- `GET /task-manager/my-day` — My Day view (HTML)
+- `GET /task-manager/morning-checkin` — Brain dump check-in step 1 (HTML)
+- `GET /task-manager/kanban` — Kanban board (HTML)
 - `GET /task-manager/tasks-page` — Tasks list page (HTML)
+- `GET /task-manager/focus` — Focus mode timer (HTML)
+- `GET /task-manager/inbox` — Meeting inbox list (HTML)
 - `POST /task-manager/tasks-page` — Create task from form (HTML redirect)
 - `GET /task-manager/projects` — List projects (JSON)
 - `POST /task-manager/projects` — Create project (JSON)
-- `GET /task-manager/tasks` — List tasks with optional filters: `?status=todo&project_id=1&is_today=true` (JSON)
+- `GET /task-manager/tasks` — List tasks with optional filters (JSON)
 - `POST /task-manager/tasks` — Create task (JSON)
 - `PUT /task-manager/tasks/{id}` — Update task (JSON)
 - `DELETE /task-manager/tasks/{id}` — Delete task (JSON)
+- `POST /task-manager/inbox/ingest/whisper` — Ingest Whisper note (JSON → 201)
 - `GET /task-manager/docs` — Swagger UI
 
 ### Running
