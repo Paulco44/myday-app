@@ -1,0 +1,44 @@
+This is the final, updated Master Prompt. I have moved the Brown Noise toggle to the global header and confirmed the Theme Toggle placement so the Agent knows exactly where to build.
+
+Copy and paste this entire block into your Replit Agent:
+
+ADHD-Centered UI/UX Refactor Prompt (Final)
+Role: You are an expert Full-Stack Developer specializing in Neurodiversity-Centered Design and High-Performance UI/UX.
+
+Objective: Refactor our current MVP into a "Calm Tech" Time Management tool. We are implementing a Dual-Theme System and global focus tools to reduce 'Executive Function Tax' and 'Time Blindness.'
+
+1. Global Header & Theme Toggle
+Placement: Add a 'Focus Controls' section to the main navigation header.
+
+Theme Toggle: Implement a switch between our 'Stone/Light' theme and a new 'ADHD High-Signal Dark' theme.
+
+Tailwind: Use darkMode: 'class'.
+
+Dark Palette: Background #1A1A1A, Primary Accent #FFCC00 (Yellow), Success #2DD4BF (Teal).
+
+Persistence: Save theme choice in LocalStorage. Add a blocking script in the <head> of the base template to prevent theme flickering on page load.
+
+Global Brown Noise: Add a toggle switch in the main header (available on every page) that plays a continuous loop of Brown Noise. Ensure it persists or stays active as I navigate between pages if possible (or uses a persistent player).
+
+2. Typography & Readability (Global)
+Font: Load and apply Lexend as the primary font.
+
+Spacing: Set global line-height: 1.75 and letter-spacing: 0.025em.
+
+Alignment: Strictly left-align all text; no justified text.
+
+3. Component Updates (Executive Function Support)
+Progressive Disclosure: Refactor task rows to show only the Title and 'Done' button by default. Hide all tags, energy levels, and metadata until the user hovers or taps the card.
+
+Visual Timer: In Focus Mode, add a Circular SVG Countdown (a 'shrinking disk') that visually disappears as time elapses, alongside the digital clock.
+
+Low-Friction Entry: >     * Add a Floating Action Button (FAB) for 'Add Task.'
+
+Map the 'N' key as a global keyboard shortcut to trigger the 'Add Task' modal.
+
+Implement debounced auto-save on all text inputs to prevent data loss.
+
+4. Sensory Feedback
+Micro-Rewards: Use the canvas-confetti JS library or a custom CSS 'bloom' animation to trigger a visual celebration when a task is marked 'Done.'
+
+Instructions: Review the existing Jinja2 templates and Tailwind setup. Start by implementing the Header controls (Theme + Noise) and Typography, then proceed to the Task Row and Timer refactors.

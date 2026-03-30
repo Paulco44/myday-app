@@ -40,6 +40,17 @@
 - Routine templates: "Morning Startup", "Weekly Review" — save sets of tasks/steps.
 - Brain-dump parser: parse lines into tasks (design to allow AI later).
 
+#### 2.6 ADHD UI/UX Layer (implemented)
+- **Dual-theme system**: Light (Stone/Indigo, default) + Dark (ADHD High-Signal: #1A1A1A bg, #FFCC00 accent, #2DD4BF success). Toggle via `🌙 Dark` button in every nav header. Theme persists in `localStorage`. Anti-flicker blocking `<script>` in `<head>` of every template prevents flash.
+- **Brown Noise**: `🎧 Noise` button in every nav header. Uses Web Audio API to generate brown noise entirely in-browser (no audio file). Auto-resumes on next page interaction if preference was saved.
+- **Lexend font**: Loaded via Google Fonts (`@import`). Applied globally via `font-family` on `body`.
+- **Global typography**: `line-height: 1.75`, `letter-spacing: 0.025em`, `text-align: left` (no justify) set on `body`.
+- **Progressive disclosure**: Task row meta (energy tag, time block, priority) is hidden with `max-height: 0; opacity: 0` by default and revealed on `:hover` or `.expanded` class.
+- **Confetti on task completion**: `canvas-confetti` CDN (`@1.9.2`). Every "Done" / "✓" form fires confetti burst before submitting.
+- **SVG Countdown Ring**: Focus Mode timer shows a circular shrinking arc (SVG `stroke-dashoffset` animation) alongside the digital countdown. Ring is r=50, circumference ≈ 314.16px.
+- **FAB + N key**: Fixed `+` button (bottom-right, all My Day pages). `N` key opens `<dialog>` quick-add modal. Modal posts to `POST /task-manager/tasks/quick-add` (returns JSON). Shows a toast confirmation. Escape closes the modal.
+- **Quick-Add route**: `POST /task-manager/tasks/quick-add` — accepts `title` + `priority` form params, returns `{"status":"ok","task_id":N,"title":"..."}`.
+
 #### 2.5 Habit Tracking
 - Track show-up per day (opened Focus Mode, completed micro-step, did Morning Check-In).
 - Streak = consecutive show-up days, not perfect completion.

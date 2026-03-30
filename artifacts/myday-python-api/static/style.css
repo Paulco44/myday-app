@@ -1,82 +1,112 @@
 /* ─────────────────────────────────────────────────────────────
    MyDay — Global design tokens & base resets
    To adjust the palette, edit the values inside :root {}
+   Dual theme: default = Stone/Light  |  html.dark = ADHD High-Signal Dark
    ───────────────────────────────────────────────────────────── */
 
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Light theme (default) ─────────────────────────────────── */
 :root {
-  /* ── Palette — Indigo & Stone ── */
-  --bg:              #F5F5F4;   /* page background (warm stone) */
-  --surface:         #FFFFFF;   /* cards, panels                */
-  --border:          #E5E7EB;   /* dividers, input borders      */
-  --border-subtle:   #E5E7EB;   /* alias for border             */
-  --border-focus:    #4F46E5;   /* focused input rings          */
-
-  /* ── Text ── */
-  --text:            #1C1917;   /* primary body text            */
-  --text-muted:      #6B7280;   /* secondary / captions         */
-  --muted:           #6B7280;   /* alias for text-muted         */
-  --text-faint:      #9CA3AF;   /* placeholders, disabled       */
-
-  /* ── Accent — Indigo (primary actions, Now, streak) ── */
+  --bg:              #F5F5F4;
+  --surface:         #FFFFFF;
+  --border:          #E5E7EB;
+  --border-subtle:   #E5E7EB;
+  --border-focus:    #4F46E5;
+  --text:            #1C1917;
+  --text-muted:      #6B7280;
+  --muted:           #6B7280;
+  --text-faint:      #9CA3AF;
   --accent:          #4F46E5;
   --accent-hover:    #4338CA;
-  --accent-soft:     #E0E7FF;   /* light indigo tint for Now BG */
-  --accent-light:    #E0E7FF;   /* alias                        */
+  --accent-soft:     #E0E7FF;
+  --accent-light:    #E0E7FF;
   --accent-text:     #3730A3;
   --focus-now:       #3730A3;
-
-  /* ── Success (completed, on-track) ── */
   --success:         #22C55E;
-  --success-soft:    #DCFCE7;   /* light green tint             */
-  --success-light:   #DCFCE7;   /* alias                        */
+  --success-soft:    #DCFCE7;
+  --success-light:   #DCFCE7;
   --success-border:  #86EFAC;
-
-  /* ── Warning (overload, soft nudges) ── */
   --warning:         #F97316;
-  --warning-soft:    #FFEDD5;   /* light orange tint            */
-  --warning-light:   #FFEDD5;   /* alias                        */
+  --warning-soft:    #FFEDD5;
+  --warning-light:   #FFEDD5;
   --warning-border:  #FDBA74;
   --warning-text:    #9A3412;
-
-  /* ── Danger (errors) ── */
   --danger:          #DC2626;
   --danger-light:    #FEF2F2;
   --danger-border:   #FCA5A5;
-
-  /* ── Focus Mode specific ── */
   --focus-bg:        #EEF2FF;
   --focus-ring:      #A5B4FC;
-
-  /* ── Radius & spacing ── */
   --radius-sm:       .35rem;
   --radius:          .55rem;
   --radius-lg:       .85rem;
   --radius-xl:       1.1rem;
+  /* controls */
+  --ctrl-bg:         #F3F4F6;
+  --ctrl-hover:      #E5E7EB;
 }
 
-/* ── Base reset ── */
+/* ── ADHD High-Signal Dark theme ──────────────────────────── */
+html.dark {
+  --bg:              #1A1A1A;
+  --surface:         #242424;
+  --border:          #3A3A3A;
+  --border-subtle:   #333333;
+  --border-focus:    #FFCC00;
+  --text:            #F5F5F0;
+  --text-muted:      #A3A3A3;
+  --muted:           #A3A3A3;
+  --text-faint:      #6B7280;
+  --accent:          #FFCC00;
+  --accent-hover:    #F0BB00;
+  --accent-soft:     #2D2800;
+  --accent-light:    #2D2800;
+  --accent-text:     #FFDD55;
+  --focus-now:       #FFDD55;
+  --success:         #2DD4BF;
+  --success-soft:    #0A2929;
+  --success-light:   #0A2929;
+  --success-border:  #2DD4BF;
+  --warning:         #F97316;
+  --warning-soft:    #2D1200;
+  --warning-light:   #2D1200;
+  --warning-border:  #F97316;
+  --warning-text:    #FDBA74;
+  --danger:          #EF4444;
+  --danger-light:    #2D0A0A;
+  --danger-border:   #EF4444;
+  --focus-bg:        #1A1A00;
+  --focus-ring:      #FFCC00;
+  --ctrl-bg:         #333333;
+  --ctrl-hover:      #444444;
+}
+
+/* ── Base reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-               "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  line-height: 1.75;
+  letter-spacing: 0.025em;
   -webkit-font-smoothing: antialiased;
+  text-align: left;
 }
 
-/* ── Shared nav ── */
+/* ── Shared nav ─────────────────────────────────────────────── */
 nav {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 2rem;
+  padding: 0 1.5rem;
   display: flex;
   align-items: center;
   height: 3.25rem;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 100;
+  gap: .75rem;
 }
 
 .nav-logo {
@@ -84,46 +114,68 @@ nav {
   font-size: 1.1rem;
   color: var(--accent);
   text-decoration: none;
-  margin-right: 1.5rem;
+  margin-right: .75rem;
   letter-spacing: -.02em;
+  flex-shrink: 0;
 }
 
-.nav-links { display: flex; }
+.nav-links { display: flex; flex: 1; }
 
 .nav-links a {
   display: flex;
   align-items: center;
   height: 3.25rem;
-  padding: 0 .85rem;
-  font-size: .85rem;
+  padding: 0 .75rem;
+  font-size: .82rem;
   font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
   border-bottom: 2px solid transparent;
   transition: color .15s;
+  white-space: nowrap;
 }
-
 .nav-links a:hover { color: var(--text); }
-
 .nav-links a.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
 }
-
-.nav-links a.nav-checkin {
-  color: #D97706;
-  font-weight: 600;
-}
-
+.nav-links a.nav-checkin { color: #D97706; font-weight: 700; }
 .nav-links a.nav-checkin:hover { color: #B45309; }
+.nav-links a.nav-focus { font-size: .78rem; color: var(--text-faint); }
 
-.nav-links a.nav-focus {
-  color: var(--text-muted);
-  font-size: .82rem;
+/* ── Focus Controls (right side of nav) ─────────────────────── */
+.focus-controls {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
-/* ── Shared button primitives ── */
+.ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  background: var(--ctrl-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .28rem .65rem;
+  font-size: .75rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+  letter-spacing: 0.02em;
+}
+.ctrl-btn:hover { background: var(--ctrl-hover); color: var(--text); }
+.ctrl-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+html.dark .ctrl-btn.active { color: #1A1A1A; }
+
+/* ── Shared button primitives ───────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -137,15 +189,13 @@ nav {
   text-decoration: none;
   transition: opacity .15s, transform .1s;
   white-space: nowrap;
+  font-family: inherit;
 }
 .btn:hover { opacity: .88; }
 .btn:active { transform: scale(.98); }
 
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  padding: .6rem 1.4rem;
-}
+.btn-primary { background: var(--accent); color: #fff; padding: .6rem 1.4rem; }
+html.dark .btn-primary { color: #1A1A1A; }
 .btn-primary:hover { background: var(--accent-hover); opacity: 1; }
 
 .btn-ghost {
@@ -155,32 +205,135 @@ nav {
   padding: .55rem 1.1rem;
 }
 .btn-ghost:hover { background: var(--bg); color: var(--text); }
-
-.btn-success {
-  background: var(--success);
-  color: #fff;
-  padding: .6rem 1.4rem;
-}
-
+.btn-success { background: var(--success); color: #fff; padding: .6rem 1.4rem; }
+html.dark .btn-success { color: #1A1A1A; }
 .btn-sm { font-size: .78rem; padding: .3rem .75rem; }
 
-/* ── Utility badges ── */
-.badge {
-  display: inline-block;
-  padding: .1rem .45rem;
-  border-radius: 999px;
-  font-size: .7rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
+/* ── Badges ─────────────────────────────────────────────────── */
+.badge { display: inline-block; padding: .1rem .45rem; border-radius: 999px; font-size: .7rem; font-weight: 700; white-space: nowrap; }
 
-/* ── Energy tag colours (semantic, intentional) ── */
+/* ── Energy tags ─────────────────────────────────────────────── */
 .etag-creative   { background: #EDE9FE; color: #5B21B6; }
 .etag-admin      { background: #DBEAFE; color: #1E40AF; }
 .etag-social     { background: #D1FAE5; color: #065F46; }
 .etag-low_energy { background: #FEF9C3; color: #854D0E; }
+html.dark .etag-creative   { background: #2D1A5E; color: #C4B5FD; }
+html.dark .etag-admin      { background: #0F2240; color: #93C5FD; }
+html.dark .etag-social     { background: #052E16; color: #6EE7B7; }
+html.dark .etag-low_energy { background: #2D2000; color: #FDE68A; }
 
-/* ── Time block colours ── */
+/* ── Time block badges ──────────────────────────────────────── */
 .tblock-morning   { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
 .tblock-afternoon { background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; }
 .tblock-evening   { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
+html.dark .tblock-morning   { background: #2D1800; color: #FDE68A; border-color: #92400E; }
+html.dark .tblock-afternoon { background: #0F2240; color: #93C5FD; border-color: #1E40AF; }
+html.dark .tblock-evening   { background: #1A1040; color: #C4B5FD; border-color: #5B21B6; }
+
+/* ── Floating Action Button (FAB) ───────────────────────────── */
+.fab {
+  position: fixed;
+  bottom: 1.75rem;
+  right: 1.75rem;
+  z-index: 200;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: 300;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s, box-shadow .15s;
+  font-family: inherit;
+}
+html.dark .fab { color: #1A1A1A; }
+.fab:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.fab:active { transform: scale(.95); }
+
+/* ── Quick-Add Modal ─────────────────────────────────────────── */
+.quick-modal {
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 0;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  width: min(480px, 92vw);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  position: fixed;
+}
+.quick-modal::backdrop { background: rgba(0,0,0,.45); backdrop-filter: blur(2px); }
+html.dark .quick-modal { box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+
+.quick-modal-inner { padding: 1.5rem; }
+.quick-modal-title { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 1rem; }
+.quick-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: .65rem .9rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  margin-bottom: .75rem;
+  transition: border-color .15s;
+}
+.quick-input:focus { border-color: var(--accent); }
+.quick-row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.quick-pri {
+  background: var(--ctrl-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .35rem .75rem;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.quick-pri.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+html.dark .quick-pri.active { color: #1A1A1A; }
+.quick-hint { font-size: .72rem; color: var(--text-faint); margin-left: auto; }
+.quick-submit {
+  width: 100%;
+  margin-top: .85rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: .7rem;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+html.dark .quick-submit { color: #1A1A1A; }
+.quick-submit:hover { background: var(--accent-hover); }
+
+/* ── Bloom animation (confetti ring) ───────────────────────── */
+@keyframes bloom-out {
+  0%   { transform: scale(.5); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.bloom-ring {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid var(--success);
+  pointer-events: none;
+  z-index: 9999;
+  animation: bloom-out .5s ease-out forwards;
+}

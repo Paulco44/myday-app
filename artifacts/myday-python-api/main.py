@@ -845,6 +845,21 @@ def delete_cop_initiative(initiative_id: int, db: Session = Depends(get_db)):
     return {"success": True}
 
 
+# ─── Quick-Add Task (FAB / N-key) ────────────────────────────────────────────
+
+@app.post(f"{BASE}/tasks/quick-add")
+async def quick_add_task(
+    title: str = Form(...),
+    priority: str = Form("medium"),
+    db: Session = Depends(get_db),
+):
+    task = models.Task(title=title, priority=priority, status="todo")
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return JSONResponse({"status": "ok", "task_id": task.id, "title": task.title})
+
+
 # ─── Focus Mode ──────────────────────────────────────────────────────────────
 
 @app.get(f"{BASE}/focus", response_class=HTMLResponse)

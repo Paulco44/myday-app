@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Focus Mode — MyDay</title>
+  <!-- Anti-flicker: apply saved theme before any paint -->
+  <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
   <link rel="stylesheet" href="{{ base }}/static/style.css" />
   <style>
     body { display: flex; flex-direction: column; }
@@ -148,22 +150,13 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* Progress bar */
-    .progress-track {
-      width: 100%;
-      height: .5rem;
-      background: var(--border);
-      border-radius: 999px;
-      overflow: hidden;
-      margin-bottom: 1.75rem;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 999px;
-      transition: width .5s linear;
-      width: 0%;
-    }
+    /* ── SVG Ring countdown ── */
+    .ring-wrap { display: flex; justify-content: center; margin-bottom: 1.75rem; }
+    .ring-inner { position: relative; width: 210px; height: 210px; display: flex; align-items: center; justify-content: center; }
+    .ring-svg { transform: rotate(-90deg); position: absolute; top: 0; left: 0; }
+    .ring-bg  { fill: none; stroke: var(--border); stroke-width: 10; }
+    .ring-arc { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 314.16; stroke-dashoffset: 0; transition: stroke-dashoffset .5s linear; }
+    .ring-time { position: relative; font-size: 2.5rem; font-weight: 800; color: var(--text); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 
     /* Timer action buttons */
     .timer-actions {
@@ -243,10 +236,13 @@
   </style>
 </head>
 <body>
-  <!-- Minimal nav for focus mode — fewer distractions -->
-  <nav class="focus-nav">
+  <nav class="focus-nav" style="justify-content:space-between;">
     <a class="logo" href="{{ base }}/">MyDay</a>
-    <a class="exit-link" href="{{ base }}/my-day">← Exit Focus</a>
+    <div style="display:flex;align-items:center;gap:.5rem;">
+      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
+      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
+      <a class="exit-link" href="{{ base }}/my-day" style="margin-left:.5rem;">← Exit Focus</a>
+    </div>
   </nav>
 
   <main>
@@ -315,10 +311,18 @@
       <!-- ── TIMER PANEL ── -->
       <div id="timer-panel">
         <div class="phase-label phase-running" id="phase-label">Focusing</div>
-        <div class="countdown" id="countdown">20:00</div>
-        <div class="progress-track">
-          <div class="progress-fill" id="progress-fill"></div>
+
+        <!-- SVG Shrinking-Disk Ring -->
+        <div class="ring-wrap">
+          <div class="ring-inner">
+            <svg class="ring-svg" viewBox="0 0 120 120" width="210" height="210">
+              <circle class="ring-bg"  cx="60" cy="60" r="50" />
+              <circle class="ring-arc" cx="60" cy="60" r="50" id="ring-arc" />
+            </svg>
+            <div class="ring-time" id="countdown">20:00</div>
+          </div>
         </div>
+
         <div class="timer-actions">
           <button class="btn-timer btn-done"  onclick="doneFocus()">✓ Done</button>
           <button class="btn-timer btn-pause" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
@@ -392,6 +396,7 @@
       document.getElementById('pause-btn').textContent       = '⏸ Pause';
       document.getElementById('phase-label').textContent     = 'Focusing';
       document.getElementById('phase-label').className       = 'phase-label phase-running';
+      document.getElementById('ring-arc').style.strokeDashoffset = '0';
 
       updateDisplay();
       timerInterval = setInterval(tick, 1000);
@@ -409,14 +414,18 @@
       }
     }
 
-    // ── Update countdown & progress bar ──────────────────────────────────────
+    // ── Update countdown + SVG ring ───────────────────────────────────────────
     function updateDisplay() {
       const m = Math.floor(remainingSeconds / 60);
       const s = remainingSeconds % 60;
       document.getElementById('countdown').textContent =
         String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-      const pct = ((totalSeconds - remainingSeconds) / totalSeconds) * 100;
-      document.getElementById('progress-fill').style.width = pct + '%';
+      // SVG ring: r=50 → circumference = 2π×50 ≈ 314.16
+      // offset goes 0→314.16 as time elapses (arc "shrinks")
+      const circumference = 2 * Math.PI * 50;
+      const pct = totalSeconds > 0 ? remainingSeconds / totalSeconds : 1;
+      document.getElementById('ring-arc').style.strokeDashoffset =
+        circumference * (1 - pct);
     }
 
     // ── Pause / Resume ────────────────────────────────────────────────────────
@@ -489,6 +498,51 @@
       document.getElementById('stopped-panel').style.display = 'none';
       document.getElementById('idle-panel').style.display    = 'block';
     }
+
+    // ─── Theme toggle ──────────────────────────────────────────────────────────
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem('myday-theme', isDark ? 'dark' : 'light'); } catch(e) {}
+      updateThemeBtn();
+    }
+    function updateThemeBtn() {
+      const btn = document.getElementById('theme-btn');
+      if (!btn) return;
+      const isDark = document.documentElement.classList.contains('dark');
+      btn.innerHTML = isDark ? '☀️ Light' : '🌙 Dark';
+      btn.classList.toggle('active', isDark);
+    }
+
+    // ─── Brown Noise ──────────────────────────────────────────────────────────
+    let _audioCtx = null, _noiseSource = null, _gainNode = null, _noiseActive = false;
+    function _buildBrownNoise(ctx) {
+      const sz = 2 * ctx.sampleRate, buf = ctx.createBuffer(1, sz, ctx.sampleRate);
+      const out = buf.getChannelData(0); let last = 0;
+      for (let i = 0; i < sz; i++) {
+        const w = Math.random() * 2 - 1;
+        out[i] = (last + (0.02 * w)) / 1.02; last = out[i]; out[i] *= 3.5;
+      }
+      const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; return src;
+    }
+    function startNoise() {
+      if (!_audioCtx) { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); _gainNode = _audioCtx.createGain(); _gainNode.gain.value = 0.22; _gainNode.connect(_audioCtx.destination); }
+      if (_audioCtx.state === 'suspended') _audioCtx.resume();
+      _noiseSource = _buildBrownNoise(_audioCtx); _noiseSource.connect(_gainNode); _noiseSource.start(); _noiseActive = true;
+    }
+    function stopNoise() { if (_noiseSource) { try { _noiseSource.stop(); } catch(e) {} _noiseSource = null; } _noiseActive = false; }
+    function toggleNoise() {
+      _noiseActive ? stopNoise() : startNoise();
+      try { localStorage.setItem('myday-noise', _noiseActive ? '1' : '0'); } catch(e) {}
+      updateNoiseBtn();
+    }
+    function updateNoiseBtn() {
+      const btn = document.getElementById('noise-btn'); if (!btn) return;
+      btn.innerHTML = _noiseActive ? '🎧 On' : '🎧 Noise'; btn.classList.toggle('active', _noiseActive);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      updateThemeBtn(); updateNoiseBtn();
+      try { if (localStorage.getItem('myday-noise') === '1') { const r = () => { startNoise(); updateNoiseBtn(); document.removeEventListener('click', r); }; document.addEventListener('click', r, { once: true }); } } catch(e) {}
+    });
   </script>
 </body>
 </html>
