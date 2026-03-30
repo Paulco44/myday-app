@@ -81,6 +81,111 @@ html.dark {
   --ctrl-hover:      #444444;
 }
 
+/* ── Explicit dark overrides — guaranteed to apply regardless of variable cascade ── */
+html.dark body { background-color: #1A1A1A !important; color: #F5F5F0; }
+html.dark nav  { background-color: #242424 !important; border-bottom-color: #3A3A3A; }
+
+/* Cards & surfaces */
+html.dark .task-row,
+html.dark .suggestion-row,
+html.dark .now-empty,
+html.dark .cop-accordion,
+html.dark .cop-body,
+html.dark .suggest-toggle,
+html.dark .empty-box,
+html.dark .time-col-body,
+html.dark .done-row,
+html.dark .checkin-cta { background: #242424 !important; border-color: #3A3A3A; }
+
+/* NOW strip */
+html.dark .now-strip { background: #2D2800 !important; border-color: #FFCC00; border-left-color: #FFCC00; }
+html.dark .now-label  { color: #FFCC00 !important; }
+html.dark .now-title  { color: #FFDD55 !important; }
+html.dark .now-empty .prompt { color: #FFDD55 !important; }
+
+/* Stat pills */
+html.dark .stat         { background: #2A2A2A !important; border-color: #3A3A3A; color: #A3A3A3; }
+html.dark .stat.streak  { background: #FFCC00 !important; color: #1A1A1A; border-color: #FFCC00; }
+html.dark .stat.streak .val { color: #1A1A1A !important; }
+html.dark .stat.done    { background: #0A2929 !important; color: #2DD4BF; border-color: #2DD4BF; }
+html.dark .stat.done .val { color: #2DD4BF !important; }
+html.dark .stat.overdue { background: #2D1200 !important; border-color: #F97316; color: #F97316; }
+html.dark .stat.overdue-none { background: #0A2929 !important; color: #2DD4BF; border-color: #2DD4BF; }
+
+/* Controls */
+html.dark .ctrl-btn { background: #333 !important; border-color: #444; color: #A3A3A3; }
+html.dark .ctrl-btn:hover { background: #444 !important; color: #F5F5F0; }
+html.dark .ctrl-btn.active { background: #FFCC00 !important; color: #1A1A1A; border-color: #FFCC00; }
+
+/* Buttons */
+html.dark .btn-focus-now  { background: #FFCC00 !important; color: #1A1A1A; }
+html.dark .btn-done-now   { background: #2DD4BF !important; color: #1A1A1A; }
+html.dark .btn-start      { background: #FFCC00 !important; color: #1A1A1A; }
+html.dark .btn-primary    { background: #FFCC00 !important; color: #1A1A1A; }
+html.dark .btn-state.primary { background: #FFCC00 !important; color: #1A1A1A; border-color: #FFCC00; }
+html.dark .btn-check      { background: #0A2929 !important; color: #2DD4BF; }
+html.dark .btn-ghost      { background: #2A2A2A !important; color: #A3A3A3; border-color: #3A3A3A; }
+html.dark .btn-state      { background: #333 !important; color: #A3A3A3; border-color: #3A3A3A; }
+html.dark .btn-state.warn { background: #2D1200 !important; color: #FDBA74; border-color: #F97316; }
+html.dark .started-badge  { background: #0A2929 !important; color: #2DD4BF; }
+
+/* FAB + modal */
+html.dark .fab { background: #FFCC00 !important; color: #1A1A1A; }
+html.dark .quick-modal-inner { background: #242424; }
+html.dark .quick-modal   { background: #242424 !important; }
+html.dark .quick-input   { background: #1A1A1A !important; border-color: #3A3A3A; color: #F5F5F0; }
+html.dark .quick-pri     { background: #333 !important; border-color: #444; color: #A3A3A3; }
+html.dark .quick-submit  { background: #FFCC00 !important; color: #1A1A1A; }
+html.dark .quick-modal-title { color: #F5F5F0; }
+html.dark .add-toast      { background: #2DD4BF !important; color: #1A1A1A; }
+
+/* Text */
+html.dark .task-row-title,
+html.dark .suggestion-title,
+html.dark .section-head h2,
+html.dark .page-header-left h1,
+html.dark .nav-logo { color: #FFCC00 !important; }
+html.dark .task-row-meta .pri-medium { color: #FFDD55; }
+html.dark .text-muted, html.dark .btn-park,
+html.dark .btn-edit-task { color: #A3A3A3; }
+html.dark .date,
+html.dark .page-header-left .date { color: #A3A3A3 !important; }
+
+/* Time blocks */
+html.dark .time-col-head.morning   { background: #2D1800 !important; color: #FDE68A; border-color: #92400E; }
+html.dark .time-col-head.afternoon { background: #0F2240 !important; color: #93C5FD; border-color: #1E40AF; }
+html.dark .time-col-head.evening   { background: #1A1040 !important; color: #C4B5FD; border-color: #5B21B6; }
+html.dark .time-task  { background: #1A1A1A !important; }
+html.dark .overflow-warn { background: #2D1200 !important; border-color: #F97316; color: #FDBA74; }
+html.dark .dump-banner { background: #0A2929 !important; border-color: #2DD4BF; color: #2DD4BF; }
+
+/* CoP / suggestions */
+html.dark .cop-tag-topic  { background: #2D1A5E; color: #C4B5FD; }
+html.dark .cop-tag-type   { background: #2D1800; color: #FDE68A; }
+html.dark .cop-tag-market { background: #052E16; color: #6EE7B7; }
+html.dark .suggest-badge  { background: #2D2800; color: #FFDD55; }
+html.dark .tag-overdue    { background: #2D0A0A; color: #EF4444; }
+html.dark .tag-today      { background: #2D1200; color: #FDBA74; }
+html.dark .tag-high       { background: #2D2800; color: #FFDD55; }
+
+/* Focus mode */
+html.dark .task-card      { background: #1A1A00 !important; border-color: #FFCC00; }
+html.dark .task-card .label { color: #FFCC00; }
+html.dark .task-card .task-title { color: #FFDD55; }
+html.dark .preset-btn     { background: #242424 !important; border-color: #3A3A3A; }
+html.dark .preset-btn.selected,
+html.dark .preset-btn:hover { background: #2D2800 !important; border-color: #FFCC00; }
+html.dark .preset-btn.selected .minutes { color: #FFCC00; }
+html.dark .btn-start-focus { background: #FFCC00 !important; color: #1A1A1A; }
+html.dark .ring-arc       { stroke: #FFCC00 !important; }
+html.dark .ring-time      { color: #F5F5F0 !important; }
+html.dark .btn-done       { background: #2DD4BF !important; color: #1A1A1A; }
+html.dark .phase-running  { color: #FFCC00 !important; }
+html.dark #done-panel     { background: #0A2929 !important; border-color: #2DD4BF; }
+html.dark #done-panel h3  { color: #2DD4BF !important; }
+html.dark #done-panel .done-msg { color: #6EE7B7; }
+html.dark #stopped-panel  { background: #242424 !important; border-color: #3A3A3A; }
+
 /* ── Base reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
