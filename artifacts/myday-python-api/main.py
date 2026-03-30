@@ -58,6 +58,13 @@ def run_migrations():
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
     ]
+    inbox_cols = [
+        ("linked_note_id", "INTEGER"),
+    ]
+    project_cols = [
+        ("source_ref", "TEXT"),
+        ("imported_at", "TEXT"),
+    ]
     with engine.connect() as conn:
         for col, col_type in task_cols:
             try:
@@ -68,6 +75,18 @@ def run_migrations():
         for col, col_type in log_cols:
             try:
                 conn.execute(sa_text(f"ALTER TABLE daily_logs ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
+        for col, col_type in inbox_cols:
+            try:
+                conn.execute(sa_text(f"ALTER TABLE inbox_items ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
+        for col, col_type in project_cols:
+            try:
+                conn.execute(sa_text(f"ALTER TABLE projects ADD COLUMN {col} {col_type}"))
                 conn.commit()
             except Exception:
                 pass
@@ -952,7 +971,22 @@ def inbox_detail(item_id: int, request: Request, db: Session = Depends(get_db)):
     linked_task = None
     if item.linked_task_id:
         linked_task = db.query(models.Task).filter(models.Task.id == item.linked_task_id).first()
+    linked_project = None
+    if item.linked_project_id:
+        linked_project = db.query(models.Project).filter(models.Project.id == item.linked_project_id).first()
+    linked_note = None
+    if item.linked_note_id:
+        linked_note = db.query(models.NoteItem).filter(models.NoteItem.id == item.linked_note_id).first()
     projects = db.query(models.Project).filter(models.Project.is_active == True).all()
+    # Determine what it was promoted to (for status badge and notice)
+    promoted_type = None
+    if item.status == "promoted":
+        if item.linked_task_id:
+            promoted_type = "task"
+        elif item.linked_project_id:
+            promoted_type = "project"
+        elif item.linked_note_id:
+            promoted_type = "note"
     return templates.TemplateResponse(
         request, "inbox_detail.html",
         {
@@ -960,6 +994,9 @@ def inbox_detail(item_id: int, request: Request, db: Session = Depends(get_db)):
             "item": item,
             "actions": actions,
             "linked_task": linked_task,
+            "linked_project": linked_project,
+            "linked_note": linked_note,
+            "promoted_type": promoted_type,
             "projects": projects,
         },
     )
@@ -1009,6 +1046,84 @@ def inbox_promote_task(
     db.flush()
     item.status = "promoted"
     item.linked_task_id = task.id
+    item.reviewed_at = item.reviewed_at or datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/inbox/{item_id}", status_code=303)
+
+
+@app.post(f"{BASE}/inbox/{{item_id}}/promote-project")
+def inbox_promote_project(
+    item_id: int,
+    name: str = Form(...),
+    description: str = Form(default=""),
+    first_step: str = Form(default=""),
+    db: Session = Depends(get_db),
+):
+    item = db.query(models.InboxItem).filter(models.InboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inbox item not found")
+
+    # Build provenance line for description
+    source_label = "Notion" if item.source == "notion" else item.source.capitalize()
+    imported_str = datetime.utcnow().strftime("%b %d, %Y")
+    provenance = f"[Imported from {source_label} on {imported_str}]"
+    if item.linked_note_url:
+        provenance += f"\n{item.linked_note_url}"
+    full_desc = f"{provenance}\n\n{description}".strip() if description else provenance
+
+    project = models.Project(
+        name=name.strip(),
+        description=full_desc,
+        is_active=True,
+    )
+    db.add(project)
+    db.flush()
+
+    if first_step.strip():
+        first_task = models.Task(
+            title=first_step.strip(),
+            project_id=project.id,
+            source_type="inbox",
+            source_ref=f"inbox:{item_id}",
+            focus_state="later",
+            status="todo",
+        )
+        db.add(first_task)
+
+    item.status = "promoted"
+    item.linked_project_id = project.id
+    item.reviewed_at = item.reviewed_at or datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/inbox/{item_id}", status_code=303)
+
+
+@app.post(f"{BASE}/inbox/{{item_id}}/promote-note")
+def inbox_promote_note(
+    item_id: int,
+    title: str = Form(...),
+    include_raw: str = Form(default="on"),
+    db: Session = Depends(get_db),
+):
+    item = db.query(models.InboxItem).filter(models.InboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inbox item not found")
+
+    content = item.raw_content if include_raw == "on" else None
+    note = models.NoteItem(
+        title=title.strip() or item.title,
+        content=content,
+        summary=item.summary,
+        source=item.source,
+        external_id=item.external_id,
+        external_url=item.linked_note_url,
+        linked_inbox_id=item.id,
+        imported_at=datetime.utcnow(),
+    )
+    db.add(note)
+    db.flush()
+
+    item.status = "promoted"
+    item.linked_note_id = note.id
     item.reviewed_at = item.reviewed_at or datetime.utcnow()
     db.commit()
     return RedirectResponse(url=f"{BASE}/inbox/{item_id}", status_code=303)

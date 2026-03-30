@@ -129,7 +129,8 @@ artifacts-monorepo/
 - **Settings** — id, morning_ritual_time, wip_limit_doing, default_priority
 - **DailyLog** — id, date, started, started_at, has_completed_task, has_morning_checkin
 - **CoPInitiative** — id, effort, topic, topic_description, subtopic, type_of_effort, focus_market, leader, cop_collaboration, notes, active_jan…active_dec
-- **InboxItem** — id, source, source_type, external_id, title, raw_content, summary, suggested_actions_json, status (new|reviewing|promoted|archived), created_at, reviewed_at, linked_task_id, linked_project_id, linked_note_url
+- **NoteItem** — id, title, content, summary, source, external_id, external_url, linked_inbox_id, imported_at, created_at
+- **InboxItem** — id, source, source_type, external_id, title, raw_content, summary, suggested_actions_json, status (new|reviewing|promoted|archived), created_at, reviewed_at, linked_task_id, linked_project_id, linked_note_id, linked_note_url
 
 ### Meeting Inbox (Phase 1)
 Pipeline for Whisper-derived meeting notes before they become tasks.
@@ -151,6 +152,13 @@ Pipeline for Whisper-derived meeting notes before they become tasks.
 - `GET /task-manager/inbox/{id}` — Detail: transcript + summary + suggested actions + promote/archive buttons
 - `POST /task-manager/inbox/{id}/promote-task` — Creates a Task with focus_state="later"; marks item as "promoted"
 - `POST /task-manager/inbox/{id}/archive` — Archives note without creating a task
+
+**Promotion options (Phase 3):**
+- **Task** (`POST /inbox/{id}/promote-task`) — creates Task with focus_state="later", links task to inbox item
+- **Project** (`POST /inbox/{id}/promote-project`) — creates Project from title/summary, optional first next-step task, embeds source provenance in project description
+- **Note** (`POST /inbox/{id}/promote-note`) — creates NoteItem preserving full content + Notion URL, links back to inbox item
+
+**Detail page UX:** 3-tab CTA panel (Create task / Start project / Save as note). Transcript is collapsed by default. "Use →" buttons on suggested actions pre-fill the active form's title field. Archive is a quiet secondary strip, never a primary CTA. Promoted status badge adapts per outcome type.
 
 **Rules:** Visiting detail page auto-transitions status new → reviewing. Promoting always sets task focus_state="later" (never Now). No auto-task creation on ingest. Designed to be extensible for Notion later.
 

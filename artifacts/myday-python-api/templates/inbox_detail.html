@@ -12,7 +12,6 @@
   <style>
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
 
-    /* ── Back link ── */
     .back-link { display: inline-flex; align-items: center; gap: .3rem; color: var(--text-muted); text-decoration: none; font-size: .85rem; font-weight: 600; margin-bottom: 1.25rem; transition: color .15s; }
     .back-link:hover { color: var(--accent); }
 
@@ -23,10 +22,10 @@
 
     /* ── Badges ── */
     .badge { display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 700; letter-spacing: .01em; text-transform: uppercase; }
-    .badge-whisper { background: #ede9fe; color: #7c3aed; }
-    html.dark .badge-whisper { background: #3b0764; color: #c4b5fd; }
-    .badge-meeting { background: #ede9fe; color: #7c3aed; }
-    html.dark .badge-meeting { background: #3b0764; color: #c4b5fd; }
+    .badge-whisper, .badge-meeting { background: #ede9fe; color: #7c3aed; }
+    html.dark .badge-whisper, html.dark .badge-meeting { background: #3b0764; color: #c4b5fd; }
+    .badge-notion, .badge-database_entry, .badge-page { background: #f0f4ff; color: #3b4fcc; }
+    html.dark .badge-notion, html.dark .badge-database_entry, html.dark .badge-page { background: #1e2a5e; color: #93c5fd; }
     .badge-new { background: #fef3c7; color: #92400e; }
     html.dark .badge-new { background: #451a03; color: var(--accent); }
     .badge-reviewing { background: #dbeafe; color: #1d4ed8; }
@@ -35,62 +34,86 @@
     html.dark .badge-promoted { background: #022c22; color: var(--success); }
     .badge-archived { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
 
-    /* ── Content cards ── */
-    .content-section { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem 1.4rem; margin-bottom: 1.1rem; }
-    .content-section h2 { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .85rem; }
-    .content-body { font-size: .9rem; line-height: 1.75; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+    /* ── Notices ── */
+    .notice { border-radius: .65rem; padding: .85rem 1.15rem; display: flex; align-items: flex-start; gap: .75rem; font-size: .88rem; font-weight: 600; margin-bottom: 1.25rem; }
+    .notice-ok { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); }
+    .notice-archived { background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); }
+    .notice a { color: inherit; text-decoration: none; font-weight: 700; border-bottom: 1px solid currentColor; }
 
     /* ── Summary highlight ── */
     .summary-block { background: var(--success-soft); border-left: 3px solid var(--success); border-radius: 0 .5rem .5rem 0; padding: .85rem 1rem; margin-bottom: 1.1rem; }
-    .summary-block h2 { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--success); margin-bottom: .5rem; }
+    .summary-block .label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--success); margin-bottom: .4rem; }
     .summary-block p { font-size: .9rem; line-height: 1.65; color: var(--text); }
 
+    /* ── Source provenance ── */
+    .provenance-block { display: inline-flex; align-items: center; gap: .45rem; font-size: .78rem; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: .45rem; padding: .3rem .7rem; margin-bottom: 1.25rem; }
+    .provenance-block a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .provenance-block a:hover { text-decoration: underline; }
+
     /* ── Suggested actions ── */
-    .actions-block { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.15rem 1.4rem; margin-bottom: 1.5rem; }
-    .actions-block h2 { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .85rem; }
+    .actions-block { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.1rem 1.35rem; margin-bottom: 1.25rem; }
+    .actions-block .section-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .75rem; }
     .action-list { display: flex; flex-direction: column; gap: .5rem; }
     .action-item { display: flex; align-items: flex-start; gap: .65rem; }
-    .action-item-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: .55rem; }
-    .action-text { font-size: .9rem; line-height: 1.55; flex: 1; }
-    .btn-use-action { background: transparent; border: 1px solid var(--border); border-radius: .4rem; padding: .22rem .65rem; font-size: .75rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: background .15s, color .15s; white-space: nowrap; flex-shrink: 0; }
-    .btn-use-action:hover { background: var(--accent); color: #1A1A1A; border-color: var(--accent); }
+    .action-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: .56rem; }
+    .action-text { font-size: .88rem; line-height: 1.55; flex: 1; }
+    .btn-use { background: transparent; border: 1px solid var(--border); border-radius: .4rem; padding: .2rem .6rem; font-size: .74rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: background .15s, color .15s, border-color .15s; white-space: nowrap; flex-shrink: 0; }
+    .btn-use:hover { background: var(--accent); color: #1A1A1A; border-color: var(--accent); }
 
-    /* ── CTA panel ── */
-    .cta-panel { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem 1.4rem; }
-    .cta-panel h2 { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; }
+    /* ── Transcript (collapsible) ── */
+    .transcript-block { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; margin-bottom: 1.25rem; overflow: hidden; }
+    .transcript-toggle { width: 100%; background: none; border: none; padding: .9rem 1.35rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: .84rem; font-weight: 600; color: var(--text-muted); font-family: inherit; text-align: left; }
+    .transcript-toggle:hover { color: var(--text); }
+    .transcript-toggle .icon { transition: transform .2s; font-style: normal; }
+    .transcript-toggle[aria-expanded="true"] .icon { transform: rotate(90deg); }
+    .transcript-body { padding: 0 1.35rem 1.15rem; font-size: .88rem; line-height: 1.75; color: var(--text); white-space: pre-wrap; word-break: break-word; display: none; }
+    .transcript-body.open { display: block; }
 
-    /* promote form */
-    .promote-form { display: flex; flex-direction: column; gap: .65rem; margin-bottom: 1rem; }
-    .promote-form input, .promote-form select, .promote-form textarea {
+    /* ── CTA Panel ── */
+    .cta-panel { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; margin-bottom: 1.1rem; overflow: hidden; }
+    .cta-panel-header { padding: 1.1rem 1.35rem .75rem; }
+    .cta-panel-header h2 { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .85rem; }
+
+    /* Action tabs */
+    .action-tabs { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .action-tab { background: var(--bg); border: 1px solid var(--border); border-radius: .4rem; padding: .42rem .9rem; font-size: .82rem; font-weight: 700; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: background .15s, color .15s, border-color .15s; }
+    .action-tab.active { background: var(--accent); color: #1A1A1A; border-color: var(--accent); }
+    .action-tab:hover:not(.active) { border-color: var(--text-muted); color: var(--text); }
+
+    /* Action panels */
+    .action-panel { display: none; padding: 1rem 1.35rem 1.25rem; border-top: 1px solid var(--border); }
+    .action-panel.visible { display: block; }
+
+    /* Shared form styles */
+    .promo-form { display: flex; flex-direction: column; gap: .65rem; }
+    .promo-form label { font-size: .78rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: .2rem; }
+    .promo-form input, .promo-form select, .promo-form textarea {
       background: var(--bg); border: 1px solid var(--border); border-radius: .45rem;
-      padding: .55rem .8rem; font-size: .9rem; color: var(--text); font-family: inherit;
+      padding: .52rem .8rem; font-size: .88rem; color: var(--text); font-family: inherit;
       width: 100%; box-sizing: border-box; transition: border-color .15s;
     }
-    .promote-form input:focus, .promote-form select:focus, .promote-form textarea:focus {
+    .promo-form input:focus, .promo-form select:focus, .promo-form textarea:focus {
       outline: none; border-color: var(--accent);
     }
-    .promote-form textarea { resize: vertical; min-height: 80px; }
-    .promote-form label { font-size: .8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: .2rem; }
-    .form-hint { font-size: .75rem; color: var(--text-faint); margin-top: -.3rem; }
+    .promo-form textarea { resize: vertical; min-height: 72px; }
+    .form-hint { font-size: .74rem; color: var(--text-faint); }
+    .btn-submit { background: var(--accent); color: #1A1A1A; border: none; border-radius: .5rem; padding: .58rem 1.25rem; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+    .btn-submit:hover { opacity: .85; }
 
-    .btn-promote { background: var(--accent); color: #1A1A1A; border: none; border-radius: .5rem; padding: .6rem 1.3rem; font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; }
-    .btn-promote:hover { opacity: .85; }
+    /* Checkbox toggle */
+    .checkbox-row { display: flex; align-items: center; gap: .55rem; font-size: .84rem; color: var(--text-muted); cursor: pointer; }
+    .checkbox-row input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
 
-    /* divider */
-    .cta-divider { display: flex; align-items: center; gap: .75rem; margin: 1rem 0; color: var(--text-faint); font-size: .78rem; }
-    .cta-divider::before, .cta-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-    /* secondary actions */
-    .secondary-actions { display: flex; gap: .65rem; flex-wrap: wrap; }
-    .btn-note { background: transparent; border: 1px solid var(--border); border-radius: .45rem; padding: .5rem 1rem; font-size: .85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; text-decoration: none; transition: background .15s, color .15s; }
-    .btn-note:hover { background: var(--bg); color: var(--text); }
-    .btn-archive { background: transparent; border: 1px solid var(--border); border-radius: .45rem; padding: .5rem 1rem; font-size: .85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: background .15s, color .15s; }
+    /* ── Archive strip ── */
+    .archive-strip { padding: .75rem 1.35rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .archive-strip p { font-size: .8rem; color: var(--text-faint); }
+    .btn-archive { background: transparent; border: 1px solid var(--border); border-radius: .4rem; padding: .38rem .85rem; font-size: .8rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: background .15s, color .15s, border-color .15s; }
     .btn-archive:hover { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
     html.dark .btn-archive:hover { background: #3b1414; color: #fca5a5; border-color: #7f1d1d; }
 
-    /* promoted / archived states */
-    .promoted-notice { background: var(--success-soft); border: 1px solid var(--success-border); border-radius: .65rem; padding: .85rem 1.1rem; display: flex; align-items: center; gap: .75rem; font-size: .88rem; color: var(--success); font-weight: 600; margin-bottom: 1.25rem; }
-    .archived-notice { background: var(--bg); border: 1px solid var(--border); border-radius: .65rem; padding: .85rem 1.1rem; display: flex; align-items: center; gap: .75rem; font-size: .88rem; color: var(--text-muted); font-weight: 600; margin-bottom: 1.25rem; }
+    /* ── Post-promotion actions ── */
+    .post-panel { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.1rem 1.35rem; }
+    .post-panel h2 { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .75rem; }
   </style>
 </head>
 <body>
@@ -115,53 +138,88 @@
   <main>
     <a class="back-link" href="{{ base }}/inbox">← Back to Inbox</a>
 
+    <!-- ── Header ── -->
     <div class="item-header">
       <h1>{{ item.title }}</h1>
       <div class="item-meta">
-        <span class="badge badge-{{ item.source_type | default('meeting') }}">🎙 {{ item.source_type | default('meeting') }}</span>
+        {% if item.source == 'notion' %}
+          <span class="badge badge-notion">◻ Notion</span>
+        {% else %}
+          <span class="badge badge-{{ item.source_type | default('meeting') }}">🎙 {{ item.source_type | default('meeting') | replace('_', ' ') }}</span>
+        {% endif %}
         <span class="badge badge-{{ item.status }}">
           {% if item.status == 'new' %}● New
           {% elif item.status == 'reviewing' %}◎ Reviewing
-          {% elif item.status == 'promoted' %}✓ Task created
-          {% elif item.status == 'archived' %}Archived
+          {% elif item.status == 'promoted' %}
+            {% if promoted_type == 'task' %}✓ Task created
+            {% elif promoted_type == 'project' %}◈ Project started
+            {% elif promoted_type == 'note' %}📎 Saved as note
+            {% else %}✓ Promoted{% endif %}
+          {% elif item.status == 'archived' %}📁 Archived
           {% else %}{{ item.status }}{% endif %}
         </span>
-        <span>{{ item.created_at.strftime('%A, %B %d · %I:%M %p') }}</span>
+        <span>{{ item.created_at.strftime('%a, %b %d · %I:%M %p') }}</span>
         {% if item.reviewed_at %}
           <span>Reviewed {{ item.reviewed_at.strftime('%b %d') }}</span>
         {% endif %}
       </div>
     </div>
 
-    {% if item.status == 'promoted' and linked_task %}
-      <div class="promoted-notice">
-        ✓ Task created: <a href="{{ base }}/tasks/{{ linked_task.id }}/edit" style="color:var(--success);font-weight:700;text-decoration:none;">{{ linked_task.title }}</a> — added to your Later list.
-      </div>
-    {% elif item.status == 'archived' %}
-      <div class="archived-notice">
-        📁 This note is archived. <a href="{{ base }}/inbox" style="color:var(--accent);font-weight:700;text-decoration:none;">Back to active inbox</a>
+    <!-- ── Source provenance ── -->
+    {% if item.source == 'notion' and item.linked_note_url %}
+      <div>
+        <a class="provenance-block" href="{{ item.linked_note_url }}" target="_blank" rel="noopener">
+          ◻ View in Notion →
+        </a>
       </div>
     {% endif %}
 
-    <!-- Summary -->
+    <!-- ── Promoted notices ── -->
+    {% if item.status == 'promoted' %}
+      {% if promoted_type == 'task' and linked_task %}
+        <div class="notice notice-ok">
+          <span>✓</span>
+          <div>Task added to your Later list: <a href="{{ base }}/tasks/{{ linked_task.id }}/edit">{{ linked_task.title }}</a>. You decide when it becomes active.</div>
+        </div>
+      {% elif promoted_type == 'project' and linked_project %}
+        <div class="notice notice-ok">
+          <span>◈</span>
+          <div>Project started: <a href="{{ base }}/tasks-page?project_id={{ linked_project.id }}">{{ linked_project.name }}</a>. Next steps are in your Later list.</div>
+        </div>
+      {% elif promoted_type == 'note' and linked_note %}
+        <div class="notice notice-ok">
+          <span>📎</span>
+          <div>Saved as reference note: <strong>{{ linked_note.title }}</strong>{% if linked_note.external_url %} · <a href="{{ linked_note.external_url }}" target="_blank" rel="noopener">View original →</a>{% endif %}</div>
+        </div>
+      {% else %}
+        <div class="notice notice-ok"><span>✓</span><div>This item has been processed.</div></div>
+      {% endif %}
+    {% elif item.status == 'archived' %}
+      <div class="notice notice-archived">
+        <span>📁</span>
+        <div>Archived. <a href="{{ base }}/inbox">Back to inbox</a></div>
+      </div>
+    {% endif %}
+
+    <!-- ── Summary ── -->
     {% if item.summary %}
       <div class="summary-block">
-        <h2>✦ Summary</h2>
+        <div class="label">✦ Summary</div>
         <p>{{ item.summary }}</p>
       </div>
     {% endif %}
 
-    <!-- Suggested actions -->
+    <!-- ── Suggested actions ── -->
     {% if actions %}
       <div class="actions-block">
-        <h2>Suggested actions ({{ actions | length }})</h2>
+        <div class="section-label">Suggested actions ({{ actions | length }})</div>
         <div class="action-list">
           {% for action in actions %}
             <div class="action-item">
-              <span class="action-item-dot"></span>
+              <span class="action-dot"></span>
               <span class="action-text">{{ action }}</span>
               {% if item.status not in ['promoted', 'archived'] %}
-                <button class="btn-use-action" onclick="useAction({{ loop.index0 }})">Use →</button>
+                <button class="btn-use" onclick="useAction({{ loop.index0 }})">Use →</button>
               {% endif %}
             </div>
           {% endfor %}
@@ -169,81 +227,145 @@
       </div>
     {% endif %}
 
-    <!-- Raw transcript -->
+    <!-- ── Raw transcript (collapsible) ── -->
     {% if item.raw_content %}
-      <div class="content-section">
-        <h2>📝 Transcript / Notes</h2>
-        <div class="content-body">{{ item.raw_content }}</div>
+      <div class="transcript-block">
+        <button class="transcript-toggle" id="transcript-btn" aria-expanded="false" onclick="toggleTranscript()">
+          <span>📝 Transcript / Notes</span>
+          <span class="icon">▶</span>
+        </button>
+        <div class="transcript-body" id="transcript-body">{{ item.raw_content }}</div>
       </div>
     {% endif %}
 
-    <!-- Actions panel — only when not yet promoted or archived -->
+    <!-- ── Action panel (triage) ── -->
     {% if item.status not in ['promoted', 'archived'] %}
       <div class="cta-panel">
-        <h2>What do you want to do?</h2>
+        <div class="cta-panel-header">
+          <h2>What do you want to do?</h2>
+          <div class="action-tabs">
+            <button class="action-tab active" id="tab-task"    onclick="switchTab('task')">✓ Create task</button>
+            <button class="action-tab"          id="tab-project" onclick="switchTab('project')">◈ Start project</button>
+            <button class="action-tab"          id="tab-note"    onclick="switchTab('note')">📎 Save as note</button>
+          </div>
+        </div>
 
-        <form id="promote-form" class="promote-form" method="post" action="{{ base }}/inbox/{{ item.id }}/promote-task">
-          <div>
-            <label for="task-title">Create a task from this note</label>
-            <input
-              id="task-title"
-              name="title"
-              type="text"
-              placeholder="Task title…"
-              value=""
-              required
-            />
-          </div>
-          <div>
-            <label for="task-desc">Notes (optional)</label>
-            <textarea id="task-desc" name="description" placeholder="Additional context…"></textarea>
-          </div>
-          {% if projects %}
+        <!-- Task panel -->
+        <div class="action-panel visible" id="panel-task">
+          <form id="form-task" class="promo-form" method="post" action="{{ base }}/inbox/{{ item.id }}/promote-task">
             <div>
-              <label for="task-project">Project (optional)</label>
-              <select id="task-project" name="project_id">
-                <option value="">No project</option>
-                {% for p in projects %}
-                  <option value="{{ p.id }}">{{ p.name }}</option>
-                {% endfor %}
-              </select>
+              <label for="task-title">Task title</label>
+              <input id="task-title" name="title" type="text" placeholder="What needs to happen…" required />
             </div>
-          {% endif %}
-          <p class="form-hint">This will be added to your Later list — not your Now. You choose when it becomes active.</p>
-          <div>
-            <button type="submit" class="btn-promote">Create task →</button>
-          </div>
-        </form>
+            <div>
+              <label for="task-desc">Notes (optional)</label>
+              <textarea id="task-desc" name="description" placeholder="Additional context…"></textarea>
+            </div>
+            {% if projects %}
+              <div>
+                <label for="task-project">Project (optional)</label>
+                <select id="task-project" name="project_id">
+                  <option value="">No project</option>
+                  {% for p in projects %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            {% endif %}
+            <p class="form-hint">Added to your Later list — not Now. You decide when it becomes active.</p>
+            <div><button type="submit" class="btn-submit">Create task →</button></div>
+          </form>
+        </div>
 
-        <div class="cta-divider">or</div>
+        <!-- Project panel -->
+        <div class="action-panel" id="panel-project">
+          <form class="promo-form" method="post" action="{{ base }}/inbox/{{ item.id }}/promote-project">
+            <div>
+              <label for="proj-name">Project name</label>
+              <input id="proj-name" name="name" type="text" placeholder="Project name…" value="{{ item.title }}" required />
+            </div>
+            <div>
+              <label for="proj-desc">Goal / description (optional)</label>
+              <textarea id="proj-desc" name="description" placeholder="What's this project trying to achieve?">{{ item.summary or '' }}</textarea>
+            </div>
+            <div>
+              <label for="proj-step">First next step (optional)</label>
+              <input id="proj-step" name="first_step" type="text" placeholder="e.g. Schedule kick-off meeting…" />
+            </div>
+            <p class="form-hint">A new project is created. The first step (if added) goes to your Later list.</p>
+            <div><button type="submit" class="btn-submit">Start project →</button></div>
+          </form>
+        </div>
 
-        <div class="secondary-actions">
-          <span style="font-size:.84rem;color:var(--text-muted);align-self:center;">Keep as reference</span>
-          <form method="post" action="{{ base }}/inbox/{{ item.id }}/archive" style="display:inline;">
-            <button type="submit" class="btn-archive">Archive note</button>
+        <!-- Note panel -->
+        <div class="action-panel" id="panel-note">
+          <form class="promo-form" method="post" action="{{ base }}/inbox/{{ item.id }}/promote-note">
+            <div>
+              <label for="note-title">Note title</label>
+              <input id="note-title" name="title" type="text" placeholder="Note title…" value="{{ item.title }}" required />
+            </div>
+            {% if item.raw_content %}
+              <label class="checkbox-row">
+                <input type="checkbox" name="include_raw" value="on" checked />
+                Include full transcript in the saved note
+              </label>
+            {% endif %}
+            <p class="form-hint">Saved as a reference note — no task, no pressure. You can find it later.</p>
+            <div><button type="submit" class="btn-submit">Save as note →</button></div>
+          </form>
+        </div>
+
+        <!-- Archive strip -->
+        <div class="archive-strip">
+          <p>Not relevant right now?</p>
+          <form method="post" action="{{ base }}/inbox/{{ item.id }}/archive">
+            <button type="submit" class="btn-archive">Archive</button>
           </form>
         </div>
       </div>
+
     {% elif item.status == 'promoted' %}
-      <div class="cta-panel">
+      <!-- Post-promotion: archive option still available -->
+      <div class="post-panel">
         <h2>Actions</h2>
-        <div class="secondary-actions">
-          <form method="post" action="{{ base }}/inbox/{{ item.id }}/archive" style="display:inline;">
-            <button type="submit" class="btn-archive">Archive note</button>
-          </form>
-        </div>
+        <form method="post" action="{{ base }}/inbox/{{ item.id }}/archive">
+          <button type="submit" class="btn-archive">Archive this inbox note</button>
+        </form>
       </div>
     {% endif %}
+
   </main>
 
   <script>
-    // Suggested action suggestions populate the task title field
     const ACTIONS = {{ actions | tojson }};
+
     function useAction(idx) {
-      const title = document.getElementById('task-title');
-      if (title) title.value = ACTIONS[idx] || '';
-      title && title.focus();
-      document.getElementById('promote-form') && document.getElementById('promote-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const text = ACTIONS[idx] || '';
+      // Fill whichever title input is currently visible
+      ['task-title', 'proj-step', 'note-title'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.closest('.action-panel.visible')) el.value = text;
+      });
+      // Always fill task-title as primary
+      const taskTitle = document.getElementById('task-title');
+      if (taskTitle) taskTitle.value = text;
+      // Scroll to the panel smoothly
+      const panel = document.querySelector('.action-panel.visible');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.action-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.action-panel').forEach(p => p.classList.remove('visible'));
+      document.getElementById('tab-' + name).classList.add('active');
+      document.getElementById('panel-' + name).classList.add('visible');
+    }
+
+    function toggleTranscript() {
+      const btn = document.getElementById('transcript-btn');
+      const body = document.getElementById('transcript-body');
+      const open = body.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
     }
   </script>
   <script src="{{ base }}/static/app.js?v=4"></script>

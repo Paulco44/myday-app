@@ -79,6 +79,24 @@ class TaskRead(BaseModel):
         from_attributes = True
 
 
+# ─── NoteItem ────────────────────────────────────────────────────────────────
+
+class NoteItemRead(BaseModel):
+    id: int
+    title: str
+    content: Optional[str]
+    summary: Optional[str]
+    source: str
+    external_id: Optional[str]
+    external_url: Optional[str]
+    linked_inbox_id: Optional[int]
+    imported_at: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ─── Notion Integration ──────────────────────────────────────────────────────
 
 class NotionSourceCreate(BaseModel):

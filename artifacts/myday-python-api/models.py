@@ -116,6 +116,25 @@ class DailyLog(Base):
     has_morning_checkin = Column(Boolean, default=False)  # did the brain-dump check-in today
 
 
+class NoteItem(Base):
+    """
+    A saved reference note — promoted from Inbox or created directly.
+    Preserves source provenance for future Notion export.
+    """
+    __tablename__ = "note_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=True)       # full text / transcript
+    summary = Column(Text, nullable=True)       # short summary
+    source = Column(String, nullable=False, default="self")  # whisper | notion | self
+    external_id = Column(String, nullable=True) # Notion page ID, whisper file ID, etc.
+    external_url = Column(String, nullable=True)# original URL (Notion page URL, etc.)
+    linked_inbox_id = Column(Integer, nullable=True)  # inbox_items.id (no FK — SQLite compat)
+    imported_at = Column(DateTime, nullable=True)     # when imported into MyDay
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class NotionSource(Base):
     """Notion page or database configured as an import source."""
     __tablename__ = "notion_sources"
@@ -147,7 +166,8 @@ class InboxItem(Base):
     reviewed_at = Column(DateTime, nullable=True)
     linked_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
     linked_project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
-    linked_note_url = Column(String, nullable=True)
+    linked_note_id = Column(Integer, nullable=True)  # note_items.id (no FK — SQLite compat)
+    linked_note_url = Column(String, nullable=True)  # kept for backwards compat / direct URL refs
 
 
 class CoPInitiative(Base):
