@@ -365,6 +365,21 @@ async def my_day(
         .all()
     )
 
+    # ── Today's inbox nudge stats (read-only, for evening panel) ──
+    today_inbox_all = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.created_at >= today_start)
+        .all()
+    )
+    inbox_today = {
+        "total": len(today_inbox_all),
+        "new": sum(1 for i in today_inbox_all if i.status == "new"),
+        "reviewing": sum(1 for i in today_inbox_all if i.status == "reviewing"),
+        "promoted": sum(1 for i in today_inbox_all if i.status == "promoted"),
+        "archived": sum(1 for i in today_inbox_all if i.status == "archived"),
+    }
+    inbox_today["unreviewed"] = inbox_today["new"] + inbox_today["reviewing"]
+
     return templates.TemplateResponse(
         request, "my_day.html",
         {
@@ -393,6 +408,7 @@ async def my_day(
             "focus_states": FOCUS_STATES,
             "time_blocks": TIME_BLOCKS,
             "energy_tags": ENERGY_TAGS,
+            "inbox_today": inbox_today,
         },
     )
 
@@ -949,6 +965,58 @@ def inbox_archived(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request, "inbox.html",
         {"base": BASE, "items": items, "archived_count": len(items), "show_archived": True},
+    )
+
+
+@app.get(f"{BASE}/meetings", response_class=HTMLResponse)
+def meetings_list(request: Request, db: Session = Depends(get_db)):
+    """
+    Group all InboxItems by calendar date and source for a meeting-centric view.
+    Read-only. No sync or promotion triggered here.
+    """
+    items = (
+        db.query(models.InboxItem)
+        .order_by(models.InboxItem.created_at.desc())
+        .all()
+    )
+
+    # Group by date
+    from collections import defaultdict, OrderedDict
+    groups: dict = OrderedDict()
+    for item in items:
+        day = item.created_at.date()
+        if day not in groups:
+            groups[day] = []
+        groups[day].append(item)
+
+    # Build summary dicts for each date group
+    day_summaries = []
+    for day, day_items in groups.items():
+        promoted = [i for i in day_items if i.status == "promoted"]
+        unreviewed = [i for i in day_items if i.status in ("new", "reviewing")]
+        archived = [i for i in day_items if i.status == "archived"]
+
+        # Sub-group by source
+        by_source: dict = OrderedDict()
+        for item in day_items:
+            src = item.source
+            if src not in by_source:
+                by_source[src] = []
+            by_source[src].append(item)
+
+        day_summaries.append({
+            "date": day,
+            "items": day_items,
+            "by_source": by_source,
+            "total": len(day_items),
+            "promoted_count": len(promoted),
+            "unreviewed_count": len(unreviewed),
+            "archived_count": len(archived),
+        })
+
+    return templates.TemplateResponse(
+        request, "meetings.html",
+        {"base": BASE, "day_summaries": day_summaries},
     )
 
 

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meetings — MyDay</title>
+  <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=4" />
+  <style>
+    main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.45rem; font-weight: 800; display: flex; align-items: center; gap: .5rem; }
+    .page-header .subtitle { color: var(--text-muted); font-size: .875rem; margin-top: .3rem; }
+
+    /* ── Day group ── */
+    .day-group { margin-bottom: 1.75rem; }
+
+    .day-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .85rem; }
+    .day-title { font-size: 1rem; font-weight: 800; color: var(--text); }
+    .day-title .weekday { font-weight: 400; color: var(--text-muted); font-size: .88rem; margin-left: .4rem; }
+
+    /* Day summary pills */
+    .day-pills { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+    .day-pill { display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 700; letter-spacing: .01em; }
+    .pill-total   { background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); }
+    .pill-promoted { background: #d1fae5; color: #065f46; }
+    html.dark .pill-promoted { background: #022c22; color: var(--success); }
+    .pill-unreviewed { background: #fef3c7; color: #92400e; }
+    html.dark .pill-unreviewed { background: #451a03; color: var(--accent); }
+
+    /* ── Source section ── */
+    .source-section { margin-bottom: .85rem; }
+    .source-label { display: flex; align-items: center; gap: .45rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .45rem; padding-left: .25rem; }
+    .source-icon { font-size: .9rem; }
+
+    /* ── Item cards ── */
+    .item-list { display: flex; flex-direction: column; gap: .5rem; }
+    .item-card { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; padding: .85rem 1.15rem; display: flex; align-items: flex-start; gap: .85rem; transition: border-color .15s; text-decoration: none; color: inherit; }
+    .item-card:hover { border-color: var(--accent); }
+    .item-card-body { flex: 1; min-width: 0; }
+    .item-title { font-size: .92rem; font-weight: 700; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-summary { font-size: .8rem; color: var(--text-muted); line-height: 1.5; margin-top: .2rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin-top: .45rem; font-size: .75rem; color: var(--text-faint); }
+
+    /* ── Status badges ── */
+    .sbadge { display: inline-flex; align-items: center; gap: .2rem; padding: .13rem .45rem; border-radius: .3rem; font-size: .69rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+    .sbadge-new { background: #fef3c7; color: #92400e; }
+    html.dark .sbadge-new { background: #451a03; color: var(--accent); }
+    .sbadge-reviewing { background: #dbeafe; color: #1d4ed8; }
+    html.dark .sbadge-reviewing { background: #1e3a5f; color: #93c5fd; }
+    .sbadge-promoted { background: #d1fae5; color: #065f46; }
+    html.dark .sbadge-promoted { background: #022c22; color: var(--success); }
+    .sbadge-archived { background: var(--bg); border: 1px solid var(--border); color: var(--text-faint); }
+
+    /* ── Promoted destination chip ── */
+    .dest-chip { display: inline-flex; align-items: center; gap: .22rem; font-size: .72rem; font-weight: 600; color: var(--success); padding: .1rem .4rem; background: var(--success-soft); border-radius: .3rem; }
+
+    /* ── Side accent stripe (source color) ── */
+    .stripe-whisper { border-left: 3px solid #7c3aed; }
+    .stripe-notion  { border-left: 3px solid #3b4fcc; }
+    .stripe-self    { border-left: 3px solid var(--text-faint); }
+
+    /* ── Empty state ── */
+    .empty-state { background: var(--surface); border: 1px dashed var(--border); border-radius: .75rem; padding: 3rem 2rem; text-align: center; }
+    .empty-state p { color: var(--text-muted); font-size: .9rem; line-height: 1.7; }
+    .empty-state a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+    /* ── Divider between groups ── */
+    .day-divider { border: none; border-top: 1px solid var(--border); margin: 0 0 1.75rem 0; }
+
+    /* ── Inbox link strip ── */
+    .inbox-strip { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; padding: .75rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .inbox-strip p { font-size: .84rem; color: var(--text-muted); }
+    .btn-inbox { display: inline-flex; align-items: center; gap: .35rem; background: var(--accent); color: #1a1a1a; border: none; border-radius: .4rem; padding: .38rem .85rem; font-size: .8rem; font-weight: 700; text-decoration: none; transition: opacity .15s; }
+    .btn-inbox:hover { opacity: .85; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
+      <a href="{{ base }}/kanban">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings" class="active">Meetings</a>
+      <a href="{{ base }}/notes">Notes</a>
+      <a href="{{ base }}/cop-admin">CoP Admin</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-noise" id="btn-noise" onclick="toggleNoise()">🎧 Noise</button>
+      <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">🌙 Dark</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page-header">
+      <h1>🎙 Meetings</h1>
+      <p class="subtitle">All inbox items grouped by date and source. Nothing is changed here — it's just a map.</p>
+    </div>
+
+    {% if day_summaries %}
+
+      <!-- Quick link to inbox if anything unreviewed -->
+      {% set total_unreviewed = namespace(n=0) %}
+      {% for g in day_summaries %}{% set total_unreviewed.n = total_unreviewed.n + g.unreviewed_count %}{% endfor %}
+      {% if total_unreviewed.n > 0 %}
+        <div class="inbox-strip">
+          <p>{{ total_unreviewed.n }} item{% if total_unreviewed.n != 1 %}s{% endif %} across all dates still need review.</p>
+          <a class="btn-inbox" href="{{ base }}/inbox">Go to Inbox →</a>
+        </div>
+      {% endif %}
+
+      {% for group in day_summaries %}
+        <div class="day-group">
+          <div class="day-header">
+            <div>
+              <span class="day-title">
+                {{ group.date.strftime('%B %-d, %Y') }}
+                <span class="weekday">{{ group.date.strftime('%A') }}</span>
+              </span>
+            </div>
+            <div class="day-pills">
+              <span class="day-pill pill-total">{{ group.total }} item{% if group.total != 1 %}s{% endif %}</span>
+              {% if group.promoted_count %}
+                <span class="day-pill pill-promoted">✓ {{ group.promoted_count }} promoted</span>
+              {% endif %}
+              {% if group.unreviewed_count %}
+                <span class="day-pill pill-unreviewed">{{ group.unreviewed_count }} to review</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% for source, source_items in group.by_source.items() %}
+            <div class="source-section">
+              <div class="source-label">
+                {% if source == 'whisper' %}
+                  <span class="source-icon">🎙</span> Whisper
+                {% elif source == 'notion' %}
+                  <span class="source-icon">◻</span> Notion
+                {% else %}
+                  <span class="source-icon">📝</span> {{ source | replace('_', ' ') | capitalize }}
+                {% endif %}
+                <span style="margin-left:.25rem;font-weight:400;">({{ source_items | length }})</span>
+              </div>
+
+              <div class="item-list">
+                {% for item in source_items %}
+                  <a class="item-card stripe-{{ item.source }}" href="{{ base }}/inbox/{{ item.id }}">
+                    <div class="item-card-body">
+                      <div class="item-title">{{ item.title }}</div>
+                      {% if item.summary %}
+                        <div class="item-summary">{{ item.summary }}</div>
+                      {% endif %}
+                      <div class="item-meta">
+                        <span class="sbadge sbadge-{{ item.status }}">
+                          {% if item.status == 'new' %}● New
+                          {% elif item.status == 'reviewing' %}◎ Reviewing
+                          {% elif item.status == 'promoted' %}✓ Promoted
+                          {% elif item.status == 'archived' %}📁 Archived
+                          {% else %}{{ item.status }}{% endif %}
+                        </span>
+                        {% if item.status == 'promoted' %}
+                          {% if item.linked_task_id %}
+                            <span class="dest-chip">→ Task</span>
+                          {% elif item.linked_project_id %}
+                            <span class="dest-chip">→ Project</span>
+                          {% elif item.linked_note_id %}
+                            <span class="dest-chip">→ Note</span>
+                          {% endif %}
+                        {% endif %}
+                        <span>{{ item.created_at.strftime('%-I:%M %p') }}</span>
+                        {% if item.reviewed_at %}
+                          <span>Reviewed {{ item.reviewed_at.strftime('%-I:%M %p') }}</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <span style="color:var(--text-faint);font-size:.78rem;flex-shrink:0;padding-top:.1rem;">→</span>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+
+          {% if not loop.last %}<hr class="day-divider" />{% endif %}
+        </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state">
+        <p>No inbox items yet.</p>
+        <p>When you add meeting notes or import from Notion, they'll appear here grouped by date.</p>
+        <p style="margin-top:.75rem;"><a href="{{ base }}/inbox">Go to Inbox →</a></p>
+      </div>
+    {% endif %}
+
+  </main>
+
+  <script src="{{ base }}/static/app.js?v=4"></script>
+</body>
+</html>

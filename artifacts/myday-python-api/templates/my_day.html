@@ -203,6 +203,25 @@
     .done-check { color: var(--success); font-size: 1rem; }
     .done-title { flex: 1; text-decoration: line-through; color: var(--text-muted); }
 
+    /* ── Inbox nudge panel ── */
+    .inbox-nudge { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; padding: .85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .inbox-nudge-left { display: flex; flex-direction: column; gap: .35rem; }
+    .inbox-nudge-title { font-size: .8rem; font-weight: 700; color: var(--text-muted); letter-spacing: .04em; text-transform: uppercase; }
+    .inbox-pills { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .ipill { display: inline-flex; align-items: center; padding: .15rem .5rem; border-radius: .3rem; font-size: .72rem; font-weight: 700; gap: .2rem; }
+    .ipill-new       { background: #fef3c7; color: #92400e; }
+    html.dark .ipill-new       { background: #451a03; color: var(--accent); }
+    .ipill-reviewing { background: #dbeafe; color: #1d4ed8; }
+    html.dark .ipill-reviewing { background: #1e3a5f; color: #93c5fd; }
+    .ipill-promoted  { background: #d1fae5; color: #065f46; }
+    html.dark .ipill-promoted  { background: #022c22; color: var(--success); }
+    .ipill-archived  { background: var(--bg); border: 1px solid var(--border); color: var(--text-faint); }
+    .inbox-nudge-actions { display: flex; gap: .4rem; flex-wrap: wrap; flex-shrink: 0; }
+    .btn-nudge-review { background: var(--accent); color: #1a1a1a; border: none; border-radius: .4rem; padding: .38rem .85rem; font-size: .78rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: opacity .15s; }
+    .btn-nudge-review:hover { opacity: .85; }
+    .btn-nudge-meetings { background: transparent; border: 1px solid var(--border); border-radius: .4rem; padding: .35rem .75rem; font-size: .78rem; font-weight: 600; color: var(--text-muted); text-decoration: none; white-space: nowrap; transition: color .15s, border-color .15s; }
+    .btn-nudge-meetings:hover { color: var(--text); border-color: var(--text-muted); }
+
     /* ── Morning check-in CTA ── */
     .checkin-cta { background: linear-gradient(135deg, var(--warning-soft) 0%, var(--warning-light) 100%); border: 1px solid var(--warning-border); border-radius: .75rem; padding: 1rem 1.2rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
     .checkin-cta-text { flex: 1; }
@@ -229,6 +248,7 @@
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
       <a href="{{ base }}/focus" class="nav-focus">Focus</a>
@@ -508,6 +528,35 @@
           <span class="done-title">{{ task.title }}</span>
         </div>
         {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Today's Inbox nudge (read-only evening panel) ── -->
+    {% if inbox_today.total > 0 %}
+    <div class="inbox-nudge">
+      <div class="inbox-nudge-left">
+        <div class="inbox-nudge-title">📥 Today's inbox · {{ inbox_today.total }} item{% if inbox_today.total != 1 %}s{% endif %}</div>
+        <div class="inbox-pills">
+          {% if inbox_today.new %}
+            <span class="ipill ipill-new">● {{ inbox_today.new }} new</span>
+          {% endif %}
+          {% if inbox_today.reviewing %}
+            <span class="ipill ipill-reviewing">◎ {{ inbox_today.reviewing }} reviewing</span>
+          {% endif %}
+          {% if inbox_today.promoted %}
+            <span class="ipill ipill-promoted">✓ {{ inbox_today.promoted }} promoted</span>
+          {% endif %}
+          {% if inbox_today.archived %}
+            <span class="ipill ipill-archived">{{ inbox_today.archived }} archived</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="inbox-nudge-actions">
+        {% if inbox_today.unreviewed > 0 %}
+          <a class="btn-nudge-review" href="{{ base }}/inbox">Review {{ inbox_today.unreviewed }} →</a>
+        {% endif %}
+        <a class="btn-nudge-meetings" href="{{ base }}/meetings">All meetings</a>
       </div>
     </div>
     {% endif %}
