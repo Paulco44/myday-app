@@ -368,12 +368,16 @@
 
   <script>
     // ── State ───────────────────────────────────────────────────────────────
-    let selectedMinutes = 20;
-    let totalSeconds    = 0;
+    // Uses wall-clock timestamps so the timer stays accurate even when
+    // the browser throttles setInterval (hidden tab, inactive window, etc.)
+    let selectedMinutes  = 20;
+    let totalSeconds     = 0;
     let remainingSeconds = 0;
-    let timerInterval   = null;
-    let isPaused        = false;
-    const BASE          = "{{ base }}";
+    let timerInterval    = null;
+    let isPaused         = false;
+    let segmentStart     = null;   // Date.now() when the current run segment began
+    let accumulatedMs    = 0;      // total ms counted in prior (completed) segments
+    const BASE           = "{{ base }}";
 
     // ── Preset selection ─────────────────────────────────────────────────────
     function selectPreset(btn) {
@@ -382,11 +386,19 @@
       selectedMinutes = parseInt(btn.dataset.minutes, 10);
     }
 
+    // ── Wall-clock remaining ──────────────────────────────────────────────────
+    function computeRemaining() {
+      const runningMs = segmentStart !== null ? Date.now() - segmentStart : 0;
+      const elapsedS  = Math.floor((accumulatedMs + runningMs) / 1000);
+      return Math.max(0, totalSeconds - elapsedS);
+    }
+
     // ── Start focus ──────────────────────────────────────────────────────────
     function startFocus() {
-      totalSeconds     = selectedMinutes * 60;
-      remainingSeconds = totalSeconds;
-      isPaused         = false;
+      totalSeconds   = selectedMinutes * 60;
+      accumulatedMs  = 0;
+      segmentStart   = Date.now();
+      isPaused       = false;
 
       document.getElementById('idle-panel').style.display    = 'none';
       document.getElementById('stopped-panel').style.display = 'none';
@@ -398,14 +410,15 @@
       document.getElementById('phase-label').className       = 'phase-label phase-running';
       document.getElementById('ring-arc').style.strokeDashoffset = '0';
 
+      remainingSeconds = totalSeconds;
       updateDisplay();
-      timerInterval = setInterval(tick, 1000);
+      timerInterval = setInterval(tick, 500);
     }
 
     // ── Tick ─────────────────────────────────────────────────────────────────
     function tick() {
       if (isPaused) return;
-      remainingSeconds--;
+      remainingSeconds = computeRemaining();
       updateDisplay();
       if (remainingSeconds <= 0) {
         clearInterval(timerInterval);
@@ -414,14 +427,25 @@
       }
     }
 
+    // ── Snap display when tab becomes visible again ───────────────────────────
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && timerInterval && !isPaused) {
+        remainingSeconds = computeRemaining();
+        updateDisplay();
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          doneFocus();
+        }
+      }
+    });
+
     // ── Update countdown + SVG ring ───────────────────────────────────────────
     function updateDisplay() {
       const m = Math.floor(remainingSeconds / 60);
       const s = remainingSeconds % 60;
       document.getElementById('countdown').textContent =
         String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-      // SVG ring: r=50 → circumference = 2π×50 ≈ 314.16
-      // offset goes 0→314.16 as time elapses (arc "shrinks")
       const circumference = 2 * Math.PI * 50;
       const pct = totalSeconds > 0 ? remainingSeconds / totalSeconds : 1;
       document.getElementById('ring-arc').style.strokeDashoffset =
@@ -435,11 +459,18 @@
       const btn    = document.getElementById('pause-btn');
       const phase  = document.getElementById('phase-label');
       if (isPaused) {
+        // Freeze the elapsed count
+        if (segmentStart !== null) {
+          accumulatedMs += Date.now() - segmentStart;
+          segmentStart = null;
+        }
         notice.style.display = 'block';
         btn.textContent      = '▶ Resume';
         phase.textContent    = 'Paused';
         phase.className      = 'phase-label phase-paused';
       } else {
+        // Start a new segment from now
+        segmentStart = Date.now();
         notice.style.display = 'none';
         btn.textContent      = '⏸ Pause';
         phase.textContent    = 'Focusing';
@@ -451,6 +482,7 @@
     function stopFocus() {
       clearInterval(timerInterval);
       timerInterval = null;
+      segmentStart  = null;
       document.getElementById('timer-panel').style.display   = 'none';
       document.getElementById('stopped-panel').style.display = 'block';
     }
@@ -459,13 +491,13 @@
     function doneFocus() {
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 
-      const taskId          = document.getElementById('task-id')?.value;
-      const minutesFocused  = Math.ceil((totalSeconds - remainingSeconds) / 60) || selectedMinutes;
+      const taskId        = document.getElementById('task-id')?.value;
+      const runningMs     = segmentStart !== null ? Date.now() - segmentStart : 0;
+      const totalElapsedMs = accumulatedMs + runningMs;
+      const minutesFocused = Math.max(1, Math.ceil(totalElapsedMs / 60000));
 
-      // Switch UI immediately
       document.getElementById('timer-panel').style.display = 'none';
 
-      // POST via fetch
       const body = new URLSearchParams({
         task_id:          taskId || '',
         duration_minutes: minutesFocused,
@@ -483,7 +515,6 @@
           document.getElementById('done-panel').style.display = 'block';
         })
         .catch(() => {
-          // Server error — still show the success message (the work happened)
           document.getElementById('done-headline').textContent =
             `Focus block complete — ${minutesFocused} min.`;
           document.getElementById('done-msg').textContent =
