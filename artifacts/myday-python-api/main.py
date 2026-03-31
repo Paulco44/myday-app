@@ -572,6 +572,44 @@ async def edit_task_post(
 
 # ─── Kanban ──────────────────────────────────────────────────────────────────
 
+@app.post(f"{BASE}/tasks/{{task_id}}/quick-edit")
+async def quick_edit_task(
+    task_id: int,
+    title: str = Form(...),
+    priority: str = Form("medium"),
+    due_date: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    """Lightweight AJAX card edit — returns JSON, no redirect."""
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db_task.title = title
+    db_task.priority = priority
+    db_task.description = description or None
+    if due_date:
+        try:
+            db_task.due_date = date.fromisoformat(due_date)
+        except ValueError:
+            db_task.due_date = None
+    else:
+        db_task.due_date = None
+    db_task.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(db_task)
+    return JSONResponse({
+        "status": "ok",
+        "task": {
+            "id": db_task.id,
+            "title": db_task.title,
+            "priority": db_task.priority,
+            "due_date": db_task.due_date.isoformat() if db_task.due_date else None,
+            "description": db_task.description,
+        }
+    })
+
+
 @app.get(f"{BASE}/kanban", response_class=HTMLResponse)
 async def kanban(request: Request, db: Session = Depends(get_db)):
     today = date.today()

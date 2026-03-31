@@ -4,9 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kanban — MyDay</title>
-    <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=4" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=4" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
@@ -19,53 +18,29 @@
     .nav-links a:hover { color: var(--text); }
     .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
     .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
-    .nav-links a.nav-focus:hover { color: #64748b; }
     .wip-info { margin-left: auto; font-size: .8rem; color: #94a3b8; }
     .wip-info strong { color: #475569; }
 
     /* ── Board ── */
     .board { flex: 1; display: flex; gap: 1rem; padding: 1.25rem 1.5rem; overflow-x: auto; align-items: flex-start; }
 
-    .column {
-      background: #e8eaf0;
-      border-radius: .75rem;
-      width: 240px;
-      min-width: 240px;
-      display: flex;
-      flex-direction: column;
-      max-height: calc(100vh - 7rem);
-    }
-    .column.drag-over { outline: 2px dashed #4f46e5; outline-offset: 2px; }
+    .column { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; width: 260px; min-width: 260px; display: flex; flex-direction: column; max-height: calc(100vh - 7rem); }
+    .column.drag-over { outline: 2px dashed var(--accent); outline-offset: 2px; }
     .column.wip-exceeded { background: #fee2e2; }
-    .column-head {
-      padding: .75rem .9rem .5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-    }
-    .column-title { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #475569; }
-    .col-count { background: #fff; border-radius: 999px; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; color: #64748b; }
+    html.dark .column.wip-exceeded { background: #2d1111; }
+    .column-head { padding: .75rem .9rem .5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; }
+    .column-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .col-count { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; color: var(--text-muted); }
     .wip-warn { font-size: .7rem; color: #dc2626; font-weight: 700; margin-top: .15rem; }
-
     .column-body { padding: .25rem .6rem .75rem; overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; min-height: 60px; }
 
-    /* ── Card ── */
-    .card {
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: .55rem;
-      padding: .7rem .8rem;
-      cursor: grab;
-      transition: box-shadow .15s, transform .15s;
-      user-select: none;
-    }
-    .card:active { cursor: grabbing; }
-    .card.dragging { opacity: .5; transform: rotate(1.5deg); box-shadow: 0 8px 20px rgba(0,0,0,.15); }
-    .card-title { font-weight: 600; font-size: .87rem; line-height: 1.3; }
+    /* ── Card preview ── */
+    .card { background: var(--bg); border: 1px solid var(--border); border-radius: .55rem; padding: .7rem .8rem; cursor: pointer; transition: box-shadow .15s, border-color .15s; position: relative; }
+    .card:not(.editing):hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .card.dragging { opacity: .5; cursor: grabbing; }
+    .card.editing { cursor: default; border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+    .card-title { font-weight: 600; font-size: .87rem; line-height: 1.35; }
     .card-meta { margin-top: .35rem; display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
-    .badge { display: inline-block; padding: .12rem .45rem; border-radius: 999px; font-size: .7rem; font-weight: 600; }
     .pri-high   { color: #dc2626; font-weight: 700; font-size: .72rem; }
     .pri-medium { color: #d97706; font-size: .72rem; }
     .pri-low    { color: #94a3b8; font-size: .72rem; }
@@ -74,29 +49,64 @@
     .card-project { font-size: .68rem; color: #94a3b8; }
     .card-today { font-size: .68rem; background: #fef3c7; color: #92400e; border-radius: 3px; padding: .1rem .3rem; }
 
-    /* Quick-action dropdown */
+    /* Expand-to-full hint (top-right, visible on hover) */
+    .card-expand-btn { position: absolute; top: .45rem; right: .5rem; padding: .25rem; border-radius: .3rem; color: var(--text-faint); border: none; background: none; cursor: pointer; opacity: 0; transition: opacity .15s; font-size: .72rem; line-height: 1; text-decoration: none; }
+    .card:not(.editing):hover .card-expand-btn { opacity: 1; }
+    .card-expand-btn:hover { color: var(--text); background: var(--surface); }
+
+    /* Move buttons */
     .card-actions { margin-top: .5rem; display: flex; gap: .3rem; flex-wrap: wrap; }
-    .move-btn { font-size: .7rem; padding: .2rem .45rem; border-radius: .3rem; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; cursor: pointer; font-weight: 500; transition: background .1s; }
+    .move-btn { font-size: .7rem; padding: .2rem .45rem; border-radius: .3rem; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; font-weight: 500; transition: background .1s; }
     .move-btn:hover { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+
+    /* ── Inline edit form (injected by JS) ── */
+    .inline-form { display: flex; flex-direction: column; gap: .5rem; }
+    .inline-form input[type=text],
+    .inline-form textarea,
+    .inline-form select,
+    .inline-form input[type=date] {
+      width: 100%; font-size: .82rem; font-family: inherit; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: .35rem; padding: .35rem .55rem; outline: none;
+      transition: border-color .15s;
+    }
+    .inline-form input[type=text]:focus,
+    .inline-form textarea:focus,
+    .inline-form select:focus,
+    .inline-form input[type=date]:focus { border-color: var(--accent); }
+    .inline-form textarea { resize: vertical; min-height: 56px; }
+    .inline-form-row { display: flex; gap: .4rem; }
+    .inline-form-row select,
+    .inline-form-row input[type=date] { flex: 1; }
+    .inline-form-actions { display: flex; align-items: center; justify-content: space-between; padding-top: .2rem; }
+    .btn-save-inline { background: var(--accent); color: #1a1a1a; border: none; border-radius: .35rem; padding: .3rem .75rem; font-size: .76rem; font-weight: 700; cursor: pointer; transition: opacity .15s; display: flex; align-items: center; gap: .25rem; }
+    .btn-save-inline:hover { opacity: .85; }
+    .btn-save-inline:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-cancel-inline { background: none; border: none; color: var(--text-muted); font-size: .76rem; cursor: pointer; padding: .3rem .5rem; border-radius: .3rem; transition: color .15s; }
+    .btn-cancel-inline:hover { color: var(--text); }
+    .btn-more-link { font-size: .7rem; color: var(--text-faint); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; background: none; border: none; font-family: inherit; }
+    .btn-more-link:hover { color: var(--text-muted); }
+    .save-feedback { font-size: .7rem; color: var(--success); font-weight: 600; }
 
     .empty-col { text-align: center; padding: 1rem .5rem; color: #94a3b8; font-size: .8rem; }
   </style>
 </head>
 <body>
+
   <nav>
     <a class="nav-logo" href="{{ base }}/">MyDay</a>
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" style="color:#f59e0b;font-weight:600;">✦ Check In</a>
+      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
       <a href="{{ base }}/kanban" class="active">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/inbox">Inbox</a>
       <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
     </div>
     <span class="wip-info">WIP limit (Doing): <strong>{{ wip_limit }}</strong></span>
-      <div class="focus-controls">
+    <div class="focus-controls">
       <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
       <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
     </div>
@@ -127,35 +137,50 @@
         {% if tasks %}
         {% for task in tasks %}
         <div class="card"
+             id="card-{{ task.id }}"
              draggable="true"
              data-task-id="{{ task.id }}"
+             data-title="{{ task.title | e }}"
+             data-priority="{{ task.priority }}"
+             data-due="{{ task.due_date.isoformat() if task.due_date else '' }}"
+             data-description="{{ (task.description or '') | e }}"
              ondragstart="handleDragStart(event, {{ task.id }})"
-             ondragend="this.classList.remove('dragging')">
+             ondragend="this.classList.remove('dragging')"
+             onclick="handleCardClick(event, this)">
 
-          <div class="card-title">{{ task.title }}</div>
-          <div class="card-meta">
-            <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
-            {% if task.due_date %}
-            <span class="card-due {% if task.due_date < today %}overdue{% endif %}">
-              {{ task.due_date.strftime('%b %-d') }}
-            </span>
-            {% endif %}
-            {% if task.project %}<span class="card-project">{{ task.project.name }}</span>{% endif %}
-            {% if task.is_today %}<span class="card-today">Today</span>{% endif %}
+          <!-- Expand-to-full-edit button -->
+          <a class="card-expand-btn"
+             href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/kanban"
+             onclick="event.stopPropagation()"
+             title="Full edit">⤢</a>
+
+          <!-- Preview content -->
+          <div class="card-preview">
+            <div class="card-title">{{ task.title }}</div>
+            <div class="card-meta">
+              <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
+              {% if task.due_date %}
+              <span class="card-due {% if task.due_date < today %}overdue{% endif %}">
+                {{ task.due_date.strftime('%b %-d') }}
+              </span>
+              {% endif %}
+              {% if task.project %}<span class="card-project">{{ task.project.name }}</span>{% endif %}
+              {% if task.is_today %}<span class="card-today">Today</span>{% endif %}
+            </div>
+            <!-- Quick move buttons -->
+            <div class="card-actions">
+              {% for s in statuses %}
+              {% if s != status %}
+              <form method="post" action="{{ base }}/tasks/{{ task.id }}/status" style="display:inline" onsubmit="event.stopPropagation()">
+                <input type="hidden" name="status" value="{{ s }}" />
+                <input type="hidden" name="redirect_to" value="{{ base }}/kanban" />
+                <button class="move-btn" type="submit" onclick="event.stopPropagation()">→ {{ status_labels[s] }}</button>
+              </form>
+              {% endif %}
+              {% endfor %}
+            </div>
           </div>
 
-          <!-- Quick move buttons -->
-          <div class="card-actions">
-            {% for s in statuses %}
-            {% if s != status %}
-            <form method="post" action="{{ base }}/tasks/{{ task.id }}/status" style="display:inline">
-              <input type="hidden" name="status" value="{{ s }}" />
-              <input type="hidden" name="redirect_to" value="{{ base }}/kanban" />
-              <button class="move-btn" type="submit">→ {{ status_labels[s] }}</button>
-            </form>
-            {% endif %}
-            {% endfor %}
-          </div>
         </div>
         {% endfor %}
         {% else %}
@@ -169,10 +194,19 @@
   <script>
     const BASE = "{{ base }}";
     let draggedId = null;
+    let activeEditCard = null;
 
+    /* ─────────────────────────────────────────
+       Drag & Drop
+    ───────────────────────────────────────── */
     function handleDragStart(event, taskId) {
+      // Don't start drag if we're editing
+      if (event.currentTarget.classList.contains('editing')) {
+        event.preventDefault();
+        return;
+      }
       draggedId = taskId;
-      event.target.classList.add('dragging');
+      event.currentTarget.classList.add('dragging');
       event.dataTransfer.effectAllowed = 'move';
     }
 
@@ -180,27 +214,186 @@
       event.preventDefault();
       event.currentTarget.classList.remove('drag-over');
       if (!draggedId) return;
-
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = `${BASE}/tasks/${draggedId}/status`;
-
       const statusInput = document.createElement('input');
-      statusInput.type = 'hidden';
-      statusInput.name = 'status';
-      statusInput.value = newStatus;
+      statusInput.type = 'hidden'; statusInput.name = 'status'; statusInput.value = newStatus;
       form.appendChild(statusInput);
-
       const redirectInput = document.createElement('input');
-      redirectInput.type = 'hidden';
-      redirectInput.name = 'redirect_to';
-      redirectInput.value = `${BASE}/kanban`;
+      redirectInput.type = 'hidden'; redirectInput.name = 'redirect_to'; redirectInput.value = `${BASE}/kanban`;
       form.appendChild(redirectInput);
-
       document.body.appendChild(form);
       form.submit();
     }
+
+    /* ─────────────────────────────────────────
+       Inline Editing
+    ───────────────────────────────────────── */
+    function handleCardClick(event, card) {
+      // Ignore clicks on move buttons or expand link
+      if (event.target.closest('.move-btn, .card-expand-btn, form')) return;
+      // Ignore if already editing
+      if (card.classList.contains('editing')) return;
+      openInlineEdit(card);
+    }
+
+    function openInlineEdit(card) {
+      // Close any other open editor first
+      if (activeEditCard && activeEditCard !== card) {
+        closeInlineEdit(activeEditCard);
+      }
+      activeEditCard = card;
+      card.classList.add('editing');
+      card.draggable = false;
+
+      const title       = card.dataset.title;
+      const priority    = card.dataset.priority;
+      const due         = card.dataset.due;
+      const description = card.dataset.description;
+      const taskId      = card.dataset.taskId;
+
+      // Hide preview
+      card.querySelector('.card-preview').style.display = 'none';
+
+      // Inject form
+      const form = document.createElement('div');
+      form.className = 'inline-form';
+      form.dataset.formFor = taskId;
+      form.innerHTML = `
+        <input type="text" class="if-title" value="${escHtml(title)}" placeholder="Task title" />
+        <textarea class="if-desc" placeholder="Add a note…">${escHtml(description)}</textarea>
+        <div class="inline-form-row">
+          <select class="if-priority">
+            <option value="low"    ${priority==='low'    ? 'selected':''}>🔵 Low</option>
+            <option value="medium" ${priority==='medium' ? 'selected':''}>🟡 Medium</option>
+            <option value="high"   ${priority==='high'   ? 'selected':''}>🔴 High</option>
+          </select>
+          <input type="date" class="if-due" value="${due}" />
+        </div>
+        <div class="inline-form-actions">
+          <button class="btn-more-link" type="button" onclick="goFullEdit('${taskId}')">More options</button>
+          <div style="display:flex;gap:.4rem;align-items:center;">
+            <span class="save-feedback" style="display:none;">✓ Saved</span>
+            <button class="btn-cancel-inline" type="button" onclick="cancelEdit(document.getElementById('card-${taskId}'))">Cancel</button>
+            <button class="btn-save-inline" type="button" onclick="saveEdit(document.getElementById('card-${taskId}'))">Save</button>
+          </div>
+        </div>
+      `;
+      card.appendChild(form);
+
+      // Focus title, select all
+      const titleInput = form.querySelector('.if-title');
+      titleInput.focus();
+      titleInput.select();
+
+      // Keyboard shortcuts
+      form.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); cancelEdit(card); }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveEdit(card); }
+      });
+    }
+
+    function cancelEdit(card) {
+      const form = card.querySelector('.inline-form');
+      if (form) form.remove();
+      const preview = card.querySelector('.card-preview');
+      if (preview) preview.style.display = '';
+      card.classList.remove('editing');
+      card.draggable = true;
+      if (activeEditCard === card) activeEditCard = null;
+    }
+
+    async function saveEdit(card) {
+      const form     = card.querySelector('.inline-form');
+      const saveBtn  = form.querySelector('.btn-save-inline');
+      const feedback = form.querySelector('.save-feedback');
+      const taskId   = card.dataset.taskId;
+
+      const title       = form.querySelector('.if-title').value.trim();
+      const priority    = form.querySelector('.if-priority').value;
+      const due         = form.querySelector('.if-due').value;
+      const description = form.querySelector('.if-desc').value.trim();
+
+      if (!title) { form.querySelector('.if-title').focus(); return; }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      const body = new URLSearchParams({ title, priority, description });
+      if (due) body.append('due_date', due);
+
+      try {
+        const res = await fetch(`${BASE}/tasks/${taskId}/quick-edit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+        });
+        const data = await res.json();
+        if (data.status !== 'ok') throw new Error('Server error');
+
+        // Update data attributes
+        card.dataset.title       = data.task.title;
+        card.dataset.priority    = data.task.priority;
+        card.dataset.due         = data.task.due_date || '';
+        card.dataset.description = data.task.description || '';
+
+        // Update preview HTML
+        const preview = card.querySelector('.card-preview');
+        const dueFmt  = data.task.due_date
+          ? formatDate(data.task.due_date)
+          : '';
+        preview.innerHTML = `
+          <div class="card-title">${escHtml(data.task.title)}</div>
+          <div class="card-meta">
+            <span class="pri-${data.task.priority}">${data.task.priority.toUpperCase()}</span>
+            ${dueFmt ? `<span class="card-due">${dueFmt}</span>` : ''}
+          </div>
+          <div class="card-actions">${card.querySelector('.card-preview .card-actions')?.innerHTML || ''}</div>
+        `;
+
+        // Brief "Saved" flash then close
+        feedback.style.display = 'inline';
+        saveBtn.textContent = '✓';
+        setTimeout(() => cancelEdit(card), 600);
+
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        saveBtn.style.background = '#dc2626';
+        setTimeout(() => { saveBtn.style.background = ''; }, 1200);
+      }
+    }
+
+    function goFullEdit(taskId) {
+      const card = document.getElementById(`card-${taskId}`);
+      cancelEdit(card);
+      window.location.href = `${BASE}/tasks/${taskId}/edit?back=${BASE}/kanban`;
+    }
+
+    /* ─────────────────────────────────────────
+       Close editor when clicking outside
+    ───────────────────────────────────────── */
+    document.addEventListener('click', (e) => {
+      if (!activeEditCard) return;
+      if (!activeEditCard.contains(e.target)) {
+        cancelEdit(activeEditCard);
+      }
+    });
+
+    /* ─────────────────────────────────────────
+       Helpers
+    ───────────────────────────────────────── */
+    function escHtml(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
   </script>
-<script src="{{ base }}/static/app.js?v=4"></script>
+
+  <script src="{{ base }}/static/app.js?v=4"></script>
 </body>
 </html>
