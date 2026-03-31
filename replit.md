@@ -1,9 +1,9 @@
 # Workspace
 
----
+## Overview
+This project is a pnpm workspace monorepo designed to act as an external brain for managing tasks, notes, and projects, with a strong focus on ADHD-friendly principles. It aims to provide a structured and visual approach to time and task management, moving away from traditional endless lists. The system emphasizes breaking down tasks into micro-steps, visualizing time, and providing immediate, non-shaming feedback. Key capabilities include daily flow management (Morning Check-In, Focus Mode, Evening Reset), robust task and project tracking with micro-steps and energy tags, and integration with external tools like Whisper for meeting notes and Notion for structured exports. The project combines TypeScript-based Kanban functionality with a Python FastAPI service for task management, built on a PostgreSQL/SQLite and Drizzle/SQLAlchemy backend.
 
-## DESIGN CONTRACT — Hard Requirements (apply to every future change)
-
+## User Preferences
 ### Core Principles
 1. **External brain, not a list** — capture → structure → schedule. Avoid raw endless lists; always show structure (time, flows, groupings).
 2. **Time must be visual** — tasks live in time blocks (Morning / Afternoon / Evening or simple timeline). Use timers to fight time blindness.
@@ -16,209 +16,49 @@
 9. **ADHD-friendly UI** — clear hierarchy, limited palette, obvious affordances, minimal motion. At-a-glance understandability.
 10. **Consistency over perfection** — emphasize "you showed up today" and partial progress.
 
-### Required Features (implement in FastAPI/Jinja2 stack, existing routes)
+## System Architecture
+The project is structured as a pnpm workspace monorepo. It comprises a Kanban board frontend (React + Vite) and backend (Express 5), and a Task Manager service (FastAPI) with Jinja2 templating.
 
-#### 2.1 Daily Flow
-- **Morning Check-In**: fast brain-dump field → parse lines into tasks; select up to 3 Must-Do + few Nice-to-Do; place into Morning/Afternoon/Evening slots.
-- **Focus Mode** (`/task-manager/focus`): shows ONE active task + visual countdown timer (25/15/45 min choices); Done / Pause / Stop controls; on completion → instant feedback + next suggestion.
-- **Evening Reset** (`/task-manager/evening`): Planned vs Touched/Done comparison, non-judgmental; one-tap Roll to Tomorrow or Move to Later; highlight wins including partial progress.
+**UI/UX Decisions:**
+- **Daily Flow:** Morning Check-In for task parsing, Focus Mode with visual countdown timers (25/15/45 min options), and Evening Reset for non-judgmental progress review.
+- **Task Visualization:** Tasks have micro-steps, 'Now / Next / Later' states, and energy tags (`creative`, `admin`, `social`, `low_energy`).
+- **Visual Rules:** Primary focus area per screen, calm neutral background with at most two accent colors, no looping/flashing animations, short and gentle completion feedback.
+- **Cognitive Load:** Default focus block of 25 min (fixed choices), routine templates, and a brain-dump parser.
+- **ADHD UI/UX Layer:**
+    - Dual-theme system (Light Stone/Indigo, Dark ADHD High-Signal) persisting via `localStorage`.
+    - Integrated brown noise generation via Web Audio API.
+    - Global Lexend font and specific typography settings (`line-height: 1.75`, `letter-spacing: 0.025em`).
+    - Progressive disclosure for task metadata.
+    - Confetti animation on task completion.
+    - SVG Countdown Ring in Focus Mode.
+    - Floating Action Button (FAB) and 'N' key for quick task addition with a modal and toast confirmation.
 
-#### 2.2 Tasks & Data Model
-- Tasks have **micro-steps** (subtasks, 2–5 min each); easy to add/reorder/complete from task view and Focus Mode.
-- **Now / Next / Later Today / Later** state on every task/micro-step.
-- Primary Today view shows: Now task + one Next + capped Today list (3–6). Everything else collapsed.
-- **Energy tags**: `creative`, `admin`, `social`, `low_energy` — visible near task title.
+**Technical Implementations:**
+- **Monorepo Tool:** pnpm workspaces.
+- **Languages:** TypeScript (Node.js 24) for Kanban, Python 3.11 for Task Manager.
+- **Package Managers:** pnpm (JS), uv/pip (Python).
+- **API Frameworks:** Express 5 (Kanban), FastAPI (Task Manager).
+- **Databases:** PostgreSQL + Drizzle ORM (Kanban), SQLite + SQLAlchemy (Task Manager).
+- **Validation:** Zod (JS), Pydantic v2 (Python).
+- **API Codegen:** Orval from OpenAPI spec.
+- **Build:** esbuild (CJS bundle).
+- **TypeScript Configuration:** All TS packages extend `tsconfig.base.json` with `composite: true`, enabling typechecking from the root with `emitDeclarationOnly`.
 
-#### 2.3 Visual Rules
-- One primary focus area per screen; secondary info collapsible or on another screen.
-- Calm neutral background; at most 2 accent colors (active/focus + success/progress). Never color alone for state — always pair icon or label.
-- No looping/flashing animations. Completion feedback: short, one-shot, gentle.
-- Non-judgmental copy always.
+**Feature Specifications:**
+- **Daily Flow:** Morning Check-In (brain-dump to tasks, 3 Must-Do + Nice-to-Do), Focus Mode (single active task, timer, controls), Evening Reset (Planned vs. Done comparison, roll-over).
+- **Tasks & Data Model:** Tasks with micro-steps (2-5 min), Now/Next/Later states, capped Today list (3-6 max), Energy tags.
+- **Habit Tracking:** Tracks show-up (opened Focus Mode, completed micro-step, Morning Check-In), streak based on show-up, not perfection.
+- **Meeting Inbox:** Ingests Whisper-derived meeting notes via a JSON endpoint (`POST /task-manager/inbox/ingest/whisper`), UI for reviewing, promoting to Tasks/Projects/Notes, or archiving. Promotion of inbox items always sets task `focus_state="later"`.
+- **Notion Export:** One-directional export of NoteItems and Projects to Notion pages/databases. Configuration of export targets, `notion_client.py` utility functions for block handling and page creation. Export UI provides "Send to Notion" button with destination selection and "Open in Notion" link.
 
-#### 2.4 Cognitive Load
-- Default focus block: 25 min (choices: 15 / 25 / 45 — not free text).
-- Routine templates: "Morning Startup", "Weekly Review" — save sets of tasks/steps.
-- Brain-dump parser: parse lines into tasks (design to allow AI later).
+**System Design Choices:**
+- Services are deployed with specific path prefixes and ports: `/` for Kanban frontend (23345), `/api` for Kanban API (8080), `/task-manager` for FastAPI Task Manager (8000).
+- SQLite database (`app.db`) is auto-created for the Python service.
+- API endpoints are provided for all core functionalities, including task, project, and inbox management, with auto-generated Swagger UI.
+- Models (SQLAlchemy) include Project, Task, Subtask, Tag, TaskTag, RecurringTask, Settings, DailyLog, CoPInitiative, NoteItem, and InboxItem.
 
-#### 2.6 ADHD UI/UX Layer (implemented)
-- **Dual-theme system**: Light (Stone/Indigo, default) + Dark (ADHD High-Signal: #1A1A1A bg, #FFCC00 accent, #2DD4BF success). Toggle via `🌙 Dark` button in every nav header. Theme persists in `localStorage`. Anti-flicker blocking `<script>` in `<head>` of every template prevents flash.
-- **Brown Noise**: `🎧 Noise` button in every nav header. Uses Web Audio API to generate brown noise entirely in-browser (no audio file). Auto-resumes on next page interaction if preference was saved.
-- **Lexend font**: Loaded via Google Fonts (`@import`). Applied globally via `font-family` on `body`.
-- **Global typography**: `line-height: 1.75`, `letter-spacing: 0.025em`, `text-align: left` (no justify) set on `body`.
-- **Progressive disclosure**: Task row meta (energy tag, time block, priority) is hidden with `max-height: 0; opacity: 0` by default and revealed on `:hover` or `.expanded` class.
-- **Confetti on task completion**: `canvas-confetti` CDN (`@1.9.2`). Every "Done" / "✓" form fires confetti burst before submitting.
-- **SVG Countdown Ring**: Focus Mode timer shows a circular shrinking arc (SVG `stroke-dashoffset` animation) alongside the digital countdown. Ring is r=50, circumference ≈ 314.16px.
-- **FAB + N key**: Fixed `+` button (bottom-right, all My Day pages). `N` key opens `<dialog>` quick-add modal. Modal posts to `POST /task-manager/tasks/quick-add` (returns JSON). Shows a toast confirmation. Escape closes the modal.
-- **Quick-Add route**: `POST /task-manager/tasks/quick-add` — accepts `title` + `priority` form params, returns `{"status":"ok","task_id":N,"title":"..."}`.
-
-#### 2.5 Habit Tracking
-- Track show-up per day (opened Focus Mode, completed micro-step, did Morning Check-In).
-- Streak = consecutive show-up days, not perfect completion.
-- Display kindly, never as punishment.
-
----
-
-## Overview
-
-pnpm workspace monorepo using TypeScript, plus a Python FastAPI service. Each package manages its own dependencies.
-
-## Stack
-
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Python version**: 3.11
-- **Package manager**: pnpm (JS), uv/pip (Python)
-- **TypeScript version**: 5.9
-- **API framework**: Express 5 (Kanban) + FastAPI (Task Manager)
-- **Database**: PostgreSQL + Drizzle ORM (Kanban); SQLite + SQLAlchemy (Task Manager)
-- **Validation**: Zod (`zod/v4`), `drizzle-zod` (JS); Pydantic v2 (Python)
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-
-## Services & Routing
-
-| Path prefix      | Service                         | Port  | Language  |
-|------------------|---------------------------------|-------|-----------|
-| `/`              | MyDay Kanban (React + Vite)    | 23345 | TypeScript|
-| `/api`           | Kanban API (Express)            | 8080  | TypeScript|
-| `/task-manager`  | Task Manager (FastAPI)          | 8000  | Python    |
-
-### URLs
-- Kanban board: `/`
-- Task Manager HTML UI: `/task-manager/tasks-page`
-- Task Manager home: `/task-manager/`
-- Task Manager REST API: `/task-manager/tasks`, `/task-manager/projects`
-- FastAPI auto-docs: `/task-manager/docs`
-
-## Structure
-
-```text
-artifacts-monorepo/
-├── artifacts/
-│   ├── api-server/          # Express API server (Kanban backend)
-│   ├── myday-kanban/        # React + Vite frontend (Kanban board)
-│   └── myday-python-api/    # FastAPI Task Manager (Python)
-│       ├── main.py          # FastAPI app, all routes prefixed /task-manager
-│       ├── database.py      # SQLAlchemy engine + session + Base
-│       ├── models.py        # SQLAlchemy models (Task, Project, Subtask, Tag, etc.)
-│       ├── schemas.py       # Pydantic schemas (TaskCreate, TaskRead, etc.)
-│       ├── app.db           # SQLite database file (auto-created)
-│       └── templates/       # Jinja2 HTML templates
-│           ├── index.html   # Home page
-│           └── tasks.html   # Task list + create form
-├── lib/
-│   ├── api-spec/            # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/    # Generated React Query hooks
-│   ├── api-zod/             # Generated Zod schemas from OpenAPI
-│   └── db/                  # Drizzle ORM schema + DB connection
-│       └── src/schema/
-│           ├── columns.ts   # Kanban columns table
-│           └── cards.ts     # Kanban cards table
-└── scripts/                 # Utility scripts
-```
-
-## Python Task Manager (FastAPI)
-
-### Models (SQLAlchemy)
-- **Project** — id, name, description, is_active
-- **Task** — id, title, description, project_id, owner, status, priority, due_date, is_today, source_type, source_ref, focus_state, time_block, energy_tag, created_at, updated_at, completed_at
-- **Subtask** — id, task_id, title, is_done, created_at, completed_at
-- **Tag** — id, name (unique)
-- **TaskTag** — id, task_id, tag_id (many-to-many join)
-- **RecurringTask** — id, title, description, project_id, priority, recurrence_type, recurrence_rule, active
-- **Settings** — id, morning_ritual_time, wip_limit_doing, default_priority
-- **DailyLog** — id, date, started, started_at, has_completed_task, has_morning_checkin
-- **CoPInitiative** — id, effort, topic, topic_description, subtopic, type_of_effort, focus_market, leader, cop_collaboration, notes, active_jan…active_dec
-- **NoteItem** — id, title, content, summary, source, external_id, external_url, linked_inbox_id, imported_at, created_at
-- **InboxItem** — id, source, source_type, external_id, title, raw_content, summary, suggested_actions_json, status (new|reviewing|promoted|archived), created_at, reviewed_at, linked_task_id, linked_project_id, linked_note_id, linked_note_url
-
-### Meeting Inbox (Phase 1)
-Pipeline for Whisper-derived meeting notes before they become tasks.
-
-**Ingest endpoint (POST JSON):** `POST /task-manager/inbox/ingest/whisper`
-```json
-{
-  "title": "Meeting title",
-  "raw_content": "Full transcript…",
-  "summary": "1–2 sentence summary",
-  "suggested_actions": ["Action 1", "Action 2"],
-  "external_id": "optional-dedup-id",
-  "source_created_at": "2026-03-30T10:30:00"
-}
-```
-**UI routes:**
-- `GET /task-manager/inbox` — Inbox list (active items)
-- `GET /task-manager/inbox/archived` — Archived notes
-- `GET /task-manager/inbox/{id}` — Detail: transcript + summary + suggested actions + promote/archive buttons
-- `POST /task-manager/inbox/{id}/promote-task` — Creates a Task with focus_state="later"; marks item as "promoted"
-- `POST /task-manager/inbox/{id}/archive` — Archives note without creating a task
-
-**Promotion options (Phase 3):**
-- **Task** (`POST /inbox/{id}/promote-task`) — creates Task with focus_state="later", links task to inbox item
-- **Project** (`POST /inbox/{id}/promote-project`) — creates Project from title/summary, optional first next-step task, embeds source provenance in project description
-- **Note** (`POST /inbox/{id}/promote-note`) — creates NoteItem preserving full content + Notion URL, links back to inbox item
-
-**Detail page UX:** 3-tab CTA panel (Create task / Start project / Save as note). Transcript is collapsed by default. "Use →" buttons on suggested actions pre-fill the active form's title field. Archive is a quiet secondary strip, never a primary CTA. Promoted status badge adapts per outcome type.
-
-**Rules:** Visiting detail page auto-transitions status new → reviewing. Promoting always sets task focus_state="later" (never Now). No auto-task creation on ingest. Designed to be extensible for Notion later.
-
-### Notion Export (Phase 4)
-MyDay stays the execution source of truth. Notion export is one-directional — no task state is synced back.
-
-**NotionExportTarget model** — `notion_export_targets` table: id, name, notion_id, target_type (page|database), is_default, created_at. Configured on the Integrations > Notion settings page under "Export Destinations". Separate from NotionSource (import) to keep concerns clean.
-
-**Exported fields on NoteItem and Project**: `notion_page_id`, `notion_url`, `exported_at`, `last_synced_at`.
-
-**notion_client.py export functions** (all reusable for future webhook sync):
-- `text_to_blocks(text)` — converts plain text to Notion paragraph blocks, chunked at 1900 chars to respect Notion's per-item limit
-- `create_page(parent_id, title, children, parent_type)` — creates a page under a page or database; sends first 100 blocks in creation request (Notion limit)
-- `append_blocks(page_id, children)` — appends more blocks to an existing page
-- `_push_blocks(page_id, blocks)` — chunks overflow blocks at 100 per request automatically
-- `export_note(note, parent_id, parent_type)` — creates a Notion page with provenance callout, summary quote, divider, full content
-- `export_project(project, first_task_title, parent_id, parent_type)` — creates a Notion page with provenance callout, description, first next-step to-do block
-
-**Routes:**
-- `GET /task-manager/notes` — list all NoteItems
-- `GET /task-manager/notes/{id}` — note detail with Notion export UI
-- `POST /task-manager/notes/{id}/export-to-notion` — export note to Notion; stores page_id/url
-- `GET /task-manager/projects/{id}` — project detail with open tasks + Notion export UI
-- `POST /task-manager/projects/{id}/export-to-notion` — export project to Notion
-- `POST /task-manager/integrations/notion/export-targets` — add export destination
-- `POST /task-manager/integrations/notion/export-targets/{id}/delete` — remove destination
-- `POST /task-manager/integrations/notion/export-targets/{id}/set-default` — set default
-
-**Export UI pattern:** "Send to Notion" button → select destination → redirect back with `?exported=1` → inline success notice with "Open in Notion" link auto-dismissed after 6 s. Already-exported items show "Open in Notion" link + re-export collapsible. Notes is in the global nav on all templates.
-
-### API Endpoints
-- `GET /task-manager/` — Home page (HTML)
-- `GET /task-manager/my-day` — My Day view (HTML)
-- `GET /task-manager/morning-checkin` — Brain dump check-in step 1 (HTML)
-- `GET /task-manager/kanban` — Kanban board (HTML)
-- `GET /task-manager/tasks-page` — Tasks list page (HTML)
-- `GET /task-manager/focus` — Focus mode timer (HTML)
-- `GET /task-manager/inbox` — Meeting inbox list (HTML)
-- `POST /task-manager/tasks-page` — Create task from form (HTML redirect)
-- `GET /task-manager/projects` — List projects (JSON)
-- `POST /task-manager/projects` — Create project (JSON)
-- `GET /task-manager/tasks` — List tasks with optional filters (JSON)
-- `POST /task-manager/tasks` — Create task (JSON)
-- `PUT /task-manager/tasks/{id}` — Update task (JSON)
-- `DELETE /task-manager/tasks/{id}` — Delete task (JSON)
-- `POST /task-manager/inbox/ingest/whisper` — Ingest Whisper note (JSON → 201)
-- `GET /task-manager/docs` — Swagger UI
-
-### Running
-The Python service runs via the "MyDay Task Manager (Python)" workflow: `cd artifacts/myday-python-api && PORT=8000 python main.py`
-
-## TypeScript & Composite Projects
-
-Every TS package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
-
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`).
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array.
-
-## Root Scripts
-
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+## External Dependencies
+- **Notion API:** For one-directional export of notes and projects.
+- **Whisper (implied):** For generating meeting notes ingested into the system's inbox.
+- **Google Fonts:** For loading the Lexend font.
+- **canvas-confetti CDN (`@1.9.2`):** For confetti animations on task completion.
