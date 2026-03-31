@@ -43,11 +43,28 @@
     .filters a { padding: .35rem .9rem; border-radius: 999px; font-size: .82rem; font-weight: 500; text-decoration: none; background: #e2e8f0; color: #475569; transition: background .15s; }
     .filters a.active, .filters a:hover { background: #4f46e5; color: #fff; }
 
+    /* ── Table ── */
+    .table-toolbar { display: flex; align-items: center; gap: .75rem; margin-bottom: .85rem; flex-wrap: wrap; }
+    .search-wrap { flex: 1; min-width: 180px; position: relative; }
+    .search-wrap svg { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+    #task-search { padding: .45rem .75rem .45rem 2.1rem; border: 1px solid #cbd5e1; border-radius: .4rem; font-size: .88rem; width: 100%; background: #fff; color: var(--text); }
+    #task-search:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+    .sort-reset { font-size: .78rem; color: #94a3b8; background: none; border: 1px solid #e2e8f0; border-radius: .35rem; padding: .35rem .7rem; cursor: pointer; white-space: nowrap; }
+    .sort-reset:hover { color: var(--text); border-color: #cbd5e1; }
+
     table { width: 100%; border-collapse: collapse; background: #fff; border-radius: .75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); border: 1px solid #e2e8f0; }
-    th { text-align: left; padding: .75rem 1rem; background: #f8fafc; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+    th { text-align: left; padding: .75rem 1rem; background: #f8fafc; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    th[data-col] { cursor: pointer; user-select: none; }
+    th[data-col]:hover { color: #334155; background: #f1f5f9; }
+    th[data-col].sort-asc  { color: #4f46e5; }
+    th[data-col].sort-desc { color: #4f46e5; }
+    th[data-col] .sort-arrow { display: inline-block; margin-left: .3rem; opacity: .3; font-style: normal; }
+    th[data-col].sort-asc  .sort-arrow,
+    th[data-col].sort-desc .sort-arrow { opacity: 1; }
     td { padding: .7rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: .9rem; vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--bg); }
+    tr.hidden-row { display: none; }
 
     .badge { display: inline-block; padding: .2rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 600; }
     .badge-todo     { background: #e0e7ff; color: #3730a3; }
@@ -62,6 +79,7 @@
     .pri-low    { color: #6b7280; }
 
     .empty { text-align: center; padding: 3rem; color: #94a3b8; }
+    #no-results { display: none; text-align: center; padding: 2.5rem; color: #94a3b8; }
   </style>
 </head>
 <body>
@@ -145,31 +163,45 @@
     </div>
 
     {% if tasks %}
-    <table>
+    <!-- Toolbar: search + sort reset -->
+    <div class="table-toolbar">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="task-search" type="search" placeholder="Search tasks…" oninput="filterSearch(this.value)" autocomplete="off" />
+      </div>
+      <button class="sort-reset" onclick="resetSort()" id="reset-btn" style="display:none;">↺ Reset sort</button>
+      <span id="visible-count" style="font-size:.8rem;color:#94a3b8;white-space:nowrap;"></span>
+    </div>
+
+    <table id="tasks-table">
       <thead>
         <tr>
-          <th>Title</th>
-          <th>Status</th>
-          <th>Priority</th>
-          <th>Project</th>
-          <th>Due Date</th>
-          <th>Created</th>
+          <th data-col="0" data-type="str">Title <i class="sort-arrow">⇅</i></th>
+          <th data-col="1" data-type="num">Status <i class="sort-arrow">⇅</i></th>
+          <th data-col="2" data-type="num">Priority <i class="sort-arrow">⇅</i></th>
+          <th data-col="3" data-type="str">Project <i class="sort-arrow">⇅</i></th>
+          <th data-col="4" data-type="str">Due Date <i class="sort-arrow">⇅</i></th>
+          <th data-col="5" data-type="str">Created <i class="sort-arrow">⇅</i></th>
           <th></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="tasks-body">
         {% for task in tasks %}
-        <tr>
-          <td>
+        {# sort keys: status order doing=1 todo=2 waiting=3 backlog=4 done=5 #}
+        {# priority order: high=1 medium=2 low=3 #}
+        {% set s_order = {'doing':1,'todo':2,'waiting':3,'backlog':4,'done':5} %}
+        {% set p_order = {'high':1,'medium':2,'low':3} %}
+        <tr data-title="{{ task.title | lower }}">
+          <td data-val="{{ task.title | lower }}">
             <strong>{{ task.title }}</strong>
             {% if task.is_today %}<span class="badge badge-today" style="margin-left:.4rem;">Today</span>{% endif %}
             {% if task.description %}<br><span style="color:#94a3b8;font-size:.8rem;">{{ task.description }}</span>{% endif %}
           </td>
-          <td><span class="badge badge-{{ task.status }}">{{ task.status }}</span></td>
-          <td><span class="pri-{{ task.priority }}">{{ task.priority | capitalize }}</span></td>
-          <td>{% if task.project %}{{ task.project.name }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
-          <td>{% if task.due_date %}{{ task.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
-          <td style="color:#94a3b8;font-size:.82rem;">{{ task.created_at.strftime('%b %d') }}</td>
+          <td data-val="{{ s_order.get(task.status, 9) }}"><span class="badge badge-{{ task.status }}">{{ task.status }}</span></td>
+          <td data-val="{{ p_order.get(task.priority, 9) }}"><span class="pri-{{ task.priority }}">{{ task.priority | capitalize }}</span></td>
+          <td data-val="{{ (task.project.name | lower) if task.project else '~' }}">{% if task.project %}{{ task.project.name }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
+          <td data-val="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '9999-99-99' }}">{% if task.due_date %}{{ task.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
+          <td data-val="{{ task.created_at.strftime('%Y-%m-%d') }}" style="color:#94a3b8;font-size:.82rem;">{{ task.created_at.strftime('%b %d') }}</td>
           <td style="white-space:nowrap;">
             <a href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/tasks-page"
                style="display:inline-flex;align-items:center;gap:.2rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:.35rem;padding:.28rem .65rem;font-size:.78rem;font-weight:600;color:#475569;text-decoration:none;margin-right:.3rem;">
@@ -183,6 +215,7 @@
         {% endfor %}
       </tbody>
     </table>
+    <div id="no-results">No tasks match your search.</div>
     {% else %}
     <div class="empty">
       <p style="font-size:2rem;">📋</p>
@@ -190,6 +223,106 @@
     </div>
     {% endif %}
   </main>
+<script>
+  // Only run if the tasks table is present
+  if (document.getElementById('tasks-body')) {
+
+  // ── Sort state ────────────────────────────────────────────────────────────
+  let sortCol = -1, sortAsc = true;
+  let searchQuery = '';
+
+  const tbody   = document.getElementById('tasks-body');
+  const noRes   = document.getElementById('no-results');
+  const cntEl   = document.getElementById('visible-count');
+  const resetBtn = document.getElementById('reset-btn');
+
+  // ── Column header click ───────────────────────────────────────────────────
+  document.querySelectorAll('th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col, 10);
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+      applySort();
+      updateHeaders();
+      resetBtn.style.display = 'inline-block';
+    });
+  });
+
+  function applySort() {
+    if (sortCol < 0) return;
+    const isNum = document.querySelector(`th[data-col="${sortCol}"]`).dataset.type === 'num';
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+      const av = a.children[sortCol].dataset.val;
+      const bv = b.children[sortCol].dataset.val;
+      let cmp;
+      if (isNum) {
+        cmp = parseFloat(av) - parseFloat(bv);
+      } else {
+        cmp = av.localeCompare(bv);
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+    updateCount();
+  }
+
+  function updateHeaders() {
+    document.querySelectorAll('th[data-col]').forEach(th => {
+      const col = parseInt(th.dataset.col, 10);
+      const arrow = th.querySelector('.sort-arrow');
+      th.classList.remove('sort-asc', 'sort-desc');
+      arrow.textContent = '⇅';
+      if (col === sortCol) {
+        th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+        arrow.textContent = sortAsc ? '↑' : '↓';
+      }
+    });
+  }
+
+  function resetSort() {
+    sortCol = -1; sortAsc = true;
+    updateHeaders();
+    resetBtn.style.display = 'none';
+    // Restore original server order (rows have data-original-index)
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => parseInt(a.dataset.idx||0) - parseInt(b.dataset.idx||0));
+    rows.forEach(r => tbody.appendChild(r));
+    updateCount();
+  }
+
+  // Stamp original order once
+  Array.from(tbody.querySelectorAll('tr')).forEach((r, i) => r.dataset.idx = i);
+
+  // ── Search / filter ───────────────────────────────────────────────────────
+  function filterSearch(q) {
+    searchQuery = q.trim().toLowerCase();
+    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+      const title = row.dataset.title || '';
+      const match = !searchQuery || title.includes(searchQuery);
+      row.classList.toggle('hidden-row', !match);
+    });
+    updateCount();
+  }
+
+  function updateCount() {
+    const total   = tbody.querySelectorAll('tr').length;
+    const visible = tbody.querySelectorAll('tr:not(.hidden-row)').length;
+    if (searchQuery) {
+      cntEl.textContent = `${visible} of ${total}`;
+      noRes.style.display = visible === 0 ? 'block' : 'none';
+    } else {
+      cntEl.textContent = '';
+      noRes.style.display = 'none';
+    }
+  }
+
+  } // end if tasks-body
+</script>
 <script src="{{ base }}/static/app.js?v=4"></script>
 </body>
 </html>
