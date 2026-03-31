@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import or_, text as sa_text
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 import models
 import schemas
@@ -811,6 +811,56 @@ async def cop_import_post(request: Request, db: Session = Depends(get_db)):
         request, "cop_import.html",
         {"base": BASE, "result": result, "csv_path": str(_COP_CSV)},
     )
+
+
+# ─── Projects HTML pages ──────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/projects-list", response_class=HTMLResponse)
+def projects_list_page(request: Request, db: Session = Depends(get_db)):
+    projects = (
+        db.query(models.Project)
+        .options(joinedload(models.Project.tasks))
+        .order_by(models.Project.is_active.desc(), models.Project.id.desc())
+        .all()
+    )
+    return templates.TemplateResponse(
+        request, "projects_list.html",
+        {"base": BASE, "projects": projects},
+    )
+
+
+@app.post(f"{BASE}/projects-list/new")
+def projects_create_html(
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    proj = models.Project(
+        name=name.strip(),
+        description=description.strip() if description else None,
+        is_active=True,
+    )
+    db.add(proj)
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/projects-list", status_code=303)
+
+
+@app.post(f"{BASE}/projects/{{project_id}}/archive")
+def project_archive(project_id: int, db: Session = Depends(get_db)):
+    proj = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if proj:
+        proj.is_active = False
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/projects-list", status_code=303)
+
+
+@app.post(f"{BASE}/projects/{{project_id}}/activate")
+def project_activate(project_id: int, db: Session = Depends(get_db)):
+    proj = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if proj:
+        proj.is_active = True
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/projects-list", status_code=303)
 
 
 # ─── Projects API ─────────────────────────────────────────────────────────────
