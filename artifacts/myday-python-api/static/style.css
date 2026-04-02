@@ -443,6 +443,18 @@ html.dark .quick-submit { color: #1A1A1A; }
   animation: bloom-out .5s ease-out forwards;
 }
 
+/* ── Card completing (move to Done) burst ─────────────────── */
+@keyframes card-burst {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  40%  { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(34,197,94,0); }
+  100% { transform: scale(1);    box-shadow: none; }
+}
+.card-completing {
+  animation: card-burst 0.5s ease-out forwards;
+  border-color: #22C55E !important;
+}
+html.dark .card-completing { border-color: #2DD4BF !important; }
+
 /* ── Move btn: primary next-state ─────────────────────────── */
 .move-btn-primary { background:var(--accent-soft)!important; color:var(--accent-text)!important; border-color:var(--accent)!important; font-weight:700!important; opacity:1!important; }
 html.dark .move-btn-primary { background:#2D2800!important; color:#FFDD55!important; border-color:#FFCC00!important; }

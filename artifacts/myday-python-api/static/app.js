@@ -233,4 +233,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Re-colorize project tags after theme toggle
   const _origToggle = window.toggleTheme;
   if (_origToggle) window.toggleTheme = function () { _origToggle.apply(this, arguments); setTimeout(colorizeProjectTags, 60); };
+
+  // ── Celebratory burst when moving a card to Done ────────────────────────
+  const board = document.getElementById('board');
+  if (board) {
+    board.addEventListener('submit', function (e) {
+      const form = e.target;
+      const statusInput = form.querySelector('input[name="status"]');
+      if (!statusInput || statusInput.value !== 'done') return;
+      const card = form.closest('.card');
+      if (!card) return;
+      e.preventDefault();
+      card.classList.add('card-completing');
+      setTimeout(() => form.submit(), 450);
+    });
+  }
 })();
