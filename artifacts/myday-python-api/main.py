@@ -620,6 +620,11 @@ async def kanban(request: Request, db: Session = Depends(get_db)):
         for s in STATUSES
     }
     settings = ensure_settings(db)
+    from datetime import datetime as _dt
+    done_today_count = db.query(models.Task).filter(
+        models.Task.status == "done",
+        models.Task.updated_at >= _dt.combine(today, _dt.min.time()),
+    ).count()
     return templates.TemplateResponse(
         request, "kanban.html",
         {
@@ -628,6 +633,7 @@ async def kanban(request: Request, db: Session = Depends(get_db)):
             "status_labels": STATUS_LABELS,
             "wip_limit": settings.wip_limit_doing,
             "today": today,
+            "done_today_count": done_today_count,
             "base": BASE,
         },
     )

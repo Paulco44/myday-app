@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const _origToggle = window.toggleTheme;
   if (_origToggle) window.toggleTheme = function () { _origToggle.apply(this, arguments); setTimeout(colorizeProjectTags, 60); };
 
-  // ── Celebratory burst when moving a card to Done ────────────────────────
+  // ── Celebratory burst + wins counter when moving a card to Done ─────────
   const board = document.getElementById('board');
   if (board) {
     board.addEventListener('submit', function (e) {
@@ -244,7 +244,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const card = form.closest('.card');
       if (!card) return;
       e.preventDefault();
+
+      // Burst animation on card
       card.classList.add('card-completing');
+
+      // Increment wins counter
+      const winsBar  = document.getElementById('kanban-wins');
+      const winsNum  = document.getElementById('kanban-wins-num');
+      if (winsBar && winsNum) {
+        const current = parseInt(winsNum.textContent || '0', 10);
+        const next    = current + 1;
+        winsNum.textContent = next;
+        winsBar.classList.add('has-wins');
+        // Bounce the counter
+        winsNum.classList.remove('count-bump');
+        void winsNum.offsetWidth; // force reflow to restart animation
+        winsNum.classList.add('count-bump');
+      }
+
       setTimeout(() => form.submit(), 450);
     });
   }
