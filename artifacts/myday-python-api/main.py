@@ -681,11 +681,12 @@ async def edit_task_post(
             db_task.due_date = None
     else:
         db_task.due_date = None
-    if status == "done" and not db_task.completed_at:
-        db_task.completed_at = datetime.utcnow()
-        db_task.is_now = False
-        mark_today_completed(db, date.today())
-    elif status != "done":
+    if status == "done":
+        db_task.is_now = False          # always clear NOW badge on completion
+        if not db_task.completed_at:
+            db_task.completed_at = datetime.utcnow()
+            mark_today_completed(db, date.today())
+    else:
         db_task.completed_at = None
     db_task.updated_at = datetime.utcnow()
     db.commit()
@@ -776,11 +777,12 @@ async def update_status(
     if db_task:
         db_task.status = status
         db_task.updated_at = datetime.utcnow()
-        if status == "done" and not db_task.completed_at:
-            db_task.completed_at = datetime.utcnow()
-            db_task.is_now = False
-            mark_today_completed(db, date.today())
-        elif status != "done":
+        if status == "done":
+            db_task.is_now = False          # always clear NOW badge on completion
+            if not db_task.completed_at:
+                db_task.completed_at = datetime.utcnow()
+                mark_today_completed(db, date.today())
+        else:
             db_task.completed_at = None
         db.commit()
     dest = redirect_to if redirect_to else f"{BASE}/kanban"
