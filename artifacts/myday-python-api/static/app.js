@@ -139,3 +139,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch(e) {}
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   KANBAN v2 — Project colors · Move collapse · Quick-add
+   ═══════════════════════════════════════════════════════════════ */
+(function () {
+  // Derive the app base path from the current URL (e.g. "/task-manager")
+  const _BASE = window.location.pathname.split('/').slice(0, 2).join('/');
+
+  const PROJECT_COLORS = {
+    'My Day improvements':                        {bg:'#EDE9FE',color:'#5B21B6',dbg:'#2D1A5E',dc:'#C4B5FD'},
+    'Business Development and Marketing Efforts': {bg:'#DBEAFE',color:'#1E40AF',dbg:'#0F2240',dc:'#93C5FD'},
+    'Other tasks':                                {bg:'#F1F5F9',color:'#475569',dbg:'#1E293B',dc:'#94A3B8'},
+    'Cardinal Health':                            {bg:'#D1FAE5',color:'#065F46',dbg:'#052E16',dc:'#6EE7B7'},
+    'AI to dos':                                  {bg:'#FEF3C7',color:'#92400E',dbg:'#2D1800',dc:'#FDE68A'},
+    'CoP Work':                                   {bg:'#FCE7F3',color:'#9D174D',dbg:'#2D0A1E',dc:'#F9A8D4'},
+    'Rizek':                                      {bg:'#ECFDF5',color:'#047857',dbg:'#042018',dc:'#34D399'},
+  };
+
+  function colorizeProjectTags() {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.querySelectorAll('.card-project').forEach(tag => {
+      const s = PROJECT_COLORS[tag.textContent.trim()];
+      if (s) tag.style.cssText = `background:${isDark?s.dbg:s.bg};color:${isDark?s.dc:s.color};border-radius:4px;padding:.1rem .4rem;font-size:.68rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:inline-block;`;
+    });
+  }
+
+  const STATUS_ORDER = ['backlog','todo','doing','waiting','done'];
+
+  function collapseMoveButtons() {
+    document.querySelectorAll('.card').forEach(card => {
+      const actions = card.querySelector('.card-actions');
+      if (!actions || actions.dataset.collapsed === '1') return;
+      const colStatus = card.closest('.column')?.dataset.status;
+      const next = STATUS_ORDER[STATUS_ORDER.indexOf(colStatus) + 1] || null;
+      const forms = Array.from(actions.querySelectorAll('form'));
+      if (!forms.length) return;
+      const nextForm = forms.find(f => f.querySelector('input[name="status"]')?.value === next);
+      const others = forms.filter(f => f !== nextForm);
+      actions.innerHTML = '';
+      actions.dataset.collapsed = '1';
+      if (nextForm) {
+        nextForm.querySelector('.move-btn').classList.add('move-btn-primary');
+        actions.appendChild(nextForm);
+      }
+      if (others.length) {
+        const wrap = document.createElement('div'); wrap.className = 'move-more-wrapper';
+        const btn = document.createElement('button'); btn.className = 'move-btn move-btn-more'; btn.type = 'button'; btn.textContent = '···'; btn.title = 'Move to…';
+        const drop = document.createElement('div'); drop.className = 'move-dropdown';
+        others.forEach(f => drop.appendChild(f));
+        btn.onclick = e => { e.stopPropagation(); drop.classList.toggle('move-dropdown-open'); };
+        document.addEventListener('click', () => drop.classList.remove('move-dropdown-open'));
+        wrap.appendChild(btn); wrap.appendChild(drop); actions.appendChild(wrap);
+      }
+    });
+  }
+
+  function addQuickAddButtons() {
+    document.querySelectorAll('.column').forEach(col => {
+      if (col.querySelector('.col-quick-add')) return;
+      const status = col.dataset.status;
+      if (!status) return;
+      const btn = document.createElement('button');
+      btn.className = 'col-quick-add'; btn.type = 'button'; btn.textContent = '+ Add task';
+      btn.onclick = () => {
+        document.querySelectorAll('.col-quick-form').forEach(f => f.remove());
+        document.querySelectorAll('.col-quick-add').forEach(b => b.style.display = '');
+        btn.style.display = 'none';
+        const form = document.createElement('form');
+        form.className = 'col-quick-form'; form.method = 'post';
+        form.action = `${_BASE}/tasks-page`;
+        form.innerHTML = `
+          <input type="text" name="title" class="col-quick-input" placeholder="Task title…" autocomplete="off" required>
+          <input type="hidden" name="status" value="${status}">
+          <input type="hidden" name="priority" value="medium">
+          <input type="hidden" name="redirect_to" value="${_BASE}/kanban">
+          <div class="col-quick-row">
+            <button type="submit" class="col-quick-submit">Add</button>
+            <button type="button" class="col-quick-cancel">Cancel</button>
+          </div>`;
+        form.querySelector('.col-quick-cancel').onclick = () => { form.remove(); btn.style.display = ''; };
+        col.appendChild(form);
+        form.querySelector('.col-quick-input').focus();
+      };
+      col.appendChild(btn);
+    });
+  }
+
+  function init() { colorizeProjectTags(); collapseMoveButtons(); addQuickAddButtons(); }
+  if (document.readyState !== 'loading') init();
+  else document.addEventListener('DOMContentLoaded', init);
+
+  // Re-colorize project tags after theme toggle
+  const _origToggle = window.toggleTheme;
+  if (_origToggle) window.toggleTheme = function () { _origToggle.apply(this, arguments); setTimeout(colorizeProjectTags, 60); };
+})();
