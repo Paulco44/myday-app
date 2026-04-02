@@ -410,6 +410,26 @@ html.dark .quick-modal { box-shadow: 0 20px 60px rgba(0,0,0,.6); }
 .quick-pri.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 html.dark .quick-pri.active { color: #1A1A1A; }
 .quick-hint { font-size: .72rem; color: var(--text-faint); margin-left: auto; }
+.quick-section-label { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); margin: .65rem 0 .3rem; }
+.quick-opt { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.quick-energy, .quick-time {
+  background: var(--ctrl-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .3rem .65rem;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.quick-energy.active { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent); }
+.quick-time.active   { background: var(--success-soft); color: var(--success); border-color: var(--success-border); }
+html.dark .quick-energy { background: #333; border-color: #444; color: #A3A3A3; }
+html.dark .quick-time   { background: #333; border-color: #444; color: #A3A3A3; }
+html.dark .quick-energy.active { background: #1e1b4b; color: #C4B5FD; border-color: #6D28D9; }
+html.dark .quick-time.active   { background: #052E16; color: #6EE7B7; border-color: #065F46; }
 .quick-submit {
   width: 100%;
   margin-top: .85rem;

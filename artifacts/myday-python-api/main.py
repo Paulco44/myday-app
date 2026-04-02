@@ -1147,9 +1147,17 @@ def delete_cop_initiative(initiative_id: int, db: Session = Depends(get_db)):
 async def quick_add_task(
     title: str = Form(...),
     priority: str = Form("medium"),
+    energy_type: Optional[str] = Form(default=None),
+    time_estimate_minutes: Optional[int] = Form(default=None),
     db: Session = Depends(get_db),
 ):
-    task = models.Task(title=title, priority=priority, status="todo")
+    task = models.Task(
+        title=title,
+        priority=priority,
+        status="todo",
+        energy_type=energy_type or None,
+        time_estimate_minutes=time_estimate_minutes or None,
+    )
     db.add(task)
     db.commit()
     db.refresh(task)

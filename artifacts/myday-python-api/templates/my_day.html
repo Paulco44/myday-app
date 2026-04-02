@@ -8,7 +8,7 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=9" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=10" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -753,12 +753,30 @@
       <div class="quick-modal-title">✦ Quick Add Task</div>
       <form id="quick-form" onsubmit="submitQuickAdd(event)">
         <input class="quick-input" id="quick-title" type="text" placeholder="What's on your mind?" autocomplete="off" />
+
+        <div class="quick-section-label">Priority</div>
         <div class="quick-row">
-          <button type="button" class="quick-pri active" data-pri="low" onclick="setPri(this)">Low</button>
+          <button type="button" class="quick-pri" data-pri="low"    onclick="setPri(this)">Low</button>
           <button type="button" class="quick-pri active" data-pri="medium" onclick="setPri(this)">Medium</button>
-          <button type="button" class="quick-pri" data-pri="high" onclick="setPri(this)">High</button>
-          <span class="quick-hint">Press N to open · Esc to close</span>
+          <button type="button" class="quick-pri" data-pri="high"   onclick="setPri(this)">High</button>
         </div>
+
+        <div class="quick-section-label">Energy type <span class="quick-opt">(optional)</span></div>
+        <div class="quick-row">
+          <button type="button" class="quick-energy" data-energy="creative"   onclick="setQEnergy(this)">🎨 Creative</button>
+          <button type="button" class="quick-energy" data-energy="admin"      onclick="setQEnergy(this)">📋 Admin</button>
+          <button type="button" class="quick-energy" data-energy="social"     onclick="setQEnergy(this)">💬 Social</button>
+          <button type="button" class="quick-energy" data-energy="low_energy" onclick="setQEnergy(this)">🌙 Low energy</button>
+        </div>
+
+        <div class="quick-section-label">Time estimate <span class="quick-opt">(optional)</span></div>
+        <div class="quick-row">
+          <button type="button" class="quick-time" data-mins="5"  onclick="setQTime(this)">5 min</button>
+          <button type="button" class="quick-time" data-mins="15" onclick="setQTime(this)">15 min</button>
+          <button type="button" class="quick-time" data-mins="30" onclick="setQTime(this)">30 min</button>
+          <span class="quick-hint">N to open · Esc to close</span>
+        </div>
+
         <button class="quick-submit" type="submit">Add Task →</button>
       </form>
     </div>
@@ -792,9 +810,20 @@
     }
 
     // ─── FAB / Quick-Add ────────────────────────────────────────────────────
-    let _selectedPri = 'medium';
+    let _selectedPri    = 'medium';
+    let _selectedEnergy = null;
+    let _selectedTime   = null;
 
     function openQuickAdd() {
+      // Reset transient state on each open
+      _selectedEnergy = null;
+      _selectedTime   = null;
+      document.querySelectorAll('.quick-energy').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.quick-time').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.quick-pri').forEach(b => b.classList.remove('active'));
+      document.querySelector('[data-pri="medium"]')?.classList.add('active');
+      _selectedPri = 'medium';
+      document.getElementById('quick-title').value = '';
       document.getElementById('quick-modal').showModal();
       setTimeout(() => document.getElementById('quick-title').focus(), 50);
     }
@@ -804,7 +833,22 @@
       btn.classList.add('active');
       _selectedPri = btn.dataset.pri;
     }
-    // default medium
+
+    function setQEnergy(btn) {
+      const already = btn.classList.contains('active');
+      document.querySelectorAll('.quick-energy').forEach(b => b.classList.remove('active'));
+      if (!already) { btn.classList.add('active'); _selectedEnergy = btn.dataset.energy; }
+      else { _selectedEnergy = null; }
+    }
+
+    function setQTime(btn) {
+      const already = btn.classList.contains('active');
+      document.querySelectorAll('.quick-time').forEach(b => b.classList.remove('active'));
+      if (!already) { btn.classList.add('active'); _selectedTime = btn.dataset.mins; }
+      else { _selectedTime = null; }
+    }
+
+    // default medium on first load
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('[data-pri="medium"]')?.classList.add('active');
       _selectedPri = 'medium';
@@ -814,13 +858,15 @@
       e.preventDefault();
       const title = document.getElementById('quick-title').value.trim();
       if (!title) { document.getElementById('quick-title').focus(); return; }
-      const body = new URLSearchParams({ title, priority: _selectedPri });
+      const params = { title, priority: _selectedPri };
+      if (_selectedEnergy) params.energy_type = _selectedEnergy;
+      if (_selectedTime)   params.time_estimate_minutes = _selectedTime;
+      const body = new URLSearchParams(params);
       try {
         const r = await fetch(`${BASE}/tasks/quick-add`, { method: 'POST', body });
         const data = await r.json();
         if (data.status === 'ok') {
           document.getElementById('quick-modal').close();
-          document.getElementById('quick-title').value = '';
           showToast(`"${data.title}" added ✓`);
         }
       } catch(err) {
@@ -870,6 +916,6 @@
     }
 
   </script>
-  <script src="{{ base }}/static/app.js?v=9"></script>
+  <script src="{{ base }}/static/app.js?v=10"></script>
 </body>
 </html>
