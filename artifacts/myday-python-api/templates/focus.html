@@ -393,12 +393,27 @@
       return Math.max(0, totalSeconds - elapsedS);
     }
 
+    // ── Notification permission (request silently on start) ──────────────────
+    function _requestNotifyPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
+    }
+    function _fireTimerNotification() {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification("⏱ Time's up!", { body: "Your focus block is complete — great work." });
+        } catch(e) {}
+      }
+    }
+
     // ── Start focus ──────────────────────────────────────────────────────────
     function startFocus() {
       totalSeconds   = selectedMinutes * 60;
       accumulatedMs  = 0;
       segmentStart   = Date.now();
       isPaused       = false;
+      _requestNotifyPermission();
 
       document.getElementById('idle-panel').style.display    = 'none';
       document.getElementById('stopped-panel').style.display = 'none';
@@ -423,6 +438,7 @@
       if (remainingSeconds <= 0) {
         clearInterval(timerInterval);
         timerInterval = null;
+        _fireTimerNotification();
         doneFocus();
       }
     }
@@ -435,6 +451,7 @@
         if (remainingSeconds <= 0) {
           clearInterval(timerInterval);
           timerInterval = null;
+          _fireTimerNotification();
           doneFocus();
         }
       }
