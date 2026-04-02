@@ -8,7 +8,7 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=10" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=11" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -763,11 +763,12 @@
 
         <div class="quick-section-label">Energy type <span class="quick-opt">(optional)</span></div>
         <div class="quick-row">
-          <button type="button" class="quick-energy" data-energy="creative"   onclick="setQEnergy(this)">🎨 Creative</button>
-          <button type="button" class="quick-energy" data-energy="admin"      onclick="setQEnergy(this)">📋 Admin</button>
-          <button type="button" class="quick-energy" data-energy="social"     onclick="setQEnergy(this)">💬 Social</button>
-          <button type="button" class="quick-energy" data-energy="low_energy" onclick="setQEnergy(this)">🌙 Low energy</button>
+          <button type="button" class="quick-pri quick-etag" data-energy="creative"   onclick="setEnergy(this)">🎨 Creative</button>
+          <button type="button" class="quick-pri quick-etag" data-energy="admin"      onclick="setEnergy(this)">📋 Admin</button>
+          <button type="button" class="quick-pri quick-etag" data-energy="social"     onclick="setEnergy(this)">💬 Social</button>
+          <button type="button" class="quick-pri quick-etag" data-energy="low_energy" onclick="setEnergy(this)">🌙 Low energy</button>
         </div>
+        <input type="hidden" id="quick-energy" name="energy_type" value="" />
 
         <div class="quick-section-label">Time estimate <span class="quick-opt">(optional)</span></div>
         <div class="quick-row">
@@ -810,35 +811,27 @@
     }
 
     // ─── FAB / Quick-Add ────────────────────────────────────────────────────
-    let _selectedPri    = 'medium';
-    let _selectedEnergy = null;
-    let _selectedTime   = null;
+    let _selectedPri  = 'medium';
+    let _selectedTime = null;
 
     function openQuickAdd() {
       // Reset transient state on each open
-      _selectedEnergy = null;
-      _selectedTime   = null;
-      document.querySelectorAll('.quick-energy').forEach(b => b.classList.remove('active'));
+      _selectedTime = null;
+      document.querySelectorAll('.quick-etag').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.quick-time').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.quick-pri').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.quick-pri:not(.quick-etag)').forEach(b => b.classList.remove('active'));
       document.querySelector('[data-pri="medium"]')?.classList.add('active');
       _selectedPri = 'medium';
+      document.getElementById('quick-energy').value = '';
       document.getElementById('quick-title').value = '';
       document.getElementById('quick-modal').showModal();
       setTimeout(() => document.getElementById('quick-title').focus(), 50);
     }
 
     function setPri(btn) {
-      document.querySelectorAll('.quick-pri').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.quick-pri:not(.quick-etag)').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       _selectedPri = btn.dataset.pri;
-    }
-
-    function setQEnergy(btn) {
-      const already = btn.classList.contains('active');
-      document.querySelectorAll('.quick-energy').forEach(b => b.classList.remove('active'));
-      if (!already) { btn.classList.add('active'); _selectedEnergy = btn.dataset.energy; }
-      else { _selectedEnergy = null; }
     }
 
     function setQTime(btn) {
@@ -859,8 +852,9 @@
       const title = document.getElementById('quick-title').value.trim();
       if (!title) { document.getElementById('quick-title').focus(); return; }
       const params = { title, priority: _selectedPri };
-      if (_selectedEnergy) params.energy_type = _selectedEnergy;
-      if (_selectedTime)   params.time_estimate_minutes = _selectedTime;
+      const energy = document.getElementById('quick-energy').value;
+      if (energy)        params.energy_type = energy;
+      if (_selectedTime) params.time_estimate_minutes = _selectedTime;
       const body = new URLSearchParams(params);
       try {
         const r = await fetch(`${BASE}/tasks/quick-add`, { method: 'POST', body });
@@ -916,6 +910,6 @@
     }
 
   </script>
-  <script src="{{ base }}/static/app.js?v=10"></script>
+  <script src="{{ base }}/static/app.js?v=11"></script>
 </body>
 </html>

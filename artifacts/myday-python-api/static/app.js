@@ -356,3 +356,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 })();
+
+// ─── Quick-Add: energy type toggle ──────────────────────────────────────────
+// Called from my_day.html quick-add modal. Toggles active state on the clicked
+// energy button and writes the value to the hidden #quick-energy input.
+// Clicking the same button again deselects it (energy is optional).
+function setEnergy(btn) {
+  const input   = document.getElementById('quick-energy');
+  const already = btn.classList.contains('active');
+  document.querySelectorAll('.quick-etag').forEach(b => b.classList.remove('active'));
+  if (!already) {
+    btn.classList.add('active');
+    if (input) input.value = btn.dataset.energy;
+  } else {
+    if (input) input.value = '';
+  }
+}
