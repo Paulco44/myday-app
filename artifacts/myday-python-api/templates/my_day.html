@@ -197,6 +197,29 @@
     html.dark .btn-set-now { color: #1A1A1A; }
     .btn-set-now:hover { opacity: .88; }
 
+    /* ── Today's Wins / Nice-to-haves ── */
+    .wins-section { margin-bottom: 1.5rem; }
+    .wins-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .7rem; }
+    .wins-head h2 { font-size: 1rem; font-weight: 800; color: var(--text); }
+    .wins-head .wcount { background: var(--accent-soft); color: var(--accent-text); font-size: .7rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px; }
+    .wins-head .wcount.nice-count { background: #f3e8ff; color: #7c3aed; }
+    html.dark .wins-head .wcount.nice-count { background: #2D1A5E; color: #C4B5FD; }
+
+    .win-row { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: .6rem; padding: .6rem .85rem; display: flex; align-items: flex-start; gap: .65rem; transition: box-shadow .15s; }
+    .win-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .nice-row { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid #a78bfa; border-radius: .6rem; padding: .6rem .85rem; display: flex; align-items: flex-start; gap: .65rem; transition: box-shadow .15s; }
+    .nice-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .win-row.is-done { opacity: .6; }
+    .win-row.is-done .win-title { text-decoration: line-through; color: var(--text-muted); }
+    .win-body { flex: 1; min-width: 0; }
+    .win-title { font-weight: 600; font-size: .9rem; line-height: 1.4; color: var(--text); }
+    .win-meta { display: flex; gap: .3rem; flex-wrap: wrap; align-items: center; margin-top: .25rem; }
+    .win-actions { display: flex; flex-direction: column; gap: .25rem; align-items: flex-end; flex-shrink: 0; }
+    .btn-start-focus { background: var(--accent); color: #fff; border: none; border-radius: .4rem; padding: .3rem .75rem; font-size: .78rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity .1s; font-family: inherit; display: inline-flex; align-items: center; gap: .25rem; }
+    html.dark .btn-start-focus { color: #1A1A1A; }
+    .btn-start-focus:hover { opacity: .88; }
+    .wins-empty { font-size: .82rem; color: var(--text-faint); text-align: center; padding: .75rem 0; font-style: italic; }
+
     /* ── Done today section ── */
     .done-list { display: flex; flex-direction: column; gap: .3rem; }
     .done-row { background: var(--success-soft); border: 1px solid var(--success-border); border-radius: .5rem; padding: .45rem .85rem; display: flex; align-items: center; gap: .6rem; font-size: .82rem; opacity: .8; }
@@ -373,6 +396,91 @@
     <div class="now-empty">
       <div class="prompt">No active focus right now</div>
       <div class="hint">Set a task as "Now" in the plan below to lock in your single focus — then use the <a href="{{ base }}/focus" style="color:var(--accent);font-weight:600;">Focus timer</a> to start a block.</div>
+    </div>
+    {% endif %}
+
+    <!-- ── Today's Wins ── -->
+    {% if wins_tasks or done_wins %}
+    <div class="wins-section">
+      <div class="wins-head">
+        <h2>🎯 Today's Wins</h2>
+        <span class="wcount">{{ wins_tasks | length }} left · {{ done_wins | length }} done</span>
+      </div>
+      <div class="focus-panel">
+        {% for task in wins_tasks %}
+        <div class="win-row">
+          <div class="win-body">
+            <div class="win-title">{{ task.title }}</div>
+            <div class="win-meta">
+              {% if task.energy_type %}<span class="etag etag-{{ task.energy_type }}">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
+              {% if task.time_estimate_minutes %}<span class="tblock">⏱ {{ task.time_estimate_minutes }} min</span>{% endif %}
+              <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
+            </div>
+          </div>
+          <div class="win-actions">
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/start-focus">
+              <button class="btn-start-focus" type="submit">▶ Start Focus</button>
+            </form>
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/status"
+                  onsubmit="fireConfettiAt(this.querySelector('button'))">
+              <input type="hidden" name="status" value="done" />
+              <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
+              <button class="btn-check" type="submit">✓ Done</button>
+            </form>
+            <a class="btn-edit-task" href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
+          </div>
+        </div>
+        {% endfor %}
+        {% for task in done_wins %}
+        <div class="win-row is-done">
+          <div class="win-body">
+            <div class="win-title">{{ task.title }}</div>
+          </div>
+          <div class="win-actions">
+            <span style="font-size:.75rem;color:var(--success);font-weight:700;">✓ Done</span>
+          </div>
+        </div>
+        {% endfor %}
+        {% if not wins_tasks and not done_wins %}
+        <div class="wins-empty">No wins picked yet — do the morning check-in to set your top 3.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Nice-to-haves ── -->
+    {% if nice_tasks %}
+    <div class="wins-section">
+      <div class="wins-head">
+        <h2>✨ Nice-to-haves</h2>
+        <span class="wcount nice-count">{{ nice_tasks | length }}</span>
+      </div>
+      <div class="focus-panel">
+        {% for task in nice_tasks %}
+        <div class="nice-row">
+          <div class="win-body">
+            <div class="win-title">{{ task.title }}</div>
+            <div class="win-meta">
+              {% if task.energy_type %}<span class="etag etag-{{ task.energy_type }}">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
+              {% if task.time_estimate_minutes %}<span class="tblock">⏱ {{ task.time_estimate_minutes }} min</span>{% endif %}
+              <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
+            </div>
+          </div>
+          <div class="win-actions">
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/start-focus">
+              <button class="btn-start-focus" type="submit">▶ Start Focus</button>
+            </form>
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/status"
+                  onsubmit="fireConfettiAt(this.querySelector('button'))">
+              <input type="hidden" name="status" value="done" />
+              <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
+              <button class="btn-check" type="submit">✓ Done</button>
+            </form>
+            <a class="btn-edit-task" href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </div>
     {% endif %}
 

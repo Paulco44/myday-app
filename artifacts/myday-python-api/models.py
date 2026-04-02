@@ -46,6 +46,7 @@ class Task(Base):
     energy_type = Column(String(20), nullable=True)
     time_estimate_minutes = Column(Integer, nullable=True)
     today_flag = Column(Boolean, default=False)
+    today_category = Column(String(10), nullable=True)  # "win" | "nice"
     source_type = Column(String, default="self")
     source_ref = Column(String, nullable=True)
 

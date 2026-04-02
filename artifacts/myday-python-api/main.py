@@ -58,6 +58,7 @@ def run_migrations():
         ("energy_type", "VARCHAR(20)"),
         ("time_estimate_minutes", "INTEGER"),
         ("today_flag", "BOOLEAN DEFAULT 0"),
+        ("today_category", "VARCHAR(10)"),
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
@@ -300,16 +301,23 @@ async def morning_checkin_post(
         )
         db.add(item)
 
-    # 3 & 4. Set today_flag on selected tasks; clear on previously flagged tasks not selected
+    # 3 & 4. Set today_flag + today_category on selected tasks; clear on deselected
     selected_ids = set(win_ids) | set(nice_ids)
     all_flagged = db.query(models.Task).filter(models.Task.today_flag == True).all()
     for task in all_flagged:
         if task.id not in selected_ids:
             task.today_flag = False
-    for task_id in selected_ids:
+            task.today_category = None
+    for task_id in win_ids:
         task = db.query(models.Task).filter(models.Task.id == task_id).first()
         if task:
             task.today_flag = True
+            task.today_category = "win"
+    for task_id in nice_ids:
+        task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        if task:
+            task.today_flag = True
+            task.today_category = "nice"
 
     db.commit()
     return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
@@ -375,6 +383,22 @@ async def my_day(
     cop_initiatives = get_cop_initiatives_this_month(db, "Paul")
     current_month_name = MONTH_NAMES[today.month]
 
+    # Today's flagged tasks split by category (wins vs nice-to-haves)
+    today_flagged = (
+        db.query(models.Task)
+        .filter(models.Task.today_flag == True, models.Task.status != "done")
+        .order_by(models.Task.priority.desc())
+        .all()
+    )
+    wins_tasks = [t for t in today_flagged if t.today_category == "win"]
+    nice_tasks  = [t for t in today_flagged if t.today_category == "nice"]
+    done_wins   = (
+        db.query(models.Task)
+        .filter(models.Task.today_flag == True, models.Task.today_category == "win",
+                models.Task.status == "done")
+        .all()
+    )
+
     # All done tasks today (for done section)
     done_today = (
         db.query(models.Task)
@@ -400,6 +424,9 @@ async def my_day(
     return templates.TemplateResponse(
         request, "my_day.html",
         {
+            "wins_tasks": wins_tasks,
+            "nice_tasks": nice_tasks,
+            "done_wins": done_wins,
             "now_task": now_task,
             "next_task": next_task,
             "later_today_tasks": later_today_tasks,
@@ -703,6 +730,17 @@ async def clear_now(task_id: int, db: Session = Depends(get_db)):
         task.is_now = False
     db.commit()
     return JSONResponse({"ok": True})
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/start-focus")
+async def start_focus(task_id: int, db: Session = Depends(get_db)):
+    """Set task as NOW and redirect straight to the focus timer."""
+    db.query(models.Task).update({models.Task.is_now: False})
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if task:
+        task.is_now = True
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/focus", status_code=303)
 
 
 # ─── Tasks HTML pages ─────────────────────────────────────────────────────────
