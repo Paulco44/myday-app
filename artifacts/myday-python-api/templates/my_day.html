@@ -226,6 +226,19 @@
     .done-check { color: var(--success); font-size: 1rem; }
     .done-title { flex: 1; text-decoration: line-through; color: var(--text-muted); }
 
+    /* ── Close-Day evening CTA ── */
+    .close-day-cta { display: none; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius: .85rem; padding: 1.4rem 1.6rem; margin-bottom: 1.75rem; align-items: center; gap: 1.25rem; }
+    html:not(.dark) .close-day-cta { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 1px solid #ddd6fe; }
+    .close-day-cta .cdc-icon { font-size: 2rem; flex-shrink: 0; }
+    .close-day-cta .cdc-text { flex: 1; }
+    .close-day-cta .cdc-title { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: .25rem; }
+    html:not(.dark) .close-day-cta .cdc-title { color: #3730a3; }
+    .close-day-cta .cdc-sub { font-size: .82rem; color: #a5b4fc; }
+    html:not(.dark) .close-day-cta .cdc-sub { color: #6d28d9; }
+    .btn-close-day-cta { background: #FFCC00; color: #1A1A1A; border: none; border-radius: .5rem; padding: .55rem 1.3rem; font-size: .88rem; font-weight: 800; cursor: pointer; white-space: nowrap; font-family: inherit; text-decoration: none; transition: opacity .15s; flex-shrink: 0; display: inline-block; }
+    .btn-close-day-cta:hover { opacity: .88; }
+    .nav-close-day { color: var(--accent) !important; font-weight: 700 !important; border-bottom-color: var(--accent) !important; }
+
     /* ── Inbox nudge panel ── */
     .inbox-nudge { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; padding: .85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .inbox-nudge-left { display: flex; flex-direction: column; gap: .35rem; }
@@ -276,6 +289,7 @@
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
       <a href="{{ base }}/focus" class="nav-focus">Focus</a>
+      <a href="{{ base }}/close-day" class="nav-close-day" id="nav-close-link" style="display:none;">🌙 Close Day</a>
     </div>
     <div class="focus-controls">
       <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise for deep focus">🎧 Noise</button>
@@ -670,6 +684,16 @@
     </div>
     {% endif %}
 
+    <!-- ── Close the Day CTA (shown after 4pm via JS) ── -->
+    <div class="close-day-cta" id="close-day-cta">
+      <div class="cdc-icon">🌙</div>
+      <div class="cdc-text">
+        <div class="cdc-title">Time to close the day</div>
+        <div class="cdc-sub">Review your wins, roll over or park what's left, and let go.</div>
+      </div>
+      <a href="{{ base }}/close-day" class="btn-close-day-cta">Close the Day →</a>
+    </div>
+
     <!-- ── Suggestions ── -->
     {% if suggestions %}
     <div class="suggest-accordion">
@@ -818,6 +842,17 @@
         if (m.open) m.close();
       }
     });
+
+    // ─── After-4pm: show Close-Day CTA and nav link ─────────────────────────
+    (function() {
+      const h = new Date().getHours();
+      if (h >= 16) {
+        const cta = document.getElementById('close-day-cta');
+        if (cta) cta.style.display = 'flex';
+        const navLink = document.getElementById('nav-close-link');
+        if (navLink) navLink.style.display = '';
+      }
+    })();
 
     // ─── Toast ─────────────────────────────────────────────────────────────
     function showToast(msg) {

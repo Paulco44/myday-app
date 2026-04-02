@@ -63,6 +63,7 @@ def run_migrations():
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
         ("energy_today", "VARCHAR(30)"),
+        ("day_closed", "BOOLEAN DEFAULT 0"),
     ]
     inbox_cols = [
         ("linked_note_id", "INTEGER"),
@@ -460,6 +461,79 @@ async def my_day(
 @app.post(f"{BASE}/my-day/start-today")
 async def start_today(db: Session = Depends(get_db)):
     mark_today_started(db, date.today())
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
+
+
+# ─── Close the Day ────────────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/close-day", response_class=HTMLResponse)
+async def close_day_get(request: Request, db: Session = Depends(get_db)):
+    today = date.today()
+    now_hour = datetime.now().hour  # 0–23 local server hour
+
+    # All today_flag tasks
+    flagged_all = (
+        db.query(models.Task)
+        .filter(models.Task.today_flag == True)
+        .order_by(models.Task.today_category, models.Task.priority.desc())
+        .all()
+    )
+    wins_done       = [t for t in flagged_all if t.today_category == "win"  and t.status == "done"]
+    wins_incomplete = [t for t in flagged_all if t.today_category == "win"  and t.status != "done"]
+    nice_done       = [t for t in flagged_all if t.today_category == "nice" and t.status == "done"]
+    nice_incomplete = [t for t in flagged_all if t.today_category == "nice" and t.status != "done"]
+
+    daily_log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    already_closed = daily_log.day_closed if daily_log else False
+
+    total_wins    = len(wins_done) + len(wins_incomplete)
+    score_pct     = int(len(wins_done) / total_wins * 100) if total_wins else 0
+
+    return templates.TemplateResponse(request, "close_day.html", {
+        "wins_done":       wins_done,
+        "wins_incomplete": wins_incomplete,
+        "nice_done":       nice_done,
+        "nice_incomplete": nice_incomplete,
+        "already_closed":  already_closed,
+        "now_hour":        now_hour,
+        "score_pct":       score_pct,
+        "base": BASE,
+    })
+
+
+@app.post(f"{BASE}/close-day")
+async def close_day_post(request: Request, db: Session = Depends(get_db)):
+    today = date.today()
+    form  = await request.form()
+
+    # Process each incomplete task's action choice
+    flagged_all = db.query(models.Task).filter(models.Task.today_flag == True).all()
+    for task in flagged_all:
+        if task.status == "done":
+            # Completed tasks: just clear flags
+            task.today_flag     = False
+            task.today_category = None
+            continue
+
+        action = form.get(f"action_{task.id}", "rollover")
+        if action == "backlog":
+            task.status         = "todo"
+            task.is_today       = False
+            task.today_flag     = False
+            task.today_category = None
+        else:  # rollover
+            task.is_today       = True
+            task.today_flag     = False
+            task.today_category = None
+
+    # Mark the day as closed in the daily log
+    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    if not log:
+        log = models.DailyLog(date=today)
+        db.add(log)
+    log.day_closed = True
+    db.commit()
+
     return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
 
 
