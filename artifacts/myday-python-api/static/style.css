@@ -567,3 +567,44 @@ html.dark .col-quick-submit { color:#1A1A1A; }
   margin-top: 0.25rem;
 }
 .backlog-show-more:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── Kanban: time estimate pill ──────────────────────────────── */
+.card-estimate {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  background: var(--ctrl-bg, #F1F5F9);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+html.dark .card-estimate { background: #2A2A2A; }
+
+/* ── Kanban: energy filter bar ───────────────────────────────── */
+.energy-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-content: flex-end;
+  padding: 0.4rem 0.75rem 0.5rem;
+}
+.energy-filter-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 0.2rem;
+}
+.energy-filter-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0.2rem 0.55rem;
+  border-radius: 1rem;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.energy-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.energy-filter-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+html.dark .energy-filter-btn.active { background: #2D2800; }

@@ -265,6 +265,23 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => form.submit(), 450);
     });
 
+    // ── Energy filter bar ─────────────────────────────────────────────────
+    document.querySelectorAll('.energy-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.energy-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const energy = btn.dataset.energy;
+        document.querySelectorAll('#board .card').forEach(card => {
+          if (energy === 'all') {
+            card.style.display = '';
+          } else {
+            const hasTag = card.querySelector(`.etag-${energy}`);
+            card.style.display = hasTag ? '' : 'none';
+          }
+        });
+      });
+    });
+
     // ── Backlog collapse (show top 3 by default) ───────────────────────────
     function collapseBacklog() {
       const backlogBody = document.querySelector('.column[data-status="backlog"] .column-body');
