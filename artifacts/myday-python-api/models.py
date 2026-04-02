@@ -126,6 +126,7 @@ class DailyLog(Base):
     started_at = Column(DateTime, nullable=True)
     has_completed_task = Column(Boolean, default=False)
     has_morning_checkin = Column(Boolean, default=False)  # did the brain-dump check-in today
+    energy_today = Column(String(30), nullable=True)      # high | flow | low | scattered
 
 
 class NoteItem(Base):

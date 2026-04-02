@@ -1,0 +1,44 @@
+Build the Morning Check-In page. This is a single-page guided flow that takes under 3 minutes and sets up the user's day.
+
+Route: GET and POST /task-manager/morning-checkin (this route may already exist — if so, replace its template)
+
+The page has 4 sequential sections that are all visible on scroll (not tabs/steps):
+
+SECTION 1 — Energy Check
+Heading: "How are you showing up today?"
+Four large clickable cards in a 2x2 grid:
+- ⚡ High energy  
+- 🌊 In the flow
+- 😴 Low energy
+- 🌪 A bit scattered
+Clicking one selects it (highlighted border). The value is stored as a hidden form field `energy_today`.
+
+SECTION 2 — Brain Dump (optional)
+Heading: "Anything on your mind? Dump it here."
+Subtext: "Each line becomes an Inbox item. No pressure."
+A large textarea (6 rows), placeholder: "Random thoughts, worries, ideas..."
+Field name: `brain_dump`
+
+SECTION 3 — Pick Your 3 Wins
+Heading: "Pick up to 3 must-dos for today."
+Subtext: "These are your wins. Everything else is a bonus."
+Shows all tasks with status IN ('todo', 'backlog') ordered by priority DESC, due_date ASC.
+Each task appears as a selectable card. User taps/clicks to select (max 3, enforce with JS).
+Selected tasks get today_flag=True on submit.
+Field: checkboxes with name="win_ids" value=task.id
+
+SECTION 4 — Nice-To-Dos (optional)
+Heading: "Any nice-to-haves? Pick up to 2."
+Same remaining tasks (excluding wins already selected). Max 2.
+Field: checkboxes with name="nice_ids" value=task.id
+
+SUBMIT BUTTON: "Let's go ✦" — full width, accent color.
+
+On POST:
+1. Save energy_today to the session (or a daily_state table keyed by date).
+2. Split brain_dump by newlines, create an Inbox task for each non-empty line (status='backlog', project=None).
+3. Set today_flag=True on all win_ids and nice_ids.
+4. Set today_flag=False on any tasks that were previously flagged but not selected today.
+5. Redirect to /task-manager/my-day.
+
+Style the page warmly — use the existing CSS variables. Make it feel like a gentle morning ritual, not a form. Use the Lexend font and the existing --accent, --surface, --bg variables. Add a soft gradient background to the page.

@@ -4,189 +4,245 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Morning Check-In — MyDay</title>
-    <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=9" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=9" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Lexend', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+    }
+
+    /* Soft warm gradient overlay behind everything */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,204,0,.09) 0%, transparent 70%),
+                  radial-gradient(ellipse 60% 40% at 80% 100%, rgba(79,70,229,.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
     }
 
     /* ── Nav ── */
-    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; flex-shrink: 0; }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; flex-shrink: 0; position: relative; z-index: 10; }
     .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
     .nav-links { display: flex; }
     .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
     .nav-links a:hover { color: var(--text); }
     .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
-    .nav-links a.nav-focus:hover { color: #64748b; }
+    .focus-controls { margin-left: auto; display: flex; gap: .5rem; }
+    html.dark .nav-links a { color: #94a3b8; }
+    html.dark .nav-links a:hover { color: #F5F5F0; }
 
-    /* ── Page ── */
+    /* ── Layout ── */
     main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+      position: relative;
+      z-index: 1;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 2.5rem; text-align: center; }
+    .page-eyebrow {
+      display: inline-block;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: .25rem .75rem;
+      border-radius: 999px;
+      margin-bottom: .85rem;
+    }
+    .page-title { font-size: 2rem; font-weight: 800; line-height: 1.2; margin-bottom: .5rem; }
+    .page-subtitle { font-size: .95rem; color: var(--text-muted); line-height: 1.6; }
+    html.dark .page-eyebrow { background: #2D2800; }
+
+    /* ── Section ── */
+    .checkin-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.75rem 1.75rem 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 8px rgba(0,0,0,.04);
+    }
+    .section-heading {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: .25rem;
+      color: var(--text);
+    }
+    .section-sub {
+      font-size: .84rem;
+      color: var(--text-muted);
+      margin-bottom: 1.1rem;
+      line-height: 1.5;
+    }
+    .section-label {
+      display: inline-flex;
       align-items: center;
-      justify-content: flex-start;
-      padding: 3rem 1.5rem;
-    }
-
-    .checkin-card {
-      width: 100%;
-      max-width: 600px;
-    }
-
-    /* ── Greeting ── */
-    .greeting { margin-bottom: 2rem; }
-    .greeting-eyebrow {
-      font-size: .78rem;
+      gap: .35rem;
+      font-size: .68rem;
       font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
-      color: #f59e0b;
-      margin-bottom: .4rem;
-    }
-    .greeting h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1.2;
-      color: #1a202c;
-    }
-    .greeting .subtitle {
-      margin-top: .5rem;
-      color: #64748b;
-      font-size: .95rem;
-      line-height: 1.55;
-    }
-
-    /* ── Brain dump area ── */
-    .dump-section { margin-bottom: 1.5rem; }
-    .dump-label {
-      display: block;
-      font-size: .8rem;
-      font-weight: 700;
-      letter-spacing: .05em;
-      text-transform: uppercase;
-      color: #94a3b8;
+      color: var(--text-faint, #94a3b8);
       margin-bottom: .6rem;
     }
-    textarea {
-      width: 100%;
-      min-height: 220px;
-      border: 2px solid #e2e8f0;
+
+    /* ── Section 1: Energy cards ── */
+    .energy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .65rem;
+    }
+    .energy-card {
+      position: relative;
+      cursor: pointer;
+      border: 2px solid var(--border);
       border-radius: .75rem;
-      padding: 1rem 1.1rem;
-      font-size: 1rem;
-      line-height: 1.65;
-      color: #1a202c;
-      background: #fff;
+      padding: 1.1rem 1rem;
+      text-align: center;
+      transition: border-color .15s, background .15s, transform .1s;
+      user-select: none;
+      background: var(--bg);
+    }
+    .energy-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .energy-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 3px rgba(255,204,0,.18);
+    }
+    html.dark .energy-card.selected { background: #2D2800; box-shadow: 0 0 0 3px rgba(255,204,0,.25); }
+    .energy-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .energy-emoji { font-size: 1.75rem; display: block; margin-bottom: .35rem; }
+    .energy-label { font-size: .88rem; font-weight: 600; color: var(--text); }
+    .energy-card.selected .energy-label { color: var(--accent); }
+
+    /* ── Section 2: Brain dump ── */
+    .brain-textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: .65rem;
+      padding: .9rem 1rem;
+      font-size: .92rem;
+      font-family: 'Lexend', inherit;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
       resize: vertical;
       outline: none;
+      min-height: 130px;
       transition: border-color .15s, box-shadow .15s;
-      font-family: inherit;
     }
-    textarea:focus {
+    .brain-textarea:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+      box-shadow: 0 0 0 3px rgba(255,204,0,.12);
     }
-    textarea::placeholder { color: #94a3b8; }
+    .brain-textarea::placeholder { color: var(--text-faint, #94a3b8); }
 
-    /* ── Reassurance note ── */
-    .reassurance {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: .6rem;
-      padding: .75rem 1rem;
-      font-size: .84rem;
-      color: #166534;
-      line-height: 1.5;
-      margin-bottom: 1.75rem;
+    /* ── Sections 3 & 4: Selectable task cards ── */
+    .task-pick-list { display: flex; flex-direction: column; gap: .5rem; }
+    .task-pick-item { position: relative; }
+    .task-pick-item input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .task-pick-label {
       display: flex;
-      gap: .6rem;
       align-items: flex-start;
-    }
-    .reassurance .icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
-
-    /* ── Tips ── */
-    .tips {
-      display: flex;
-      gap: .65rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.5rem;
-    }
-    .tip-pill {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 999px;
-      padding: .3rem .85rem;
-      font-size: .78rem;
-      color: #475569;
-    }
-
-    /* ── Submit ── */
-    .submit-row {
-      display: flex;
-      gap: .85rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .btn-primary {
-      background: #4f46e5;
-      color: #fff;
-      border: none;
-      border-radius: .6rem;
-      padding: .8rem 1.8rem;
-      font-size: 1rem;
-      font-weight: 700;
+      gap: .75rem;
+      padding: .75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: .65rem;
       cursor: pointer;
-      transition: opacity .15s, transform .1s;
+      transition: border-color .15s, background .15s;
+      background: var(--bg);
     }
-    .btn-primary:hover { opacity: .9; }
-    .btn-primary:active { transform: scale(.98); }
-    .btn-skip {
-      color: #94a3b8;
-      text-decoration: none;
-      font-size: .88rem;
-      font-weight: 500;
+    .task-pick-label:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .task-pick-item input:checked + .task-pick-label {
+      border-color: var(--accent);
+      background: var(--accent-soft);
     }
-    .btn-skip:hover { color: #64748b; }
-
-    /* ── Steps hint ── */
-    .steps-hint {
-      margin-top: 2.5rem;
-      display: flex;
-      gap: 0;
-      align-items: center;
-    }
-    .step {
-      display: flex;
-      align-items: center;
-      gap: .4rem;
-      font-size: .8rem;
-      font-weight: 600;
-    }
-    .step .num {
-      width: 1.5rem;
-      height: 1.5rem;
-      border-radius: 50%;
+    html.dark .task-pick-item input:checked + .task-pick-label { background: #2D2800; }
+    .task-pick-check {
+      width: 1.1rem;
+      height: 1.1rem;
+      border: 2px solid var(--border);
+      border-radius: .3rem;
+      flex-shrink: 0;
+      margin-top: .1rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: .72rem;
-      font-weight: 700;
+      font-size: .7rem;
+      font-weight: 900;
+      color: transparent;
+      background: var(--bg);
+      transition: border-color .12s, background .12s, color .12s;
     }
-    .step.active .num { background: #4f46e5; color: #fff; }
-    .step.inactive .num { background: #e2e8f0; color: #94a3b8; }
-    .step.active { color: #4f46e5; }
-    .step.inactive { color: #94a3b8; }
-    .step-arrow { color: #d1d5db; margin: 0 .6rem; font-size: .85rem; }
+    .task-pick-item input:checked + .task-pick-label .task-pick-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+    html.dark .task-pick-item input:checked + .task-pick-label .task-pick-check { color: #1A1A1A; }
+    .task-pick-body { flex: 1; min-width: 0; }
+    .task-pick-title { font-size: .88rem; font-weight: 600; line-height: 1.35; margin-bottom: .25rem; }
+    .task-pick-meta { display: flex; gap: .3rem; flex-wrap: wrap; align-items: center; }
+    .task-pick-item.win-selected { opacity: .35; pointer-events: none; }
+
+    /* Priority + project pills inside pick cards */
+    .tpill { font-size: .65rem; font-weight: 700; padding: .1rem .35rem; border-radius: 3px; }
+    .tpill-high { color: #dc2626; background: #fee2e2; }
+    .tpill-medium { color: #d97706; background: #fef3c7; }
+    .tpill-low { color: #64748b; background: #f1f5f9; }
+    .tpill-project { color: #475569; background: #f1f5f9; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+    html.dark .tpill-high { background: #450a0a; color: #fca5a5; }
+    html.dark .tpill-medium { background: #451a03; color: #fcd34d; }
+    html.dark .tpill-low { background: #1e293b; color: #94a3b8; }
+    html.dark .tpill-project { background: #1e293b; color: #94a3b8; }
+
+    /* Counter badges */
+    .pick-counter {
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: .6rem;
+    }
+    .pick-counter .cnt { color: var(--accent); }
+
+    /* Empty state */
+    .task-empty { font-size: .86rem; color: var(--text-faint, #94a3b8); text-align: center; padding: 1rem 0; }
+
+    /* ── Submit ── */
+    .submit-wrap { margin-top: 1.75rem; }
+    .btn-submit-main {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.05rem;
+      font-weight: 800;
+      font-family: 'Lexend', inherit;
+      background: var(--accent);
+      color: #1A1A1A;
+      border: none;
+      border-radius: .75rem;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      letter-spacing: .01em;
+    }
+    .btn-submit-main:hover { opacity: .9; }
+    .btn-submit-main:active { transform: scale(.99); }
+    html.dark .btn-submit-main { color: #1A1A1A; }
+    .skip-link { display: block; text-align: center; margin-top: .85rem; font-size: .84rem; color: var(--text-faint, #94a3b8); text-decoration: none; }
+    .skip-link:hover { color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -194,7 +250,7 @@
     <a class="nav-logo" href="{{ base }}/">MyDay</a>
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="active">Check In</a>
+      <a href="{{ base }}/morning-checkin" class="active">✦ Check In</a>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
@@ -203,74 +259,181 @@
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>
-      <div class="focus-controls">
+    <div class="focus-controls">
       <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
       <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
     </div>
   </nav>
 
   <main>
-    <div class="checkin-card">
-      <div class="greeting">
-        <div class="greeting-eyebrow">☀️ Morning Check-In</div>
-        <h1>What's on your mind?</h1>
-        <p class="subtitle">
-          Dump everything out of your head — tasks, worries, ideas, half-formed thoughts.
-          One per line is great, but messy is totally fine.
-        </p>
-      </div>
-
-      <form method="post" action="{{ base }}/morning-checkin/process">
-        <div class="dump-section">
-          <label class="dump-label" for="brain-dump">Brain dump</label>
-          <textarea
-            id="brain-dump"
-            name="brain_dump"
-            placeholder="Send the email about the project update&#10;Call back Sam&#10;Worried about the deadline next week&#10;Need to review the quarterly report&#10;Pick up groceries&#10;..."
-            autofocus
-          ></textarea>
-        </div>
-
-        <div class="reassurance">
-          <span class="icon">💚</span>
-          <span>
-            <strong>This is not a to-do list yet.</strong>
-            We'll help you pick just 3 things to focus on after this.
-            Everything else gets parked safely — you won't lose it.
-          </span>
-        </div>
-
-        <div class="tips">
-          <span class="tip-pill">One idea per line</span>
-          <span class="tip-pill">Worries count too</span>
-          <span class="tip-pill">No grammar needed</span>
-          <span class="tip-pill">Fast is fine</span>
-        </div>
-
-        <div class="submit-row">
-          <button class="btn-primary" type="submit">Turn this into tasks →</button>
-          <a class="btn-skip" href="{{ base }}/my-day">Skip for now</a>
-        </div>
-      </form>
-
-      <div class="steps-hint">
-        <div class="step active">
-          <div class="num">1</div>
-          Brain dump
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step inactive">
-          <div class="num">2</div>
-          Pick 3 Must-Dos
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step inactive">
-          <div class="num">3</div>
-          Focus
-        </div>
-      </div>
+    <div class="page-header">
+      <span class="page-eyebrow">☀️ Morning Ritual</span>
+      <h1 class="page-title">Set up your day</h1>
+      <p class="page-subtitle">Takes under 3 minutes. No pressure, no perfection.</p>
     </div>
+
+    <form method="post" action="{{ base }}/morning-checkin" id="checkin-form">
+
+      <!-- ── SECTION 1: Energy Check ──────────────────────────────────── -->
+      <div class="checkin-section">
+        <div class="section-heading">How are you showing up today?</div>
+        <p class="section-sub">Be honest — there's no wrong answer.</p>
+        <div class="energy-grid">
+
+          <div class="energy-card" id="ec-high" onclick="pickEnergy('high')">
+            <input type="radio" name="energy_today" value="high" id="e_high" />
+            <span class="energy-emoji">⚡</span>
+            <span class="energy-label">High energy</span>
+          </div>
+
+          <div class="energy-card" id="ec-flow" onclick="pickEnergy('flow')">
+            <input type="radio" name="energy_today" value="flow" id="e_flow" />
+            <span class="energy-emoji">🌊</span>
+            <span class="energy-label">In the flow</span>
+          </div>
+
+          <div class="energy-card" id="ec-low" onclick="pickEnergy('low')">
+            <input type="radio" name="energy_today" value="low" id="e_low" />
+            <span class="energy-emoji">😴</span>
+            <span class="energy-label">Low energy</span>
+          </div>
+
+          <div class="energy-card" id="ec-scattered" onclick="pickEnergy('scattered')">
+            <input type="radio" name="energy_today" value="scattered" id="e_scattered" />
+            <span class="energy-emoji">🌪</span>
+            <span class="energy-label">A bit scattered</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── SECTION 2: Brain Dump ────────────────────────────────────── -->
+      <div class="checkin-section">
+        <div class="section-heading">Anything on your mind? Dump it here.</div>
+        <p class="section-sub">Each line becomes an Inbox item. No pressure.</p>
+        <textarea
+          class="brain-textarea"
+          name="brain_dump"
+          rows="6"
+          placeholder="Random thoughts, worries, ideas..."></textarea>
+      </div>
+
+      <!-- ── SECTION 3: Pick 3 Wins ───────────────────────────────────── -->
+      <div class="checkin-section">
+        <div class="section-heading">Pick up to 3 must-dos for today.</div>
+        <p class="section-sub">These are your wins. Everything else is a bonus.</p>
+
+        {% if tasks %}
+        <div class="task-pick-list" id="wins-list">
+          {% for task in tasks %}
+          <div class="task-pick-item" id="win-item-{{ task.id }}" data-task-id="{{ task.id }}">
+            <input type="checkbox" name="win_ids" value="{{ task.id }}" id="win-{{ task.id }}"
+                   onchange="onWinChange(this)" />
+            <label class="task-pick-label" for="win-{{ task.id }}">
+              <div class="task-pick-check">✓</div>
+              <div class="task-pick-body">
+                <div class="task-pick-title">{{ task.title }}</div>
+                <div class="task-pick-meta">
+                  <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
+                  {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date.strftime('%b %-d') }}</span>{% endif %}
+                  {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
+                  {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
+                </div>
+              </div>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="pick-counter">Selected: <span class="cnt" id="win-count">0</span> / 3</div>
+        {% else %}
+        <div class="task-empty">No open tasks yet — add some from the Tasks page.</div>
+        {% endif %}
+      </div>
+
+      <!-- ── SECTION 4: Nice-To-Dos ───────────────────────────────────── -->
+      <div class="checkin-section">
+        <div class="section-heading">Any nice-to-haves? Pick up to 2.</div>
+        <p class="section-sub">Bonus tasks if energy allows — no guilt if they don't happen.</p>
+
+        {% if tasks %}
+        <div class="task-pick-list" id="nice-list">
+          {% for task in tasks %}
+          <div class="task-pick-item" id="nice-item-{{ task.id }}" data-task-id="{{ task.id }}">
+            <input type="checkbox" name="nice_ids" value="{{ task.id }}" id="nice-{{ task.id }}"
+                   onchange="onNiceChange(this)" />
+            <label class="task-pick-label" for="nice-{{ task.id }}">
+              <div class="task-pick-check">✓</div>
+              <div class="task-pick-body">
+                <div class="task-pick-title">{{ task.title }}</div>
+                <div class="task-pick-meta">
+                  <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
+                  {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date.strftime('%b %-d') }}</span>{% endif %}
+                  {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
+                  {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
+                </div>
+              </div>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="pick-counter">Selected: <span class="cnt" id="nice-count">0</span> / 2</div>
+        {% else %}
+        <div class="task-empty">No open tasks yet.</div>
+        {% endif %}
+      </div>
+
+      <!-- ── Submit ────────────────────────────────────────────────────── -->
+      <div class="submit-wrap">
+        <button type="submit" class="btn-submit-main">Let's go ✦</button>
+        <a class="skip-link" href="{{ base }}/my-day">Skip for now →</a>
+      </div>
+
+    </form>
   </main>
+
 <script src="{{ base }}/static/app.js?v=9"></script>
+<script>
+  // ── Energy card selection ──────────────────────────────────────────────
+  function pickEnergy(val) {
+    document.querySelectorAll('.energy-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('ec-' + val).classList.add('selected');
+    document.getElementById('e_' + val).checked = true;
+  }
+
+  // ── Win selection: max 3, sync with nice list ──────────────────────────
+  function onWinChange(cb) {
+    const wins = Array.from(document.querySelectorAll('#wins-list input[type="checkbox"]:checked'));
+    if (wins.length > 3) { cb.checked = false; return; }
+    document.getElementById('win-count').textContent = wins.length;
+    syncNiceList();
+  }
+
+  // ── Nice selection: max 2, can't overlap with wins ─────────────────────
+  function onNiceChange(cb) {
+    const nices = Array.from(document.querySelectorAll('#nice-list input[type="checkbox"]:checked'));
+    if (nices.length > 2) { cb.checked = false; return; }
+    document.getElementById('nice-count').textContent = nices.length;
+  }
+
+  // Hide tasks in Section 4 that are already selected as wins
+  function syncNiceList() {
+    const winIds = new Set(
+      Array.from(document.querySelectorAll('#wins-list input:checked')).map(i => i.value)
+    );
+    document.querySelectorAll('#nice-list .task-pick-item').forEach(item => {
+      const id = item.dataset.taskId;
+      const cb = item.querySelector('input[type="checkbox"]');
+      if (winIds.has(id)) {
+        item.classList.add('win-selected');
+        cb.checked = false;
+      } else {
+        item.classList.remove('win-selected');
+      }
+    });
+    // Recount nices
+    const nices = Array.from(document.querySelectorAll('#nice-list input:checked'));
+    document.getElementById('nice-count').textContent = nices.length;
+  }
+</script>
 </body>
 </html>

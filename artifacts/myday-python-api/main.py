@@ -61,6 +61,7 @@ def run_migrations():
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
+        ("energy_today", "VARCHAR(30)"),
     ]
     inbox_cols = [
         ("linked_note_id", "INTEGER"),
@@ -256,53 +257,62 @@ async def home(request: Request, db: Session = Depends(get_db)):
 # ─── Morning Check-In ────────────────────────────────────────────────────────
 
 @app.get(f"{BASE}/morning-checkin", response_class=HTMLResponse)
-async def morning_checkin_get(request: Request):
-    return templates.TemplateResponse(request, "morning_checkin.html", {"base": BASE})
-
-
-@app.post(f"{BASE}/morning-checkin/process")
-async def morning_checkin_process(
-    brain_dump: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    lines = [line.strip() for line in brain_dump.splitlines() if line.strip()]
-    for line in lines:
-        task = models.Task(
-            title=line,
-            status="todo",
-            is_today=False,
-            focus_state=None,
-            source_type="brain_dump",
-        )
-        db.add(task)
-    db.commit()
-    mark_morning_checkin(db, date.today())
-    return RedirectResponse(url=f"{BASE}/morning-checkin/pick", status_code=303)
-
-
-@app.get(f"{BASE}/morning-checkin/pick", response_class=HTMLResponse)
-async def morning_checkin_pick(request: Request, db: Session = Depends(get_db)):
-    today_start = datetime(date.today().year, date.today().month, date.today().day)
-    brain_tasks = (
+async def morning_checkin_get(request: Request, db: Session = Depends(get_db)):
+    tasks = (
         db.query(models.Task)
-        .filter(
-            models.Task.source_type == "brain_dump",
-            models.Task.created_at >= today_start,
-            models.Task.status != "done",
-        )
-        .order_by(models.Task.created_at.asc())
+        .filter(models.Task.status.in_(["todo", "backlog"]))
+        .order_by(models.Task.priority.desc(), models.Task.due_date.asc())
         .all()
     )
-    must_do_count = sum(1 for t in brain_tasks if t.is_today)
     return templates.TemplateResponse(
-        request, "morning_checkin_pick.html",
-        {
-            "base": BASE,
-            "brain_tasks": brain_tasks,
-            "must_do_count": must_do_count,
-            "must_do_cap": 3,
-        },
+        request, "morning_checkin.html",
+        {"base": BASE, "tasks": tasks},
     )
+
+
+@app.post(f"{BASE}/morning-checkin")
+async def morning_checkin_post(
+    request: Request,
+    energy_today: Optional[str] = Form(default=None),
+    brain_dump: str = Form(default=""),
+    win_ids: list[int] = Form(default=[]),
+    nice_ids: list[int] = Form(default=[]),
+    db: Session = Depends(get_db),
+):
+    today = date.today()
+    # 1. Save energy_today to daily log
+    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    if not log:
+        log = models.DailyLog(date=today)
+        db.add(log)
+    if energy_today:
+        log.energy_today = energy_today
+    log.has_morning_checkin = True
+
+    # 2. Brain dump → Inbox items
+    lines = [line.strip() for line in brain_dump.splitlines() if line.strip()]
+    for line in lines:
+        item = models.InboxItem(
+            title=line,
+            source="morning_checkin",
+            source_type="brain_dump",
+            status="new",
+        )
+        db.add(item)
+
+    # 3 & 4. Set today_flag on selected tasks; clear on previously flagged tasks not selected
+    selected_ids = set(win_ids) | set(nice_ids)
+    all_flagged = db.query(models.Task).filter(models.Task.today_flag == True).all()
+    for task in all_flagged:
+        if task.id not in selected_ids:
+            task.today_flag = False
+    for task_id in selected_ids:
+        task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        if task:
+            task.today_flag = True
+
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
 
 
 # ─── My Day ──────────────────────────────────────────────────────────────────
