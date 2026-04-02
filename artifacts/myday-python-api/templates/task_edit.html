@@ -278,6 +278,27 @@
           <div class="field-hint">Helps match tasks to how you feel at different times of day.</div>
         </div>
 
+        <!-- Energy type (new field, separate from energy_tag) -->
+        <div class="field">
+          <label for="energy_type">Energy type</label>
+          <select id="energy_type" name="energy_type">
+            <option value="">— none —</option>
+            <option value="creative" {% if task.energy_type == 'creative' %}selected{% endif %}>✨ Creative</option>
+            <option value="admin" {% if task.energy_type == 'admin' %}selected{% endif %}>📋 Admin</option>
+            <option value="social" {% if task.energy_type == 'social' %}selected{% endif %}>💬 Social</option>
+            <option value="low_energy" {% if task.energy_type == 'low_energy' %}selected{% endif %}>🌿 Low Energy</option>
+          </select>
+        </div>
+
+        <!-- Time estimate -->
+        <div class="field">
+          <label for="time_estimate_minutes">Est. minutes</label>
+          <input type="number" id="time_estimate_minutes" name="time_estimate_minutes"
+                 min="1" max="240" placeholder="e.g. 25"
+                 value="{{ task.time_estimate_minutes if task.time_estimate_minutes else '' }}" />
+          <div class="field-hint">How long do you expect this to take? (1–240 min)</div>
+        </div>
+
         <hr class="divider" />
 
         <div class="form-actions">

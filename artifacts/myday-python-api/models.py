@@ -43,6 +43,9 @@ class Task(Base):
     completed_at = Column(DateTime, nullable=True)
     is_today = Column(Boolean, default=False)
     is_now = Column(Boolean, default=False)
+    energy_type = Column(String(20), nullable=True)
+    time_estimate_minutes = Column(Integer, nullable=True)
+    today_flag = Column(Boolean, default=False)
     source_type = Column(String, default="self")
     source_ref = Column(String, nullable=True)
 

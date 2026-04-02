@@ -145,6 +145,20 @@
               <option value="done">Done</option>
             </select>
           </div>
+          <div class="field">
+            <label for="energy_type">Energy type</label>
+            <select id="energy_type" name="energy_type">
+              <option value="">— none —</option>
+              <option value="creative">✨ Creative</option>
+              <option value="admin">📋 Admin</option>
+              <option value="social">💬 Social</option>
+              <option value="low_energy">🌿 Low Energy</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="time_estimate_minutes">Est. minutes</label>
+            <input id="time_estimate_minutes" name="time_estimate_minutes" type="number" min="1" max="240" placeholder="e.g. 25" />
+          </div>
           <div>
             <button type="submit" class="btn btn-primary">Add</button>
           </div>

@@ -55,6 +55,9 @@ def run_migrations():
         ("time_block", "TEXT"),
         ("energy_tag", "TEXT"),
         ("is_now", "BOOLEAN DEFAULT 0"),
+        ("energy_type", "VARCHAR(20)"),
+        ("time_estimate_minutes", "INTEGER"),
+        ("today_flag", "BOOLEAN DEFAULT 0"),
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
@@ -539,6 +542,8 @@ async def edit_task_post(
     focus_state: Optional[str] = Form(None),
     time_block: Optional[str] = Form(None),
     energy_tag: Optional[str] = Form(None),
+    energy_type: Optional[str] = Form(None),
+    time_estimate_minutes: Optional[str] = Form(None),
     project_id: Optional[str] = Form(None),
     back: str = Form(default=""),
     db: Session = Depends(get_db),
@@ -553,6 +558,8 @@ async def edit_task_post(
     db_task.focus_state = focus_state if focus_state and focus_state != "none" else None
     db_task.time_block = time_block if time_block and time_block != "none" else None
     db_task.energy_tag = energy_tag if energy_tag and energy_tag != "none" else None
+    db_task.energy_type = energy_type if energy_type and energy_type.strip() else None
+    db_task.time_estimate_minutes = int(time_estimate_minutes) if time_estimate_minutes and time_estimate_minutes.strip().isdigit() else None
     db_task.project_id = int(project_id) if project_id and project_id.strip() else None
     if due_date:
         try:
@@ -722,6 +729,8 @@ async def create_task_form(
     priority: str = Form("medium"),
     due_date: Optional[str] = Form(None),
     status: str = Form("todo"),
+    energy_type: Optional[str] = Form(None),
+    time_estimate_minutes: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     parsed_due: Optional[date] = None
@@ -731,7 +740,12 @@ async def create_task_form(
         except ValueError:
             pass
     pid = int(project_id) if project_id and project_id.strip() else None
-    task = models.Task(title=title, priority=priority, due_date=parsed_due, status=status, project_id=pid)
+    etype = energy_type if energy_type and energy_type.strip() else None
+    tmin = int(time_estimate_minutes) if time_estimate_minutes and time_estimate_minutes.strip().isdigit() else None
+    task = models.Task(
+        title=title, priority=priority, due_date=parsed_due, status=status,
+        project_id=pid, energy_type=etype, time_estimate_minutes=tmin,
+    )
     db.add(task)
     db.commit()
     return RedirectResponse(url=f"{BASE}/tasks-page", status_code=303)
