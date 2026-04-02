@@ -221,6 +221,11 @@ async def lifespan(app):
     db = SessionLocal()
     try:
         ensure_settings(db)
+        # Sweep any done tasks that still carry is_now=True (data integrity guard)
+        db.query(models.Task).filter(
+            models.Task.status == "done", models.Task.is_now == True
+        ).update({models.Task.is_now: False}, synchronize_session=False)
+        db.commit()
     finally:
         db.close()
     yield
@@ -749,7 +754,9 @@ async def kanban(request: Request, db: Session = Depends(get_db)):
         models.Task.status == "done",
         models.Task.updated_at >= _dt.combine(today, _dt.min.time()),
     ).count()
-    now_task_obj = db.query(models.Task).filter(models.Task.is_now == True).first()
+    now_task_obj = db.query(models.Task).filter(
+        models.Task.is_now == True, models.Task.status != "done"
+    ).first()
     now_task_id = now_task_obj.id if now_task_obj else None
     return templates.TemplateResponse(
         request, "kanban.html",
