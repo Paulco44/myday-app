@@ -265,6 +265,30 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => form.submit(), 450);
     });
 
+    // ── Backlog collapse (show top 3 by default) ───────────────────────────
+    function collapseBacklog() {
+      const backlogBody = document.querySelector('.column[data-status="backlog"] .column-body');
+      if (!backlogBody) return;
+      const cards = Array.from(backlogBody.querySelectorAll('.card'));
+      const LIMIT = 3;
+      if (cards.length <= LIMIT) return;
+
+      const hidden = cards.slice(LIMIT);
+      hidden.forEach(c => c.classList.add('backlog-hidden'));
+
+      const toggle = document.createElement('button');
+      toggle.className = 'backlog-show-more';
+      toggle.textContent = `+ Show ${hidden.length} more`;
+      toggle.onclick = () => {
+        const isExpanded = toggle.dataset.expanded === '1';
+        hidden.forEach(c => c.classList.toggle('backlog-hidden', isExpanded));
+        toggle.textContent = isExpanded ? `+ Show ${hidden.length} more` : `− Hide ${hidden.length}`;
+        toggle.dataset.expanded = isExpanded ? '0' : '1';
+      };
+      backlogBody.appendChild(toggle);
+    }
+    collapseBacklog();
+
     // ── NOW task: Set NOW / Clear NOW buttons ──────────────────────────────
     board.addEventListener('click', function (e) {
       const setBtn   = e.target.closest('.btn-set-now');

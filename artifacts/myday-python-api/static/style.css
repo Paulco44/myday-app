@@ -548,3 +548,22 @@ html.dark .col-quick-submit { color:#1A1A1A; }
 .btn-clear-now:hover { background: var(--bg); color: var(--text); }
 .column[data-status="doing"] .card:hover .btn-set-now { display: inline-flex; }
 .card[data-now="true"] .btn-set-now { display: none !important; }
+
+/* ── Backlog collapse ────────────────────────────────────────── */
+.backlog-hidden { display: none !important; }
+.backlog-show-more {
+  width: 100%;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.5rem;
+  cursor: pointer;
+  border: 1.5px dashed var(--border);
+  border-radius: 0.5rem;
+  background: transparent;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+  margin-top: 0.25rem;
+}
+.backlog-show-more:hover { color: var(--accent); border-color: var(--accent); }
