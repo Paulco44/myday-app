@@ -220,12 +220,10 @@
               <span class="card-estimate">⏱ {{ task.time_estimate_minutes }} min</span>
               {% endif %}
               <button class="btn-set-now" type="button"
-                      data-task-id="{{ task.id }}"
-                      onclick="event.stopPropagation()">▶ Set NOW</button>
+                      data-task-id="{{ task.id }}">▶ Set NOW</button>
               {% if task.id == now_task_id %}
               <button class="btn-clear-now" type="button"
-                      data-task-id="{{ task.id }}"
-                      onclick="event.stopPropagation()">✕ Clear</button>
+                      data-task-id="{{ task.id }}">✕ Clear</button>
               {% endif %}
             </div>
             <!-- Quick move buttons -->
@@ -292,8 +290,8 @@
        Inline Editing
     ───────────────────────────────────────── */
     function handleCardClick(event, card) {
-      // Ignore clicks on move buttons or expand link
-      if (event.target.closest('.move-btn, .card-expand-btn, form')) return;
+      // Ignore clicks on move buttons, expand link, or NOW buttons
+      if (event.target.closest('.move-btn, .card-expand-btn, form, .btn-set-now, .btn-clear-now')) return;
       // Ignore if already editing
       if (card.classList.contains('editing')) return;
       openInlineEdit(card);
