@@ -54,6 +54,7 @@ def run_migrations():
         ("focus_state", "TEXT"),
         ("time_block", "TEXT"),
         ("energy_tag", "TEXT"),
+        ("is_now", "BOOLEAN DEFAULT 0"),
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
@@ -321,8 +322,9 @@ async def my_day(
     )
     active_today_ids = {t.id for t in active_today}
 
-    # Focus state buckets
-    now_task = next((t for t in active_today if t.focus_state == "now"), None)
+    # Focus state buckets — prefer kanban is_now flag, fall back to focus_state
+    is_now_task = db.query(models.Task).filter(models.Task.is_now == True).first()
+    now_task = is_now_task or next((t for t in active_today if t.focus_state == "now"), None)
     next_task = next((t for t in active_today if t.focus_state == "next"), None)
     later_today_all = [t for t in active_today if t.focus_state in ("later_today", None)]
     later_today_tasks = later_today_all[:TODAY_VISIBLE_CAP]
@@ -625,6 +627,8 @@ async def kanban(request: Request, db: Session = Depends(get_db)):
         models.Task.status == "done",
         models.Task.updated_at >= _dt.combine(today, _dt.min.time()),
     ).count()
+    now_task_obj = db.query(models.Task).filter(models.Task.is_now == True).first()
+    now_task_id = now_task_obj.id if now_task_obj else None
     return templates.TemplateResponse(
         request, "kanban.html",
         {
@@ -634,6 +638,7 @@ async def kanban(request: Request, db: Session = Depends(get_db)):
             "wip_limit": settings.wip_limit_doing,
             "today": today,
             "done_today_count": done_today_count,
+            "now_task_id": now_task_id,
             "base": BASE,
         },
     )
@@ -658,6 +663,25 @@ async def update_status(
         db.commit()
     dest = redirect_to if redirect_to else f"{BASE}/kanban"
     return RedirectResponse(url=dest, status_code=303)
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/set-now")
+async def set_now(task_id: int, db: Session = Depends(get_db)):
+    db.query(models.Task).update({models.Task.is_now: False})
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if task:
+        task.is_now = True
+    db.commit()
+    return JSONResponse({"ok": True})
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/clear-now")
+async def clear_now(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if task:
+        task.is_now = False
+    db.commit()
+    return JSONResponse({"ok": True})
 
 
 # ─── Tasks HTML pages ─────────────────────────────────────────────────────────

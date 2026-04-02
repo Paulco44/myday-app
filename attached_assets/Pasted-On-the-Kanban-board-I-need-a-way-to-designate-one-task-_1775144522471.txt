@@ -1,0 +1,48 @@
+On the Kanban board, I need a way to designate one task in the DOING column as the active "NOW" task — the single thing I'm working on right now. This should feed into the My Day page's "No active focus right now" strip.
+
+Backend changes needed:
+1. Add a column `is_now BOOLEAN DEFAULT FALSE` to the tasks table (migration).
+2. When setting a task as NOW, clear is_now on all other tasks first (only one task can be NOW at a time).
+3. Add route: POST /task-manager/tasks/<int:task_id>/set-now  — sets is_now=True on that task, clears it on all others, returns JSON {"ok": true}
+4. Add route: POST /task-manager/tasks/<int:task_id>/clear-now — sets is_now=False, returns JSON {"ok": true}
+5. In the kanban route (GET), pass `now_task_id` to the template = the id of the task where is_now=True (or None).
+6. In the my-day route (GET), pass the full now_task object to the template, and use it to populate the now-strip instead of showing "No active focus right now."
+
+Frontend — Kanban card changes:
+1. In the kanban template, add data-now="true" attribute to the card where task.is_now is True.
+2. On hover of any card in the DOING column, show a small "▶ Set NOW" button (class: btn-set-now). On cards where data-now="true", show a "■ NOW" badge instead and an "✕ Clear" button.
+3. In static/app.js, handle btn-set-now clicks with a fetch POST to /task-manager/tasks/{id}/set-now, then on success update the DOM: remove data-now from all cards, add data-now="true" to the clicked card, swap the button to the badge.
+
+In static/style.css:
+.card[data-now="true"] {
+  border-left-color: var(--accent) !important;
+  background: var(--focus-bg) !important;
+}
+.card-now-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+.btn-set-now {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  display: none;
+}
+.column[data-status="doing"] .card:hover .btn-set-now { display: inline-flex; }
+.card[data-now="true"] .btn-set-now { display: none !important; }
+
+Frontend — My Day now-strip update:
+In the my_day.html template, update the now-strip section to show the NOW task title and a "Start Focus →" link when a now_task exists. When no now_task, keep the current "No active focus right now" message.

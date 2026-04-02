@@ -264,5 +264,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
       setTimeout(() => form.submit(), 450);
     });
+
+    // ── NOW task: Set NOW / Clear NOW buttons ──────────────────────────────
+    board.addEventListener('click', function (e) {
+      const setBtn   = e.target.closest('.btn-set-now');
+      const clearBtn = e.target.closest('.btn-clear-now');
+      if (!setBtn && !clearBtn) return;
+      e.stopPropagation();
+
+      const taskId = (setBtn || clearBtn).dataset.taskId;
+      const isSet  = !!setBtn;
+      const url    = _BASE + '/tasks/' + taskId + (isSet ? '/set-now' : '/clear-now');
+
+      fetch(url, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) return;
+          // Clear data-now from all cards
+          document.querySelectorAll('.card[data-now="true"]').forEach(c => {
+            c.removeAttribute('data-now');
+            c.querySelector('.card-now-badge')?.remove();
+            c.querySelector('.btn-clear-now')?.remove();
+          });
+          if (isSet) {
+            const card = document.querySelector('.card[data-task-id="' + taskId + '"]');
+            if (!card) return;
+            card.setAttribute('data-now', 'true');
+            // Insert badge above title
+            const preview = card.querySelector('.card-preview');
+            const title   = card.querySelector('.card-title');
+            if (preview && title) {
+              const badge = document.createElement('div');
+              badge.className = 'card-now-badge';
+              badge.textContent = '▶ NOW';
+              preview.insertBefore(badge, title);
+            }
+            // Add "Clear" button next to the (still-hidden) Set NOW button
+            const sBtn = card.querySelector('.btn-set-now');
+            if (sBtn && !card.querySelector('.btn-clear-now')) {
+              const cBtn = document.createElement('button');
+              cBtn.className = 'btn-clear-now';
+              cBtn.type = 'button';
+              cBtn.dataset.taskId = taskId;
+              cBtn.textContent = '✕ Clear';
+              sBtn.insertAdjacentElement('afterend', cBtn);
+            }
+          }
+        })
+        .catch(() => {});
+    });
   }
 })();

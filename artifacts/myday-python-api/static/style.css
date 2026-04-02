@@ -505,3 +505,46 @@ html.dark .col-quick-submit { color:#1A1A1A; }
 .col-quick-submit:hover { opacity:.88; }
 .col-quick-cancel { background:none; border:1px solid var(--border); border-radius:.35rem; padding:.3rem .6rem; font-size:.78rem; color:var(--text-muted); font-family:inherit; cursor:pointer; }
 .col-quick-cancel:hover { background:var(--bg); }
+
+/* ── NOW task card ───────────────────────────────────────────── */
+.card[data-now="true"] {
+  border-left-color: var(--accent) !important;
+  background: var(--focus-bg, rgba(255,204,0,.06)) !important;
+}
+.card-now-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+.btn-set-now {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text, var(--accent));
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  display: none;
+}
+.btn-clear-now {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+}
+.btn-clear-now:hover { background: var(--bg); color: var(--text); }
+.column[data-status="doing"] .card:hover .btn-set-now { display: inline-flex; }
+.card[data-now="true"] .btn-set-now { display: none !important; }

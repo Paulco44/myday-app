@@ -178,6 +178,7 @@
              data-priority="{{ task.priority }}"
              data-due="{{ task.due_date.isoformat() if task.due_date else '' }}"
              data-description="{{ (task.description or '') | e }}"
+             {% if task.id == now_task_id %}data-now="true"{% endif %}
              ondragstart="handleDragStart(event, {{ task.id }})"
              ondragend="this.classList.remove('dragging')"
              onclick="handleCardClick(event, this)">
@@ -190,6 +191,9 @@
 
           <!-- Preview content -->
           <div class="card-preview">
+            {% if task.id == now_task_id %}
+            <div class="card-now-badge">▶ NOW</div>
+            {% endif %}
             <div class="card-title">{{ task.title }}</div>
             <div class="card-meta">
               <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
@@ -200,6 +204,14 @@
               {% endif %}
               {% if task.project %}<span class="card-project">{{ task.project.name }}</span>{% endif %}
               {% if task.is_today %}<span class="card-today">Today</span>{% endif %}
+              <button class="btn-set-now" type="button"
+                      data-task-id="{{ task.id }}"
+                      onclick="event.stopPropagation()">▶ Set NOW</button>
+              {% if task.id == now_task_id %}
+              <button class="btn-clear-now" type="button"
+                      data-task-id="{{ task.id }}"
+                      onclick="event.stopPropagation()">✕ Clear</button>
+              {% endif %}
             </div>
             <!-- Quick move buttons -->
             <div class="card-actions">

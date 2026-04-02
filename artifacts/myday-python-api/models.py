@@ -42,6 +42,7 @@ class Task(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     is_today = Column(Boolean, default=False)
+    is_now = Column(Boolean, default=False)
     source_type = Column(String, default="self")
     source_ref = Column(String, nullable=True)
 
