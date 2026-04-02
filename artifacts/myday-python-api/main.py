@@ -336,7 +336,9 @@ async def my_day(
     active_today_ids = {t.id for t in active_today}
 
     # Focus state buckets — prefer kanban is_now flag, fall back to focus_state
-    is_now_task = db.query(models.Task).filter(models.Task.is_now == True).first()
+    is_now_task = db.query(models.Task).filter(
+        models.Task.is_now == True, models.Task.status != "done"
+    ).first()
     now_task = is_now_task or next((t for t in active_today if t.focus_state == "now"), None)
     next_task = next((t for t in active_today if t.focus_state == "next"), None)
     later_today_all = [t for t in active_today if t.focus_state in ("later_today", None)]
@@ -580,6 +582,7 @@ async def edit_task_post(
         db_task.due_date = None
     if status == "done" and not db_task.completed_at:
         db_task.completed_at = datetime.utcnow()
+        db_task.is_now = False
         mark_today_completed(db, date.today())
     elif status != "done":
         db_task.completed_at = None
@@ -674,6 +677,7 @@ async def update_status(
         db_task.updated_at = datetime.utcnow()
         if status == "done" and not db_task.completed_at:
             db_task.completed_at = datetime.utcnow()
+            db_task.is_now = False
             mark_today_completed(db, date.today())
         elif status != "done":
             db_task.completed_at = None
