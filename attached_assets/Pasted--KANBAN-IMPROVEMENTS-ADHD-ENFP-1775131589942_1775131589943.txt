@@ -1,0 +1,69 @@
+/* ─────────────────────────────────────────────────────────────
+   KANBAN IMPROVEMENTS — ADHD/ENFP design upgrades
+   ───────────────────────────────────────────────────────────── */
+
+/* 1. Priority left border on cards */
+.card { border-left-width: 4px; }
+.card:has(.pri-high)   { border-left-color: #DC2626; }
+.card:has(.pri-medium) { border-left-color: #D97706; }
+.card:has(.pri-low)    { border-left-color: #CBD5E1; }
+
+/* 2. Truncate card titles to 2 lines max */
+.card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 3. Column header tinted backgrounds */
+.board > .column:nth-child(1) .column-head { background: #F8FAFC; border-bottom: 2px solid #CBD5E1; border-radius: .75rem .75rem 0 0; }
+.board > .column:nth-child(2) .column-head { background: #EFF6FF; border-bottom: 2px solid #93C5FD; border-radius: .75rem .75rem 0 0; }
+.board > .column:nth-child(3) .column-head { background: #FFFBEB; border-bottom: 2px solid #FCD34D; border-radius: .75rem .75rem 0 0; }
+.board > .column:nth-child(4) .column-head { background: #F5F3FF; border-bottom: 2px solid #C4B5FD; border-radius: .75rem .75rem 0 0; }
+.board > .column:nth-child(5) .column-head { background: #F0FDF4; border-bottom: 2px solid #86EFAC; border-radius: .75rem .75rem 0 0; }
+
+/* 4. DOING column gets amber accent */
+.board > .column:nth-child(3) .column-title { color: #D97706; }
+.board > .column:nth-child(3) .col-count    { background: #FEF3C7; border-color: #F59E0B; color: #92400E; }
+
+/* 5. Overdue date → red pill */
+.card-due.overdue {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-weight: 700;
+}
+
+/* 6. Project tag → truncated pill */
+.card-project {
+  background: #F1F5F9;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  color: #475569;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* 7. Move buttons — subtle until hover */
+.card-actions { border-top: 1px solid var(--border); padding-top: 0.4rem; margin-top: 0.45rem; gap: 0.25rem; }
+.move-btn { font-size: 0.65rem; padding: 0.15rem 0.35rem; opacity: 0.6; }
+.card:hover .move-btn { opacity: 1; }
+
+/* ── Dark mode adjustments ── */
+html.dark .card:has(.pri-high)   { border-left-color: #EF4444; }
+html.dark .card:has(.pri-medium) { border-left-color: #F97316; }
+html.dark .card:has(.pri-low)    { border-left-color: #374151; }
+html.dark .board > .column:nth-child(1) .column-head { background: #1E1E1E; border-bottom-color: #374151; }
+html.dark .board > .column:nth-child(2) .column-head { background: #0F1E2E; border-bottom-color: #1E40AF; }
+html.dark .board > .column:nth-child(3) .column-head { background: #1F1500; border-bottom-color: #D97706; }
+html.dark .board > .column:nth-child(4) .column-head { background: #1A0F2E; border-bottom-color: #7C3AED; }
+html.dark .board > .column:nth-child(5) .column-head { background: #042014; border-bottom-color: #16A34A; }
+html.dark .board > .column:nth-child(3) .column-title { color: #FFCC00; }
+html.dark .board > .column:nth-child(3) .col-count    { background: #2D2000; border-color: #FFCC00; color: #FFDD55; }
+html.dark .card-due.overdue { background: #2D0A0A; border-color: #EF4444; }
+html.dark .card-project { background: #2A2A2A; color: #94A3B8; }
