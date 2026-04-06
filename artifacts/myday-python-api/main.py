@@ -687,12 +687,14 @@ async def edit_task_post(
     else:
         db_task.due_date = None
     if status == "done":
-        db_task.is_now = False          # always clear NOW badge on completion
+        db_task.is_now = False          # clear NOW on completion
         if not db_task.completed_at:
             db_task.completed_at = datetime.utcnow()
             mark_today_completed(db, date.today())
     else:
         db_task.completed_at = None
+        if status not in ("todo", "doing"):
+            db_task.is_now = False      # waiting/backlog can't be the NOW task
     db_task.updated_at = datetime.utcnow()
     db.commit()
     dest = back if back else f"{BASE}/tasks-page"
@@ -785,12 +787,14 @@ async def update_status(
         db_task.status = status
         db_task.updated_at = datetime.utcnow()
         if status == "done":
-            db_task.is_now = False          # always clear NOW badge on completion
+            db_task.is_now = False          # clear NOW on completion
             if not db_task.completed_at:
                 db_task.completed_at = datetime.utcnow()
                 mark_today_completed(db, date.today())
         else:
             db_task.completed_at = None
+            if status not in ("todo", "doing"):
+                db_task.is_now = False      # waiting/backlog can't be the NOW task
         db.commit()
     dest = redirect_to if redirect_to else f"{BASE}/kanban"
     return RedirectResponse(url=dest, status_code=303)
