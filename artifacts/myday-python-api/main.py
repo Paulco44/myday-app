@@ -390,9 +390,11 @@ async def my_day(
     current_month_name = MONTH_NAMES[today.month]
 
     # Today's flagged tasks split by category (wins vs nice-to-haves)
+    # Only show tasks in active states — waiting/backlog are not actionable today
     today_flagged = (
         db.query(models.Task)
-        .filter(models.Task.today_flag == True, models.Task.status != "done")
+        .filter(models.Task.today_flag == True,
+                models.Task.status.in_(["todo", "doing"]))
         .order_by(models.Task.priority.desc())
         .all()
     )
