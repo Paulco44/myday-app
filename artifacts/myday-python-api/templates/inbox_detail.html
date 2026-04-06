@@ -220,7 +220,7 @@
             <div class="action-item">
               <span class="action-dot"></span>
               <span class="action-text">{{ action }}</span>
-              {% if item.status not in ['promoted', 'archived'] %}
+              {% if item.status != 'archived' %}
                 <button class="btn-use" onclick="useAction({{ loop.index0 }})">Use →</button>
               {% endif %}
             </div>
@@ -241,7 +241,7 @@
     {% endif %}
 
     <!-- ── Action panel (triage) ── -->
-    {% if item.status not in ['promoted', 'archived'] %}
+    {% if item.status != 'archived' %}
       <div class="cta-panel">
         <div class="cta-panel-header">
           <h2>What do you want to do?</h2>
@@ -326,14 +326,6 @@
         </div>
       </div>
 
-    {% elif item.status == 'promoted' %}
-      <!-- Post-promotion: archive option still available -->
-      <div class="post-panel">
-        <h2>Actions</h2>
-        <form method="post" action="{{ base }}/inbox/{{ item.id }}/archive">
-          <button type="submit" class="btn-archive">Archive this inbox note</button>
-        </form>
-      </div>
     {% endif %}
 
   </main>
