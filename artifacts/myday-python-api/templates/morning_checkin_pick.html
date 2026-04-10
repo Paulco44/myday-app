@@ -30,7 +30,7 @@
     /* ── Steps ── */
     .steps { display: flex; align-items: center; gap: 0; margin-bottom: 2.25rem; }
     .step { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; }
-    .step .num { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .73rem; font-weight: 700; flex-shrink: 0; }
+    .step .num { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size:.82rem; font-weight: 700; flex-shrink: 0; }
     .step.done .num { background: #4f46e5; color: #fff; }
     .step.done { color: #4f46e5; }
     .step.active .num { background: #4f46e5; color: #fff; }
@@ -60,7 +60,7 @@
     .dot { width: 1.1rem; height: 1.1rem; border-radius: 50%; border: 2px solid #e2e8f0; }
     .dot.filled { background: #4f46e5; border-color: var(--accent); }
     .counter-label { font-size: .84rem; color: #475569; font-weight: 600; }
-    .counter-hint { margin-left: auto; font-size: .76rem; color: #94a3b8; font-style: italic; }
+    .counter-hint { margin-left: auto; font-size:.82rem; color: #94a3b8; font-style: italic; }
 
     /* ── Task list ── */
     .task-list { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1.75rem; }
@@ -110,7 +110,7 @@
     .btn-pick:hover { background: #c7d2fe; }
     .btn-unpick { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: .4rem; padding: .33rem .85rem; font-size: .8rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .btn-unpick:hover { background: #ddd6fe; }
-    .btn-edit-sm { background: none; border: none; color: #94a3b8; font-size: .75rem; cursor: pointer; padding: .2rem .35rem; border-radius: .3rem; text-decoration: none; }
+    .btn-edit-sm { background: none; border: none; color: #94a3b8; font-size:.82rem; cursor: pointer; padding: .2rem .35rem; border-radius: .3rem; text-decoration: none; }
     .btn-edit-sm:hover { color: #4f46e5; background: #f1f5f9; }
 
     /* ── Empty state ── */
@@ -166,11 +166,13 @@
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" class="checkin">✦ Check In</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>

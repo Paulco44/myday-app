@@ -33,7 +33,7 @@
     /* ── Field groups ── */
     .field { margin-bottom: 1.2rem; }
     .field:last-child { margin-bottom: 0; }
-    label { display: block; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #64748b; margin-bottom: .4rem; }
+    label { display: block; font-size:.82rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #64748b; margin-bottom: .4rem; }
     input[type="text"],
     input[type="date"],
     textarea,
@@ -101,11 +101,11 @@
     .btn-cancel:hover { color: var(--text); }
 
     /* ── Hint text ── */
-    .field-hint { font-size: .73rem; color: #94a3b8; margin-top: .3rem; }
+    .field-hint { font-size:.82rem; color: #94a3b8; margin-top: .3rem; }
 
     /* ── Section label ── */
     .section-label {
-      font-size: .72rem;
+      font-size:.82rem;
       font-weight: 700;
       letter-spacing: .06em;
       text-transform: uppercase;
@@ -121,11 +121,13 @@
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" class="checkin">✦ Check In</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>
@@ -278,17 +280,7 @@
           <div class="field-hint">Helps match tasks to how you feel at different times of day.</div>
         </div>
 
-        <!-- Energy type (new field, separate from energy_tag) -->
-        <div class="field">
-          <label for="energy_type">Energy type</label>
-          <select id="energy_type" name="energy_type">
-            <option value="">— none —</option>
-            <option value="creative" {% if task.energy_type == 'creative' %}selected{% endif %}>✨ Creative</option>
-            <option value="admin" {% if task.energy_type == 'admin' %}selected{% endif %}>📋 Admin</option>
-            <option value="social" {% if task.energy_type == 'social' %}selected{% endif %}>💬 Social</option>
-            <option value="low_energy" {% if task.energy_type == 'low_energy' %}selected{% endif %}>🌿 Low Energy</option>
-          </select>
-        </div>
+        <!-- energy_type duplicate removed — use the energy_tag chips above -->
 
         <!-- Time estimate -->
         <div class="field">

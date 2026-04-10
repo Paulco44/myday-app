@@ -42,11 +42,11 @@
 
     .inbox-card-body { flex: 1; min-width: 0; }
     .inbox-card-title { font-weight: 700; font-size: .97rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: .3rem; }
-    .inbox-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; font-size: .78rem; color: var(--text-muted); margin-bottom: .4rem; }
+    .inbox-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; font-size:.82rem; color: var(--text-muted); margin-bottom: .4rem; }
     .inbox-card-summary { font-size: .84rem; color: var(--text-muted); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
     /* badges */
-    .badge { display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 700; letter-spacing: .01em; text-transform: uppercase; }
+    .badge { display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .55rem; border-radius: .35rem; font-size:.82rem; font-weight: 700; letter-spacing: .01em; text-transform: uppercase; }
     .badge-whisper { background: #ede9fe; color: #7c3aed; }
     html.dark .badge-whisper { background: #3b0764; color: #c4b5fd; }
     .badge-new { background: #fef3c7; color: #92400e; }
@@ -64,7 +64,7 @@
     .inbox-card.status-promoted .btn-review { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); font-weight: 600; }
 
     /* ── Action count pill ── */
-    .action-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: .15rem .5rem; font-size: .72rem; color: var(--text-muted); font-weight: 600; }
+    .action-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: .15rem .5rem; font-size:.82rem; color: var(--text-muted); font-weight: 600; }
 
     /* ── Archived link ── */
     .archived-link { text-align: center; margin-top: 2.5rem; font-size: .84rem; color: var(--text-muted); }
@@ -78,14 +78,16 @@
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox" class="active">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/inbox" class="active">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
     </div>
     <div class="nav-actions">
       <button class="btn-noise" id="btn-noise" onclick="toggleNoise()">🎧 Noise</button>

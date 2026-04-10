@@ -16,7 +16,7 @@
 
     /* ── Create project card ── */
     .create-card { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.15rem 1.35rem; margin-bottom: 1.75rem; }
-    .create-card h2 { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .85rem; }
+    .create-card h2 { font-size:.82rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .85rem; }
     .create-form { display: flex; flex-direction: column; gap: .65rem; }
     .create-form input[type=text],
     .create-form textarea {
@@ -33,7 +33,7 @@
     .btn-create:hover { opacity: .85; }
 
     /* ── Section label ── */
-    .section-label { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: .65rem; padding-left: .15rem; }
+    .section-label { font-size:.82rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: .65rem; padding-left: .15rem; }
 
     /* ── Project cards ── */
     .projects-grid { display: flex; flex-direction: column; gap: .65rem; margin-bottom: 2rem; }
@@ -46,7 +46,7 @@
     .proj-name a { color: var(--text); text-decoration: none; }
     .proj-name a:hover { color: var(--accent); }
     .proj-desc { font-size: .83rem; color: var(--text-muted); line-height: 1.55; margin-bottom: .45rem; }
-    .proj-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; font-size: .75rem; color: var(--text-faint); }
+    .proj-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; font-size:.82rem; color: var(--text-faint); }
 
     /* Status badge */
     .badge { display: inline-flex; align-items: center; gap: .2rem; padding: .14rem .5rem; border-radius: .3rem; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
@@ -58,17 +58,17 @@
     .task-progress { display: flex; align-items: center; gap: .5rem; }
     .progress-bar { width: 90px; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; flex-shrink: 0; }
     .progress-fill { height: 100%; background: var(--success); border-radius: 99px; transition: width .3s; }
-    .progress-label { font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
+    .progress-label { font-size:.82rem; color: var(--text-muted); white-space: nowrap; }
 
     /* Notion synced chip */
-    .notion-chip { display: inline-flex; align-items: center; gap: .25rem; font-size: .68rem; font-weight: 600; color: #3b4fcc; background: #eef2ff; padding: .1rem .4rem; border-radius: .25rem; text-decoration: none; }
+    .notion-chip { display: inline-flex; align-items: center; gap: .25rem; font-size:.82rem; font-weight: 600; color: #3b4fcc; background: #eef2ff; padding: .1rem .4rem; border-radius: .25rem; text-decoration: none; }
     html.dark .notion-chip { background: #1e3a5f; color: #93c5fd; }
 
     /* Card actions sidebar */
     .proj-card-side { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; flex-shrink: 0; }
-    .btn-view { display: inline-flex; align-items: center; gap: .3rem; background: var(--accent); color: #1a1a1a; border: none; border-radius: .4rem; padding: .38rem .85rem; font-size: .78rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: opacity .15s; }
+    .btn-view { display: inline-flex; align-items: center; gap: .3rem; background: var(--accent); color: #1a1a1a; border: none; border-radius: .4rem; padding: .38rem .85rem; font-size:.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: opacity .15s; }
     .btn-view:hover { opacity: .85; }
-    .btn-archive { background: none; border: 1px solid var(--border); border-radius: .4rem; padding: .32rem .7rem; font-size: .74rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: background .15s, color .15s; white-space: nowrap; }
+    .btn-archive { background: none; border: 1px solid var(--border); border-radius: .4rem; padding: .32rem .7rem; font-size:.82rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: background .15s, color .15s; white-space: nowrap; }
     .btn-archive:hover { background: var(--bg); color: var(--text); }
 
     /* ── Empty state ── */
@@ -83,14 +83,16 @@
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list" class="active">Projects</a>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
     </div>
     <div class="nav-actions">
       <button class="btn-noise" id="btn-noise" onclick="toggleNoise()">🎧 Noise</button>

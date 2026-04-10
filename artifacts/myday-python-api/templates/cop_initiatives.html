@@ -36,7 +36,7 @@
 
     .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; margin-bottom: 1rem; }
     .form-field { display: flex; flex-direction: column; gap: .3rem; }
-    .form-field label { font-size: .75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+    .form-field label { font-size:.82rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
     .form-field input[type="text"],
     .form-field textarea {
       border: 1px solid #e2e8f0;
@@ -52,7 +52,7 @@
     .form-field textarea { resize: vertical; min-height: 60px; }
 
     .months-row { margin-bottom: 1rem; }
-    .months-row label { font-size: .75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: .4rem; }
+    .months-row label { font-size:.82rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: .4rem; }
     .months-grid { display: flex; flex-wrap: wrap; gap: .5rem; }
     .month-cb { display: flex; align-items: center; gap: .3rem; font-size: .82rem; background: #f1f5f9; border-radius: .35rem; padding: .3rem .6rem; cursor: pointer; user-select: none; }
     .month-cb input { accent-color: #4f46e5; cursor: pointer; }
@@ -74,11 +74,11 @@
     .table-wrap { overflow-x: auto; }
     .section-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .85rem; }
     .section-head h2 { font-size: 1rem; font-weight: 700; }
-    .count-badge { background: #e0e7ff; color: #3730a3; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; }
+    .count-badge { background: #e0e7ff; color: #3730a3; font-size:.82rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; }
 
     table { width: 100%; border-collapse: collapse; font-size: .82rem; background: #fff; border-radius: .75rem; overflow: hidden; border: 1px solid #e2e8f0; }
     thead { background: #f8fafc; }
-    th { text-align: left; padding: .65rem .85rem; font-size: .72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    th { text-align: left; padding: .65rem .85rem; font-size:.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
     td { padding: .6rem .85rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--bg); }
@@ -94,7 +94,7 @@
       border: none;
       border-radius: .35rem;
       padding: .25rem .55rem;
-      font-size: .75rem;
+      font-size:.82rem;
       font-weight: 600;
       cursor: pointer;
       transition: opacity .15s;
@@ -110,11 +110,13 @@
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" style="color:#f59e0b;font-weight:600;">✦ Check In</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin" class="active">CoP Admin</a>
     </div>
@@ -233,7 +235,7 @@
                 {% endfor %}
               </div>
             </td>
-            <td style="max-width:180px;color:#64748b;font-size:.78rem;">{{ (init.notes or '')[:80] }}{% if init.notes and init.notes|length > 80 %}…{% endif %}</td>
+            <td style="max-width:180px;color:#64748b;font-size:.82rem;">{{ (init.notes or '')[:80] }}{% if init.notes and init.notes|length > 80 %}…{% endif %}</td>
             <td>
               <form method="post" action="{{ base }}/cop-admin/{{ init.id }}/delete" onsubmit="return confirm('Delete this initiative?')">
                 <button class="btn-del" type="submit">✕</button>

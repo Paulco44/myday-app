@@ -53,7 +53,7 @@
     .page-header { margin-bottom: 2.5rem; text-align: center; }
     .page-eyebrow {
       display: inline-block;
-      font-size: .72rem;
+      font-size:.82rem;
       font-weight: 700;
       letter-spacing: .12em;
       text-transform: uppercase;
@@ -92,7 +92,7 @@
       display: inline-flex;
       align-items: center;
       gap: .35rem;
-      font-size: .68rem;
+      font-size:.82rem;
       font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
@@ -200,7 +200,7 @@
     .task-pick-item.win-selected { opacity: .35; pointer-events: none; }
 
     /* Priority + project pills inside pick cards */
-    .tpill { font-size: .65rem; font-weight: 700; padding: .1rem .35rem; border-radius: 3px; }
+    .tpill { font-size:.82rem; font-weight: 700; padding: .1rem .35rem; border-radius: 3px; }
     .tpill-high { color: #dc2626; background: #fee2e2; }
     .tpill-medium { color: #d97706; background: #fef3c7; }
     .tpill-low { color: #64748b; background: #f1f5f9; }
@@ -212,7 +212,7 @@
 
     /* Counter badges */
     .pick-counter {
-      font-size: .75rem;
+      font-size:.82rem;
       font-weight: 700;
       color: var(--text-muted);
       margin-top: .6rem;
@@ -251,11 +251,13 @@
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" class="active">✦ Check In</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
       <a href="{{ base }}/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>

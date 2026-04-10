@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isDark = document.documentElement.classList.contains('dark');
     document.querySelectorAll('.card-project').forEach(tag => {
       const s = PROJECT_COLORS[tag.textContent.trim()];
-      if (s) tag.style.cssText = `background:${isDark?s.dbg:s.bg};color:${isDark?s.dc:s.color};border-radius:4px;padding:.1rem .4rem;font-size:.68rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:inline-block;`;
+      if (s) tag.style.cssText = `background:${isDark?s.dbg:s.bg};color:${isDark?s.dc:s.color};border-radius:4px;padding:.1rem .4rem;font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:inline-block;`;
     });
   }
 
@@ -356,6 +356,91 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 })();
+
+// ─── PHASE 1 QUICK WINS ─────────────────────────────────────────────────────
+
+// ── 1.2 Click-toggle for progressive disclosure on task rows ─────────────────
+// Clicking a task row toggles .expanded, making metadata "sticky" instead of
+// hover-only. The :hover CSS continues working for mouse users who prefer it.
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', (e) => {
+    const row = e.target.closest('.task-row');
+    if (!row) return;
+    // Don't toggle if clicking on an interactive element
+    if (e.target.closest('button, a, form, input, select, textarea')) return;
+    row.classList.toggle('expanded');
+  });
+});
+
+// ── 1.4 Persist CoP accordion state in localStorage ─────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const copAccordion = document.querySelector('.cop-accordion');
+  if (!copAccordion) return;
+  try {
+    const wasOpen = localStorage.getItem('myday-cop-open') === '1';
+    if (wasOpen) copAccordion.setAttribute('open', '');
+  } catch(e) {}
+  copAccordion.addEventListener('toggle', () => {
+    try {
+      localStorage.setItem('myday-cop-open', copAccordion.open ? '1' : '0');
+    } catch(e) {}
+  });
+});
+
+// ── 1.6 Keyboard shortcuts for My Day ────────────────────────────────────────
+// F = go to Focus mode, D = mark NOW task as done, N = open quick-add (existing)
+document.addEventListener('DOMContentLoaded', () => {
+  const _BASE = window.location.pathname.split('/').slice(0, 2).join('/');
+  document.addEventListener('keydown', (e) => {
+    // Don't fire shortcuts when typing in inputs
+    if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    const key = e.key.toLowerCase();
+
+    // F → Focus mode
+    if (key === 'f') {
+      const focusLink = document.querySelector('a[href*="/focus"]');
+      if (focusLink) { window.location.href = focusLink.href; e.preventDefault(); }
+    }
+
+    // D → Done NOW task (submit the done button in the now-strip)
+    if (key === 'd') {
+      const doneBtn = document.querySelector('.now-strip .btn-done-now, .now-strip .btn-check');
+      if (doneBtn) { doneBtn.closest('form')?.submit(); e.preventDefault(); }
+    }
+
+    // N → Open quick-add modal (native dialog)
+    if (key === 'n') {
+      const modal = document.querySelector('.quick-modal');
+      if (modal && typeof modal.showModal === 'function' && !modal.open) {
+        modal.showModal();
+        const input = modal.querySelector('.quick-input');
+        if (input) setTimeout(() => input.focus(), 50);
+        e.preventDefault();
+      }
+    }
+
+    // ? → Show keyboard shortcuts help
+    if (key === '?' || (e.shiftKey && key === '/')) {
+      const existing = document.getElementById('shortcuts-help');
+      if (existing) { existing.remove(); return; }
+      const help = document.createElement('div');
+      help.id = 'shortcuts-help';
+      help.style.cssText = 'position:fixed;bottom:2rem;right:2rem;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:.85rem;padding:1.25rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,.2);font-size:.88rem;line-height:2;max-width:280px;';
+      help.innerHTML = `
+        <div style="font-weight:800;margin-bottom:.5rem;color:var(--accent);">Keyboard Shortcuts</div>
+        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">N</kbd> Quick add task</div>
+        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">F</kbd> Focus mode</div>
+        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">D</kbd> Done (NOW task)</div>
+        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">?</kbd> Show this help</div>
+        <div style="margin-top:.5rem;font-size:.82rem;color:var(--text-faint);cursor:pointer;" onclick="this.parentElement.remove()">Click to close</div>
+      `;
+      document.body.appendChild(help);
+      setTimeout(() => { document.addEventListener('click', function handler(ev) { if (!help.contains(ev.target)) { help.remove(); document.removeEventListener('click', handler); } }); }, 100);
+    }
+  });
+});
 
 // ─── Quick-Add: energy type toggle ──────────────────────────────────────────
 function setQuickEnergy(btn) {

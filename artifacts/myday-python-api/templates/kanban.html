@@ -29,8 +29,8 @@
     .column.wip-exceeded { background: #fee2e2; }
     html.dark .column.wip-exceeded { background: #2d1111; }
     .column-head { padding: .75rem .9rem .5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; border-radius: .75rem .75rem 0 0; }
-    .column-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
-    .col-count { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; color: var(--text-muted); }
+    .column-title { font-size:.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .col-count { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; font-size:.82rem; font-weight: 700; padding: .1rem .5rem; color: var(--text-muted); }
 
     /* Column header tinted backgrounds (light) */
     .board > .column:nth-child(1) .column-head { background: #F8FAFC; border-bottom: 2px solid #CBD5E1; }
@@ -67,24 +67,24 @@
 
     .card-title { font-weight: 600; font-size: .87rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .card-meta { margin-top: .35rem; display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
-    .pri-high   { color: #dc2626; font-weight: 700; font-size: .72rem; }
-    .pri-medium { color: #d97706; font-size: .72rem; }
-    .pri-low    { color: #94a3b8; font-size: .72rem; }
+    .pri-high   { color: #dc2626; font-weight: 700; font-size:.82rem; }
+    .pri-medium { color: #d97706; font-size:.82rem; }
+    .pri-low    { color: #94a3b8; font-size:.82rem; }
     .card-due   { font-size: .7rem; color: #94a3b8; }
     .card-due.overdue { color: #dc2626; font-weight: 700; background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 4px; padding: .1rem .35rem; }
     html.dark .card-due.overdue { background: #2D0A0A; border-color: #EF4444; }
-    .card-project { font-size: .68rem; color: #475569; background: #F1F5F9; border-radius: 4px; padding: .1rem .4rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+    .card-project { font-size:.82rem; color: #475569; background: #F1F5F9; border-radius: 4px; padding: .1rem .4rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
     html.dark .card-project { background: #2A2A2A; color: #94A3B8; }
-    .card-today { font-size: .68rem; background: #fef3c7; color: #92400e; border-radius: 3px; padding: .1rem .3rem; }
+    .card-today { font-size:.82rem; background: #fef3c7; color: #92400e; border-radius: 3px; padding: .1rem .3rem; }
 
     /* Expand-to-full hint (top-right, visible on hover) */
-    .card-expand-btn { position: absolute; top: .45rem; right: .5rem; padding: .25rem; border-radius: .3rem; color: var(--text-faint); border: none; background: none; cursor: pointer; opacity: 0; transition: opacity .15s; font-size: .72rem; line-height: 1; text-decoration: none; }
+    .card-expand-btn { position: absolute; top: .45rem; right: .5rem; padding: .25rem; border-radius: .3rem; color: var(--text-faint); border: none; background: none; cursor: pointer; opacity: 0; transition: opacity .15s; font-size:.82rem; line-height: 1; text-decoration: none; }
     .card:not(.editing):hover .card-expand-btn { opacity: 1; }
     .card-expand-btn:hover { color: var(--text); background: var(--surface); }
 
     /* Move buttons */
     .card-actions { margin-top: .45rem; border-top: 1px solid var(--border); padding-top: .4rem; display: flex; gap: .25rem; flex-wrap: wrap; }
-    .move-btn { font-size: .65rem; padding: .15rem .35rem; border-radius: .3rem; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; font-weight: 500; transition: background .1s, opacity .15s; opacity: .6; }
+    .move-btn { font-size:.82rem; padding: .15rem .35rem; border-radius: .3rem; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; font-weight: 500; transition: background .1s, opacity .15s; opacity: .6; }
     .move-btn:hover { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; opacity: 1; }
     .card:hover .move-btn { opacity: 1; }
 
@@ -107,10 +107,10 @@
     .inline-form-row select,
     .inline-form-row input[type=date] { flex: 1; }
     .inline-form-actions { display: flex; align-items: center; justify-content: space-between; padding-top: .2rem; }
-    .btn-save-inline { background: var(--accent); color: #1a1a1a; border: none; border-radius: .35rem; padding: .3rem .75rem; font-size: .76rem; font-weight: 700; cursor: pointer; transition: opacity .15s; display: flex; align-items: center; gap: .25rem; }
+    .btn-save-inline { background: var(--accent); color: #1a1a1a; border: none; border-radius: .35rem; padding: .3rem .75rem; font-size:.82rem; font-weight: 700; cursor: pointer; transition: opacity .15s; display: flex; align-items: center; gap: .25rem; }
     .btn-save-inline:hover { opacity: .85; }
     .btn-save-inline:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-cancel-inline { background: none; border: none; color: var(--text-muted); font-size: .76rem; cursor: pointer; padding: .3rem .5rem; border-radius: .3rem; transition: color .15s; }
+    .btn-cancel-inline { background: none; border: none; color: var(--text-muted); font-size:.82rem; cursor: pointer; padding: .3rem .5rem; border-radius: .3rem; transition: color .15s; }
     .btn-cancel-inline:hover { color: var(--text); }
     .btn-more-link { font-size: .7rem; color: var(--text-faint); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; background: none; border: none; font-family: inherit; }
     .btn-more-link:hover { color: var(--text-muted); }
@@ -126,14 +126,16 @@
     <div class="nav-links">
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
       <a href="{{ base }}/kanban" class="active">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
       <a href="{{ base }}/notes">Notes</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
     </div>
     <span class="wip-info">WIP limit (Doing): <strong>{{ wip_limit }}</strong></span>
     <div class="focus-controls">

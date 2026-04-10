@@ -50,9 +50,10 @@ export function Navbar() {
           )}
         </nav>
 
-        <div className="ml-auto hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full border border-border/50">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          Connected
+        {/* ⚠ Separate-DB warning */}
+        <div className="ml-auto hidden md:flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+          <span className="shrink-0">⚠️</span>
+          <span>Este Kanban usa una BD separada — los cambios aquí <strong>no</strong> se reflejan en Task Manager.</span>
         </div>
       </div>
     </header>
