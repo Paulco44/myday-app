@@ -276,7 +276,7 @@
     .empty-box .icon { font-size: 1.75rem; margin-bottom: .4rem; }
   </style>
 </head>
-<body>
+<body class="myday-page">
   <nav>
     <a class="nav-logo" href="{{ base }}/">MyDay</a>
     <div class="nav-links">
@@ -352,8 +352,10 @@
     </div>
     {% endif %}
 
-    <!-- ── Widescreen 2-column grid starts ── -->
+    <!-- ── Widescreen 3-column grid starts ── -->
     <div class="myday-grid">
+
+    <!-- ═══ LEFT COLUMN: Context & Reference ═══ -->
     <aside class="md-left">
 
     <!-- ── CoP accordion ── -->
@@ -386,7 +388,50 @@
       </div>
     </details>
 
+    <!-- ── Suggestions (moved to left column for widescreen) ── -->
+    {% if suggestions %}
+    <div class="suggest-accordion md-suggestions">
+      <button class="suggest-toggle" onclick="toggleSuggestions(this)" type="button">
+        <span>💡</span>
+        <span>{{ suggestions | length }} suggestion{% if suggestions | length != 1 %}s{% endif %} waiting</span>
+        <span class="suggest-badge">{{ suggestions | length }}</span>
+        <span class="suggest-arrow">▾</span>
+      </button>
+      <div class="suggest-body" id="suggest-body-left">
+        <div style="font-size:.82rem;color:var(--text-muted);padding:.55rem .25rem .3rem;">
+          Pick a few to add to today.
+          <a href="{{ base }}/tasks-page" style="color:var(--accent);font-weight:600;margin-left:.5rem;">All tasks →</a>
+        </div>
+        <div class="suggestion-list">
+          {% for task in suggestions %}
+          {% set is_overdue = task.due_date and task.due_date < today %}
+          {% set is_due_today = task.due_date and task.due_date == today %}
+          <div class="suggestion-row {% if is_overdue %}overdue{% elif is_due_today %}due-today{% endif %}">
+            <div class="suggestion-body">
+              <div class="suggestion-title">{{ task.title }}</div>
+              <div class="suggestion-meta">
+                {% if is_overdue %}<span class="tag-overdue">Since {{ task.due_date.strftime('%b %-d') }}</span>
+                {% elif is_due_today %}<span class="tag-today">Due today</span>
+                {% elif task.priority == 'high' %}<span class="tag-high">High</span>{% endif %}
+                {% if task.energy_tag %}<span class="etag etag-{{ task.energy_tag }}">{{ task.energy_tag.replace('_',' ') }}</span>{% endif %}
+              </div>
+            </div>
+            <div class="suggestion-actions">
+              <form method="post" action="{{ base }}/tasks/{{ task.id }}/set-today">
+                <input type="hidden" name="focus_state" value="later_today" />
+                <button class="btn-add-today" type="submit">+ Today</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     </aside><!-- /md-left -->
+
+    <!-- ═══ CENTER COLUMN: Active Workflow ═══ -->
     <div class="md-center">
 
     {% if energy_today %}
@@ -670,14 +715,16 @@
     </div>
     {% endif %}
 
+    </div><!-- /md-center -->
+
+    <!-- ═══ RIGHT COLUMN: Feedback & Context ═══ -->
+    <aside class="md-right">
+
     <!-- ── Done today ── -->
     {% if done_today %}
-    <div class="section">
-      <div class="section-head">
-        <h2>You finished these today 🎉</h2>
-        <span class="count">{{ done_today | length }}</span>
-      </div>
-      <div class="done-list">
+    <div class="md-right-card">
+      <h3>🎉 Finished today <span class="count">{{ done_today | length }}</span></h3>
+      <div class="done-list done-list-compact">
         {% for task in done_today %}
         <div class="done-row">
           <span class="done-check">✓</span>
@@ -688,94 +735,33 @@
     </div>
     {% endif %}
 
-    <!-- ── Today's Inbox nudge (read-only evening panel) ── -->
+    <!-- ── Inbox nudge ── -->
     {% if inbox_today.total > 0 %}
-    <div class="inbox-nudge">
-      <div class="inbox-nudge-left">
-        <div class="inbox-nudge-title">📥 Today's inbox · {{ inbox_today.total }} item{% if inbox_today.total != 1 %}s{% endif %}</div>
-        <div class="inbox-pills">
-          {% if inbox_today.new %}
-            <span class="ipill ipill-new">● {{ inbox_today.new }} new</span>
-          {% endif %}
-          {% if inbox_today.reviewing %}
-            <span class="ipill ipill-reviewing">◎ {{ inbox_today.reviewing }} reviewing</span>
-          {% endif %}
-          {% if inbox_today.promoted %}
-            <span class="ipill ipill-promoted">✓ {{ inbox_today.promoted }} promoted</span>
-          {% endif %}
-          {% if inbox_today.archived %}
-            <span class="ipill ipill-archived">{{ inbox_today.archived }} archived</span>
-          {% endif %}
-        </div>
+    <div class="md-right-card">
+      <h3>📥 Today's inbox · {{ inbox_today.total }}</h3>
+      <div class="inbox-pills" style="margin-bottom:.5rem;">
+        {% if inbox_today.new %}<span class="ipill ipill-new">● {{ inbox_today.new }} new</span>{% endif %}
+        {% if inbox_today.reviewing %}<span class="ipill ipill-reviewing">◎ {{ inbox_today.reviewing }} reviewing</span>{% endif %}
+        {% if inbox_today.promoted %}<span class="ipill ipill-promoted">✓ {{ inbox_today.promoted }} promoted</span>{% endif %}
       </div>
-      <div class="inbox-nudge-actions">
-        {% if inbox_today.unreviewed > 0 %}
-          <a class="btn-nudge-review" href="{{ base }}/inbox">Review {{ inbox_today.unreviewed }} →</a>
-        {% endif %}
-        <a class="btn-nudge-meetings" href="{{ base }}/meetings">All meetings</a>
-      </div>
+      {% if inbox_today.unreviewed > 0 %}
+      <a class="btn-nudge-review" href="{{ base }}/inbox" style="font-size:.82rem;">Review {{ inbox_today.unreviewed }} →</a>
+      {% endif %}
     </div>
     {% endif %}
 
     <!-- ── Close the Day CTA (shown after 4pm via JS) ── -->
-    <div class="close-day-cta" id="close-day-cta">
-      <div class="cdc-icon">🌙</div>
-      <div class="cdc-text">
-        <div class="cdc-title">Time to close the day</div>
-        <div class="cdc-sub">Review your wins, roll over or park what's left, and let go.</div>
+    <div class="md-right-card close-day-cta" id="close-day-cta">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+        <span style="font-size:1.1rem;">🌙</span>
+        <strong style="font-size:.88rem;">Time to close the day</strong>
       </div>
+      <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.6rem;">Review your wins, roll over or park what's left.</div>
       <a href="{{ base }}/close-day" class="btn-close-day-cta">Close the Day →</a>
     </div>
 
-    <!-- ── Suggestions ── -->
-    {% if suggestions %}
-    <div class="suggest-accordion">
-      <button class="suggest-toggle" onclick="toggleSuggestions(this)" type="button">
-        <span>💡</span>
-        <span>{{ suggestions | length }} suggestion{% if suggestions | length != 1 %}s{% endif %} waiting — ready when you are</span>
-        <span class="suggest-badge">{{ suggestions | length }}</span>
-        <span class="suggest-arrow">▾</span>
-      </button>
-      <div class="suggest-body" id="suggest-body">
-        <div style="font-size:.82rem;color:var(--text-muted);padding:.55rem .25rem .3rem;">
-          Pick just a few to add to today — the rest stays safely parked.
-          <a href="{{ base }}/tasks-page" style="color:var(--accent);font-weight:600;margin-left:.5rem;">All tasks →</a>
-        </div>
-        <div class="suggestion-list">
-          {% for task in suggestions %}
-          {% set is_overdue = task.due_date and task.due_date < today %}
-          {% set is_due_today = task.due_date and task.due_date == today %}
-          <div class="suggestion-row {% if is_overdue %}overdue{% elif is_due_today %}due-today{% endif %}">
-            <div class="suggestion-body">
-              <div class="suggestion-title">{{ task.title }}</div>
-              <div class="suggestion-meta">
-                {% if is_overdue %}<span class="tag-overdue">Waiting since {{ task.due_date.strftime('%b %-d') }}</span>
-                {% elif is_due_today %}<span class="tag-today">Due today</span>
-                {% elif task.priority == 'high' %}<span class="tag-high">High priority</span>{% endif %}
-                {% if task.energy_tag %}<span class="etag etag-{{ task.energy_tag }}">{{ task.energy_tag.replace('_',' ') }}</span>{% endif %}
-                <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
-              </div>
-            </div>
-            <div class="suggestion-actions">
-              <form method="post" action="{{ base }}/tasks/{{ task.id }}/set-today">
-                <input type="hidden" name="focus_state" value="later_today" />
-                <button class="btn-add-today" type="submit">+ Today</button>
-              </form>
-              {% if not now_task %}
-              <form method="post" action="{{ base }}/tasks/{{ task.id }}/focus-state">
-                <input type="hidden" name="focus_state" value="now" />
-                <button class="btn-set-now" type="submit">Set as Now</button>
-              </form>
-              {% endif %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    {% endif %}
+    </aside><!-- /md-right -->
 
-    </div><!-- /md-center -->
     </div><!-- /myday-grid -->
 
   </main>
@@ -824,7 +810,9 @@
 
     // ─── Suggestions toggle ─────────────────────────────────────────────────
     function toggleSuggestions(btn) {
-      const body = document.getElementById('suggest-body');
+      const accordion = btn.closest('.suggest-accordion');
+      const body = accordion ? accordion.querySelector('.suggest-body') : document.getElementById('suggest-body');
+      if (!body) return;
       const isOpen = body.classList.toggle('open');
       btn.classList.toggle('open', isOpen);
     }

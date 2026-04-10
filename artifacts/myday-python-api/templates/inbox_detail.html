@@ -117,6 +117,17 @@
   </style>
 </head>
 <body>
+  <script>
+    // Hide nav + back-link when loaded inside the inbox split-panel iframe
+    if (window.self !== window.top) {
+      document.documentElement.classList.add('in-iframe');
+    }
+  </script>
+  <style>
+    html.in-iframe nav,
+    html.in-iframe .back-link { display: none !important; }
+    html.in-iframe main { padding-top: .5rem !important; }
+  </style>
 
   <nav>
     <a class="nav-logo" href="{{ base }}/">MyDay</a>
