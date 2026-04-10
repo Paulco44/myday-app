@@ -70,10 +70,10 @@ export function Navbar() {
             {noiseActive ? "Noise On" : "Noise"}
           </Button>
 
-          {/* Separate-DB warning */}
-          <div className="hidden md:flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
-            <span className="shrink-0">⚠️</span>
-            <span>Este Kanban usa una BD separada — los cambios aquí <strong>no</strong> se reflejan en Task Manager.</span>
+          {/* Unified DB badge */}
+          <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200" title="Kanban and Task Manager share the same PostgreSQL database">
+            <span>✓</span>
+            <span>Shared DB</span>
           </div>
         </div>
       </div>

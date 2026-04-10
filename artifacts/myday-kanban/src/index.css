@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -7,7 +7,7 @@
 
 @theme inline {
   --font-sans: 'Inter', sans-serif;
-  --font-display: 'Outfit', sans-serif;
+  --font-display: 'Lexend', 'Outfit', sans-serif;
 
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -57,8 +57,8 @@
   --popover-foreground: 222 47% 11%;
   --popover-border: 214 32% 91%;
   
-  --primary: 221 83% 53%;         /* Vivid cohesive blue */
-  --primary-foreground: 210 40% 98%;
+  --primary: 48 100% 50%;          /* MyDay yellow — #FFCC00 */
+  --primary-foreground: 222 47% 11%; /* dark text on yellow */
   
   --secondary: 210 40% 96%;
   --secondary-foreground: 222 47% 11%;
@@ -74,7 +74,7 @@
   
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  --ring: 48 100% 50%;
   
   --radius: 0.75rem;
 
@@ -95,7 +95,7 @@
   --popover-foreground: 210 40% 98%;
   --popover-border: 217 33% 17%;
   
-  --primary: 217 91% 60%;
+  --primary: 48 100% 50%;           /* MyDay yellow — #FFCC00 */
   --primary-foreground: 222 47% 11%;
   
   --secondary: 217 33% 17%;
@@ -112,7 +112,7 @@
   
   --border: 217 33% 17%;
   --input: 217 33% 17%;
-  --ring: 213 27% 84%;
+  --ring: 48 100% 50%;
 
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);

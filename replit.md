@@ -38,7 +38,7 @@ The project is structured as a pnpm workspace monorepo. It comprises a Kanban bo
 - **Languages:** TypeScript (Node.js 24) for Kanban, Python 3.11 for Task Manager.
 - **Package Managers:** pnpm (JS), uv/pip (Python).
 - **API Frameworks:** Express 5 (Kanban), FastAPI (Task Manager).
-- **Databases:** PostgreSQL + Drizzle ORM (Kanban), SQLite + SQLAlchemy (Task Manager).
+- **Databases:** PostgreSQL + Drizzle ORM (Kanban), PostgreSQL + SQLAlchemy (Task Manager) — both services now share the same PostgreSQL instance. SQLite (`app.db`) is kept as a migration source backup only.
 - **Validation:** Zod (JS), Pydantic v2 (Python).
 - **API Codegen:** Orval from OpenAPI spec.
 - **Build:** esbuild (CJS bundle).
@@ -53,7 +53,8 @@ The project is structured as a pnpm workspace monorepo. It comprises a Kanban bo
 
 **System Design Choices:**
 - Services are deployed with specific path prefixes and ports: `/` for Kanban frontend (23345), `/api` for Kanban API (8080), `/task-manager` for FastAPI Task Manager (8000).
-- SQLite database (`app.db`) is auto-created for the Python service.
+- PostgreSQL is shared by both the Kanban (Drizzle) and Task Manager (SQLAlchemy) services. Task Manager tables are prefixed separately (`tasks`, `projects`, `inbox_items`, etc.) and do not conflict with Kanban tables (`columns`, `cards`). The `migrate_sqlite_to_postgres.py` script in `artifacts/myday-python-api/` was used for the one-time data migration.
+- The Jinja2-templated Kanban view (`/task-manager/kanban`) is deprecated — it now 301-redirects to the React Kanban at `/`. All Python template nav links point directly to `/`.
 - API endpoints are provided for all core functionalities, including task, project, and inbox management, with auto-generated Swagger UI.
 - Models (SQLAlchemy) include Project, Task, Subtask, Tag, TaskTag, RecurringTask, Settings, DailyLog, CoPInitiative, NoteItem, and InboxItem.
 

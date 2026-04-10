@@ -786,37 +786,9 @@ async def quick_edit_task(
 
 
 @app.get(f"{BASE}/kanban", response_class=HTMLResponse)
-async def kanban(request: Request, db: Session = Depends(get_db)):
-    today = date.today()
-    columns = {
-        s: db.query(models.Task).filter(models.Task.status == s)
-              .order_by(models.Task.priority.desc())
-              .all()
-        for s in STATUSES
-    }
-    settings = ensure_settings(db)
-    from datetime import datetime as _dt
-    done_today_count = db.query(models.Task).filter(
-        models.Task.status == "done",
-        models.Task.updated_at >= _dt.combine(today, _dt.min.time()),
-    ).count()
-    now_task_obj = db.query(models.Task).filter(
-        models.Task.is_now == True, models.Task.status != "done"
-    ).first()
-    now_task_id = now_task_obj.id if now_task_obj else None
-    return templates.TemplateResponse(
-        request, "kanban.html",
-        {
-            "columns": columns,
-            "statuses": STATUSES,
-            "status_labels": STATUS_LABELS,
-            "wip_limit": settings.wip_limit_doing,
-            "today": today,
-            "done_today_count": done_today_count,
-            "now_task_id": now_task_id,
-            "base": BASE,
-        },
-    )
+async def kanban(request: Request):
+    """Deprecated — the React Kanban at / is the canonical board view."""
+    return RedirectResponse(url="/", status_code=301)
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/status")
