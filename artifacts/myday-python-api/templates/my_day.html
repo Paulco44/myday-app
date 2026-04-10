@@ -424,7 +424,7 @@
 
     <!-- ── NOW Focus Strip ── -->
     {% if now_task %}
-    <div class="now-strip">
+    <div class="now-strip" id="now-strip-{{ now_task.id }}">
       <div class="now-label">⚡ Now — Single Focus</div>
       <div class="now-title">{{ now_task.title }}</div>
       <div class="now-meta">
@@ -432,6 +432,37 @@
         {% if now_task.time_block %}<span class="tblock tblock-{{ now_task.time_block }}">{{ now_task.time_block.capitalize() }}</span>{% endif %}
         <span class="pri-{{ now_task.priority }}">{{ now_task.priority | upper }}</span>
       </div>
+
+      <!-- ── Subtask checklist ── -->
+      {% set subs = now_task.subtasks %}
+      {% if subs %}
+      {% set done_count = subs | selectattr('is_done') | list | length %}
+      <div class="subtask-list" id="subtask-list-{{ now_task.id }}">
+        <div class="subtask-progress">
+          <div class="subtask-progress-bar" style="width: {{ (done_count / subs|length * 100) | int }}%"></div>
+        </div>
+        <div class="subtask-count">{{ done_count }}/{{ subs | length }} steps</div>
+        {% for sub in subs %}
+        <div class="subtask-row {{ 'done' if sub.is_done else '' }}" id="subrow-{{ sub.id }}">
+          <button class="subtask-check {{ 'checked' if sub.is_done else '' }}"
+                  onclick="toggleSubtask({{ now_task.id }}, {{ sub.id }}, this)"
+                  title="{{ 'Mark undone' if sub.is_done else 'Mark done' }}">
+            {{ '✓' if sub.is_done else '' }}
+          </button>
+          <span class="subtask-title">{{ sub.title }}</span>
+          <button class="subtask-del" onclick="deleteSubtask({{ now_task.id }}, {{ sub.id }}, this)" title="Remove">×</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- ── Add subtask inline ── -->
+      <div class="subtask-add-row">
+        <input class="subtask-add-input" id="sub-input-{{ now_task.id }}" type="text"
+               placeholder="＋ Add a step…" maxlength="200" autocomplete="off"
+               onkeydown="if(event.key==='Enter'){addSubtask({{ now_task.id }},this);}" />
+      </div>
+
       <div class="now-actions">
         <a href="{{ base }}/focus" class="btn-focus-now">⏱ Focus 20 min</a>
         <form method="post" action="{{ base }}/tasks/{{ now_task.id }}/status" style="display:inline"

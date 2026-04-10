@@ -849,6 +849,44 @@ async def clear_now(task_id: int, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True})
 
 
+@app.post(f"{BASE}/tasks/{{task_id}}/subtasks")
+async def create_subtask(task_id: int, title: str = Form(...), db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        return JSONResponse({"error": "Task not found"}, status_code=404)
+    sub = models.Subtask(task_id=task_id, title=title.strip())
+    db.add(sub)
+    db.commit()
+    db.refresh(sub)
+    return JSONResponse({"id": sub.id, "title": sub.title, "is_done": sub.is_done})
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/subtasks/{{subtask_id}}/toggle")
+async def toggle_subtask(task_id: int, subtask_id: int, db: Session = Depends(get_db)):
+    sub = db.query(models.Subtask).filter(
+        models.Subtask.id == subtask_id,
+        models.Subtask.task_id == task_id,
+    ).first()
+    if not sub:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    sub.is_done = not sub.is_done
+    sub.completed_at = datetime.utcnow() if sub.is_done else None
+    db.commit()
+    return JSONResponse({"id": sub.id, "is_done": sub.is_done})
+
+
+@app.delete(f"{BASE}/tasks/{{task_id}}/subtasks/{{subtask_id}}")
+async def delete_subtask(task_id: int, subtask_id: int, db: Session = Depends(get_db)):
+    sub = db.query(models.Subtask).filter(
+        models.Subtask.id == subtask_id,
+        models.Subtask.task_id == task_id,
+    ).first()
+    if sub:
+        db.delete(sub)
+        db.commit()
+    return JSONResponse({"ok": True})
+
+
 @app.post(f"{BASE}/tasks/{{task_id}}/start-focus")
 async def start_focus(task_id: int, db: Session = Depends(get_db)):
     """Set task as NOW and redirect straight to the focus timer."""

@@ -903,3 +903,97 @@ html.dark .energy-filter-btn.active { background: #2D2800; }
 }
 .iqa-btn:hover { opacity: .85; }
 .iqa-success { color: var(--success); font-size: .82rem; font-weight: 600; padding: .1rem .3rem; }
+
+/* ════════════════════════════════════════════════════════════════
+   PHASE 3 — Subtasks in NOW strip (3.5)
+════════════════════════════════════════════════════════════════ */
+.subtask-list {
+  margin: .75rem 0 .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+.subtask-progress {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: .5rem;
+  overflow: hidden;
+}
+.subtask-progress-bar {
+  height: 100%;
+  background: var(--success);
+  border-radius: 2px;
+  transition: width .3s ease;
+}
+.subtask-count {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: .35rem;
+}
+.subtask-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .25rem .1rem;
+  border-radius: .35rem;
+  transition: background .12s;
+}
+.subtask-row:hover { background: var(--bg); }
+.subtask-row.done .subtask-title { text-decoration: line-through; color: var(--text-faint); }
+.subtask-check {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: .3rem;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  font-weight: 700;
+  color: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .12s, border-color .12s, color .12s;
+  font-family: inherit;
+}
+.subtask-check.checked {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.subtask-check:hover:not(.checked) { border-color: var(--accent); }
+.subtask-title { flex: 1; font-size: .88rem; line-height: 1.4; }
+.subtask-del {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 .2rem;
+  border-radius: .25rem;
+  font-family: inherit;
+  transition: opacity .1s, color .1s;
+}
+.subtask-row:hover .subtask-del { opacity: 1; }
+.subtask-del:hover { color: var(--danger, #ef4444); }
+
+.subtask-add-row { margin: .5rem 0 .75rem; }
+.subtask-add-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px dashed var(--border);
+  padding: .3rem .1rem;
+  font-size: .88rem;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+}
+.subtask-add-input:focus { border-bottom-color: var(--accent); }
+.subtask-add-input::placeholder { color: var(--text-faint); }

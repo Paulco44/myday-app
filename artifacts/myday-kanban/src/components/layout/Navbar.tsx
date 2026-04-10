@@ -1,5 +1,7 @@
-import { KanbanSquare } from "lucide-react";
+import { Headphones, KanbanSquare } from "lucide-react";
 import { Link } from "wouter";
+import { useBrownNoise } from "@/hooks/useBrownNoise";
+import { Button } from "@/components/ui/button";
 
 const TM_BASE = "/task-manager";
 
@@ -13,6 +15,7 @@ const navLinks = [
 export function Navbar() {
   const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
   const isKanban = currentPath === "/" || currentPath === import.meta.env.BASE_URL?.replace(/\/$/, "");
+  const { active: noiseActive, toggle: toggleNoise } = useBrownNoise();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-white/80 backdrop-blur-md shadow-sm shadow-black/5">
@@ -50,10 +53,28 @@ export function Navbar() {
           )}
         </nav>
 
-        {/* ⚠ Separate-DB warning */}
-        <div className="ml-auto hidden md:flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
-          <span className="shrink-0">⚠️</span>
-          <span>Este Kanban usa una BD separada — los cambios aquí <strong>no</strong> se reflejan en Task Manager.</span>
+        <div className="ml-auto flex items-center gap-2">
+          {/* Brown noise toggle */}
+          <Button
+            variant={noiseActive ? "default" : "outline"}
+            size="sm"
+            onClick={toggleNoise}
+            className={`h-8 gap-1.5 text-xs font-semibold transition-all ${
+              noiseActive
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                : "text-muted-foreground"
+            }`}
+            title="Toggle brown noise (focus sound)"
+          >
+            <Headphones className="w-3.5 h-3.5" />
+            {noiseActive ? "Noise On" : "Noise"}
+          </Button>
+
+          {/* Separate-DB warning */}
+          <div className="hidden md:flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+            <span className="shrink-0">⚠️</span>
+            <span>Este Kanban usa una BD separada — los cambios aquí <strong>no</strong> se reflejan en Task Manager.</span>
+          </div>
         </div>
       </div>
     </header>

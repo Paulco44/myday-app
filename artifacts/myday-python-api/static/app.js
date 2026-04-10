@@ -515,6 +515,77 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ─── Subtask helpers (NOW strip, Phase 3.5) ──────────────────────────────────
+const _SUBTASK_BASE = (function() {
+  const m = window.location.pathname.match(/^(\/[^/]+)\/my-day/);
+  return m ? m[1] : '/task-manager';
+})();
+
+function addSubtask(taskId, input) {
+  const title = input.value.trim();
+  if (!title) return;
+  const body = new FormData();
+  body.append('title', title);
+  fetch(`${_SUBTASK_BASE}/tasks/${taskId}/subtasks`, { method: 'POST', body })
+    .then(r => r.json())
+    .then(sub => {
+      input.value = '';
+      let list = document.getElementById(`subtask-list-${taskId}`);
+      if (!list) {
+        list = document.createElement('div');
+        list.className = 'subtask-list';
+        list.id = `subtask-list-${taskId}`;
+        list.innerHTML = '<div class="subtask-progress"><div class="subtask-progress-bar" style="width:0%"></div></div><div class="subtask-count">0/0 steps</div>';
+        input.closest('.subtask-add-row').insertAdjacentElement('beforebegin', list);
+      }
+      const row = document.createElement('div');
+      row.className = 'subtask-row';
+      row.id = `subrow-${sub.id}`;
+      row.innerHTML = `
+        <button class="subtask-check" onclick="toggleSubtask(${taskId},${sub.id},this)"></button>
+        <span class="subtask-title">${sub.title.replace(/</g,'&lt;')}</span>
+        <button class="subtask-del" onclick="deleteSubtask(${taskId},${sub.id},this)" title="Remove">×</button>`;
+      list.appendChild(row);
+      _updateSubtaskProgress(taskId);
+    })
+    .catch(() => {});
+}
+
+function toggleSubtask(taskId, subId, btn) {
+  fetch(`${_SUBTASK_BASE}/tasks/${taskId}/subtasks/${subId}/toggle`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      const row = document.getElementById(`subrow-${subId}`);
+      if (!row) return;
+      row.classList.toggle('done', data.is_done);
+      btn.classList.toggle('checked', data.is_done);
+      btn.textContent = data.is_done ? '✓' : '';
+      _updateSubtaskProgress(taskId);
+    })
+    .catch(() => {});
+}
+
+function deleteSubtask(taskId, subId, btn) {
+  fetch(`${_SUBTASK_BASE}/tasks/${taskId}/subtasks/${subId}`, { method: 'DELETE' })
+    .then(() => {
+      document.getElementById(`subrow-${subId}`)?.remove();
+      _updateSubtaskProgress(taskId);
+    })
+    .catch(() => {});
+}
+
+function _updateSubtaskProgress(taskId) {
+  const list = document.getElementById(`subtask-list-${taskId}`);
+  if (!list) return;
+  const rows = list.querySelectorAll('.subtask-row');
+  const done = [...rows].filter(r => r.classList.contains('done')).length;
+  const total = rows.length;
+  const bar = list.querySelector('.subtask-progress-bar');
+  const count = list.querySelector('.subtask-count');
+  if (bar) bar.style.width = total ? `${Math.round(done/total*100)}%` : '0%';
+  if (count) count.textContent = `${done}/${total} steps`;
+}
+
 // ─── Inline Quick-Capture (iqSubmit) ─────────────────────────────────────────
 function iqSubmit(form) {
   const input = form.querySelector('.iqa-input');
