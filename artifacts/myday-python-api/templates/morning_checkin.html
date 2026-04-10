@@ -7,24 +7,22 @@
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=13" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=14" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Lexend', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-
-    /* Soft warm gradient overlay behind everything */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,204,0,.09) 0%, transparent 70%),
-                  radial-gradient(ellipse 60% 40% at 80% 100%, rgba(79,70,229,.06) 0%, transparent 60%);
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,204,0,.08) 0%, transparent 70%);
       pointer-events: none;
       z-index: 0;
     }
@@ -40,100 +38,122 @@
     html.dark .nav-links a { color: #94a3b8; }
     html.dark .nav-links a:hover { color: #F5F5F0; }
 
-    /* ── Layout ── */
-    main {
+    /* ── Wizard shell ── */
+    .wizard-shell {
       position: relative;
       z-index: 1;
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 3rem 1.5rem 5rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1.25rem 4rem;
     }
 
-    /* ── Page header ── */
-    .page-header { margin-bottom: 2.5rem; text-align: center; }
-    .page-eyebrow {
-      display: inline-block;
-      font-size:.82rem;
+    /* ── Top progress track ── */
+    .wiz-progress-track {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: 2.25rem;
+    }
+    .wiz-step-dot {
+      flex: 1;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border);
+      transition: background .35s;
+    }
+    .wiz-step-dot.active { background: var(--accent); }
+    .wiz-step-dot.done { background: var(--success); }
+    .wiz-step-label {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--text-faint);
+      white-space: nowrap;
+    }
+
+    /* ── Viewport / slider ── */
+    .wiz-viewport {
+      width: 100%;
+      max-width: 600px;
+      overflow: hidden;
+    }
+    .wiz-track {
+      display: flex;
+      transition: transform .38s cubic-bezier(.4,0,.2,1);
+      will-change: transform;
+    }
+    .wiz-step {
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    /* ── Step card ── */
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.1rem;
+      padding: 2rem 2rem 1.75rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,.06);
+    }
+    .step-eyebrow {
+      font-size: .78rem;
       font-weight: 700;
       letter-spacing: .12em;
       text-transform: uppercase;
       color: var(--accent);
-      background: var(--accent-soft);
-      padding: .25rem .75rem;
-      border-radius: 999px;
-      margin-bottom: .85rem;
-    }
-    .page-title { font-size: 2rem; font-weight: 800; line-height: 1.2; margin-bottom: .5rem; }
-    .page-subtitle { font-size: .95rem; color: var(--text-muted); line-height: 1.6; }
-    html.dark .page-eyebrow { background: #2D2800; }
-
-    /* ── Section ── */
-    .checkin-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 1.75rem 1.75rem 1.5rem;
-      margin-bottom: 1.25rem;
-      box-shadow: 0 1px 8px rgba(0,0,0,.04);
-    }
-    .section-heading {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: .25rem;
-      color: var(--text);
-    }
-    .section-sub {
-      font-size: .84rem;
-      color: var(--text-muted);
-      margin-bottom: 1.1rem;
-      line-height: 1.5;
-    }
-    .section-label {
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      font-size:.82rem;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--text-faint, #94a3b8);
       margin-bottom: .6rem;
     }
+    .step-heading {
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: .4rem;
+    }
+    .step-sub {
+      font-size: .88rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 1.5rem;
+    }
 
-    /* ── Section 1: Energy cards ── */
+    /* ── Energy grid ── */
     .energy-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: .65rem;
+      margin-bottom: .75rem;
     }
     .energy-card {
       position: relative;
       cursor: pointer;
       border: 2px solid var(--border);
-      border-radius: .75rem;
-      padding: 1.1rem 1rem;
+      border-radius: .8rem;
+      padding: 1.25rem 1rem;
       text-align: center;
-      transition: border-color .15s, background .15s, transform .1s;
+      transition: border-color .15s, background .15s, transform .1s, box-shadow .15s;
       user-select: none;
       background: var(--bg);
     }
-    .energy-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .energy-card:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
     .energy-card.selected {
       border-color: var(--accent);
       background: var(--accent-soft);
-      box-shadow: 0 0 0 3px rgba(255,204,0,.18);
+      box-shadow: 0 0 0 3px rgba(255,204,0,.22);
     }
-    html.dark .energy-card.selected { background: #2D2800; box-shadow: 0 0 0 3px rgba(255,204,0,.25); }
+    html.dark .energy-card.selected { background: #2D2800; box-shadow: 0 0 0 3px rgba(255,204,0,.28); }
     .energy-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
-    .energy-emoji { font-size: 1.75rem; display: block; margin-bottom: .35rem; }
-    .energy-label { font-size: .88rem; font-weight: 600; color: var(--text); }
+    .energy-emoji { font-size: 2rem; display: block; margin-bottom: .4rem; }
+    .energy-label { font-size: .9rem; font-weight: 600; color: var(--text); }
     .energy-card.selected .energy-label { color: var(--accent); }
 
-    /* ── Section 2: Brain dump ── */
+    /* ── Brain dump textarea ── */
     .brain-textarea {
       width: 100%;
       border: 1.5px solid var(--border);
-      border-radius: .65rem;
+      border-radius: .7rem;
       padding: .9rem 1rem;
       font-size: .92rem;
       font-family: 'Lexend', inherit;
@@ -142,24 +162,24 @@
       background: var(--bg);
       resize: vertical;
       outline: none;
-      min-height: 130px;
+      min-height: 160px;
       transition: border-color .15s, box-shadow .15s;
     }
     .brain-textarea:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(255,204,0,.12);
     }
-    .brain-textarea::placeholder { color: var(--text-faint, #94a3b8); }
+    .brain-textarea::placeholder { color: var(--text-faint); }
 
-    /* ── Sections 3 & 4: Selectable task cards ── */
-    .task-pick-list { display: flex; flex-direction: column; gap: .5rem; }
+    /* ── Task pick list ── */
+    .task-pick-list { display: flex; flex-direction: column; gap: .45rem; max-height: 360px; overflow-y: auto; }
     .task-pick-item { position: relative; }
     .task-pick-item input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
     .task-pick-label {
       display: flex;
       align-items: flex-start;
       gap: .75rem;
-      padding: .75rem 1rem;
+      padding: .7rem .9rem;
       border: 1.5px solid var(--border);
       border-radius: .65rem;
       cursor: pointer;
@@ -173,8 +193,8 @@
     }
     html.dark .task-pick-item input:checked + .task-pick-label { background: #2D2800; }
     .task-pick-check {
-      width: 1.1rem;
-      height: 1.1rem;
+      width: 1.15rem;
+      height: 1.15rem;
       border: 2px solid var(--border);
       border-radius: .3rem;
       flex-shrink: 0;
@@ -191,57 +211,126 @@
     .task-pick-item input:checked + .task-pick-label .task-pick-check {
       border-color: var(--accent);
       background: var(--accent);
-      color: #fff;
+      color: #1A1A1A;
     }
-    html.dark .task-pick-item input:checked + .task-pick-label .task-pick-check { color: #1A1A1A; }
     .task-pick-body { flex: 1; min-width: 0; }
-    .task-pick-title { font-size: .88rem; font-weight: 600; line-height: 1.35; margin-bottom: .25rem; }
-    .task-pick-meta { display: flex; gap: .3rem; flex-wrap: wrap; align-items: center; }
-    .task-pick-item.win-selected { opacity: .35; pointer-events: none; }
+    .task-pick-title { font-size: .87rem; font-weight: 600; line-height: 1.35; margin-bottom: .22rem; }
+    .task-pick-meta { display: flex; gap: .3rem; flex-wrap: wrap; }
+    .task-pick-item.win-selected { opacity: .32; pointer-events: none; }
+    .task-empty { font-size: .86rem; color: var(--text-faint); text-align: center; padding: 1rem 0; }
 
-    /* Priority + project pills inside pick cards */
-    .tpill { font-size:.82rem; font-weight: 700; padding: .1rem .35rem; border-radius: 3px; }
+    .tpill { font-size:.78rem; font-weight: 700; padding: .1rem .35rem; border-radius: 3px; }
     .tpill-high { color: #dc2626; background: #fee2e2; }
     .tpill-medium { color: #d97706; background: #fef3c7; }
     .tpill-low { color: #64748b; background: #f1f5f9; }
-    .tpill-project { color: #475569; background: #f1f5f9; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+    .tpill-project { color: #475569; background: #f1f5f9; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
     html.dark .tpill-high { background: #450a0a; color: #fca5a5; }
     html.dark .tpill-medium { background: #451a03; color: #fcd34d; }
     html.dark .tpill-low { background: #1e293b; color: #94a3b8; }
     html.dark .tpill-project { background: #1e293b; color: #94a3b8; }
 
-    /* Counter badges */
     .pick-counter {
-      font-size:.82rem;
+      font-size: .82rem;
       font-weight: 700;
       color: var(--text-muted);
-      margin-top: .6rem;
+      margin-top: .65rem;
     }
     .pick-counter .cnt { color: var(--accent); }
 
-    /* Empty state */
-    .task-empty { font-size: .86rem; color: var(--text-faint, #94a3b8); text-align: center; padding: 1rem 0; }
-
-    /* ── Submit ── */
-    .submit-wrap { margin-top: 1.75rem; }
-    .btn-submit-main {
-      width: 100%;
-      padding: 1rem;
-      font-size: 1.05rem;
+    /* ── Nav buttons ── */
+    .step-nav {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      margin-top: 1.5rem;
+    }
+    .btn-wiz-back {
+      padding: .75rem 1.25rem;
+      font-size: .9rem;
+      font-weight: 700;
+      font-family: 'Lexend', inherit;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: .65rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-wiz-back:hover { border-color: var(--accent); color: var(--text); }
+    .btn-wiz-next {
+      flex: 1;
+      padding: .85rem 1.5rem;
+      font-size: 1rem;
       font-weight: 800;
       font-family: 'Lexend', inherit;
       background: var(--accent);
       color: #1A1A1A;
       border: none;
-      border-radius: .75rem;
+      border-radius: .65rem;
       cursor: pointer;
       transition: opacity .15s, transform .1s;
       letter-spacing: .01em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
     }
-    .btn-submit-main:hover { opacity: .9; }
-    .btn-submit-main:active { transform: scale(.99); }
-    html.dark .btn-submit-main { color: #1A1A1A; }
-    .skip-link { display: block; text-align: center; margin-top: .85rem; font-size: .84rem; color: var(--text-faint, #94a3b8); text-decoration: none; }
+    .btn-wiz-next:hover { opacity: .92; }
+    .btn-wiz-next:active { transform: scale(.99); }
+    .btn-wiz-next:disabled { opacity: .45; cursor: default; }
+    .btn-wiz-next .spinner {
+      width: 1.1rem;
+      height: 1.1rem;
+      border: 2.5px solid rgba(26,26,26,.25);
+      border-top-color: #1A1A1A;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .btn-wiz-next.loading .spinner { display: block; }
+    .btn-wiz-next.loading .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Done screen ── */
+    .done-screen {
+      text-align: center;
+      padding: 2rem 1rem 1.5rem;
+    }
+    .done-icon {
+      font-size: 3.5rem;
+      display: block;
+      margin-bottom: 1rem;
+      animation: popIn .5s cubic-bezier(.18,.89,.32,1.28) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .done-title { font-size: 1.65rem; font-weight: 800; margin-bottom: .5rem; }
+    .done-sub { font-size: .92rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 1.75rem; }
+    .done-stats { display: flex; justify-content: center; gap: 1.75rem; margin-bottom: 2rem; }
+    .done-stat-val { font-size: 1.8rem; font-weight: 800; color: var(--accent); display: block; }
+    .done-stat-lbl { font-size: .78rem; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+    .btn-goto-myday {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .85rem 2rem;
+      background: var(--accent);
+      color: #1A1A1A;
+      font-weight: 800;
+      font-family: 'Lexend', inherit;
+      font-size: 1rem;
+      border: none;
+      border-radius: .75rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn-goto-myday:hover { opacity: .9; }
+    .redirect-note { font-size: .8rem; color: var(--text-faint); margin-top: 1rem; }
+
+    .skip-link { display: block; text-align: center; margin-top: .9rem; font-size: .83rem; color: var(--text-faint); text-decoration: none; }
     .skip-link:hover { color: var(--text-muted); }
   </style>
 </head>
@@ -267,142 +356,224 @@
     </div>
   </nav>
 
-  <main>
-    <div class="page-header">
-      <span class="page-eyebrow">☀️ Morning Ritual</span>
-      <h1 class="page-title">Set up your day</h1>
-      <p class="page-subtitle">Takes under 3 minutes. No pressure, no perfection.</p>
+  <div class="wizard-shell">
+
+    <!-- Progress dots -->
+    <div class="wiz-progress-track" id="wiz-progress">
+      <div class="wiz-step-dot active" id="dot-0"></div>
+      <div class="wiz-step-dot" id="dot-1"></div>
+      <div class="wiz-step-dot" id="dot-2"></div>
+      <div class="wiz-step-dot" id="dot-3"></div>
+      <span class="wiz-step-label" id="step-label">Step 1 of 4</span>
     </div>
 
-    <form method="post" action="{{ base }}/morning-checkin" id="checkin-form">
+    <!-- Slider viewport -->
+    <div class="wiz-viewport">
+      <div class="wiz-track" id="wiz-track">
 
-      <!-- ── SECTION 1: Energy Check ──────────────────────────────────── -->
-      <div class="checkin-section">
-        <div class="section-heading">How are you showing up today?</div>
-        <p class="section-sub">Be honest — there's no wrong answer.</p>
-        <div class="energy-grid">
+        <!-- ══ STEP 1: Energy ════════════════════════════════════════════ -->
+        <div class="wiz-step">
+          <div class="step-card">
+            <div class="step-eyebrow">☀️ Step 1 — Energy</div>
+            <h2 class="step-heading">How are you showing up today?</h2>
+            <p class="step-sub">Be honest — there's no wrong answer. Your day adapts to this.</p>
 
-          <div class="energy-card" id="ec-high" onclick="pickEnergy('high')">
-            <input type="radio" name="energy_today" value="high" id="e_high" />
-            <span class="energy-emoji">⚡</span>
-            <span class="energy-label">High energy</span>
-          </div>
-
-          <div class="energy-card" id="ec-flow" onclick="pickEnergy('flow')">
-            <input type="radio" name="energy_today" value="flow" id="e_flow" />
-            <span class="energy-emoji">🌊</span>
-            <span class="energy-label">In the flow</span>
-          </div>
-
-          <div class="energy-card" id="ec-low" onclick="pickEnergy('low')">
-            <input type="radio" name="energy_today" value="low" id="e_low" />
-            <span class="energy-emoji">😴</span>
-            <span class="energy-label">Low energy</span>
-          </div>
-
-          <div class="energy-card" id="ec-scattered" onclick="pickEnergy('scattered')">
-            <input type="radio" name="energy_today" value="scattered" id="e_scattered" />
-            <span class="energy-emoji">🌪</span>
-            <span class="energy-label">A bit scattered</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ── SECTION 2: Brain Dump ────────────────────────────────────── -->
-      <div class="checkin-section">
-        <div class="section-heading">Anything on your mind? Dump it here.</div>
-        <p class="section-sub">Each line becomes an Inbox item. No pressure.</p>
-        <textarea
-          class="brain-textarea"
-          name="brain_dump"
-          rows="6"
-          placeholder="Random thoughts, worries, ideas..."></textarea>
-      </div>
-
-      <!-- ── SECTION 3: Pick 3 Wins ───────────────────────────────────── -->
-      <div class="checkin-section">
-        <div class="section-heading">Pick up to 3 must-dos for today.</div>
-        <p class="section-sub">These are your wins. Everything else is a bonus.</p>
-
-        {% if tasks %}
-        <div class="task-pick-list" id="wins-list">
-          {% for task in tasks %}
-          <div class="task-pick-item" id="win-item-{{ task.id }}" data-task-id="{{ task.id }}">
-            <input type="checkbox" name="win_ids" value="{{ task.id }}" id="win-{{ task.id }}"
-                   onchange="onWinChange(this)" />
-            <label class="task-pick-label" for="win-{{ task.id }}">
-              <div class="task-pick-check">✓</div>
-              <div class="task-pick-body">
-                <div class="task-pick-title">{{ task.title }}</div>
-                <div class="task-pick-meta">
-                  <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
-                  {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date.strftime('%b %-d') }}</span>{% endif %}
-                  {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
-                  {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
-                </div>
+            <div class="energy-grid">
+              <div class="energy-card" id="ec-high" onclick="pickEnergy('high')">
+                <input type="radio" name="energy_today" value="high" id="e_high" />
+                <span class="energy-emoji">⚡</span>
+                <span class="energy-label">High energy</span>
               </div>
-            </label>
-          </div>
-          {% endfor %}
-        </div>
-        <div class="pick-counter">Selected: <span class="cnt" id="win-count">0</span> / 3</div>
-        {% else %}
-        <div class="task-empty">No open tasks yet — add some from the Tasks page.</div>
-        {% endif %}
-      </div>
-
-      <!-- ── SECTION 4: Nice-To-Dos ───────────────────────────────────── -->
-      <div class="checkin-section">
-        <div class="section-heading">Any nice-to-haves? Pick up to 2.</div>
-        <p class="section-sub">Bonus tasks if energy allows — no guilt if they don't happen.</p>
-
-        {% if tasks %}
-        <div class="task-pick-list" id="nice-list">
-          {% for task in tasks %}
-          <div class="task-pick-item" id="nice-item-{{ task.id }}" data-task-id="{{ task.id }}">
-            <input type="checkbox" name="nice_ids" value="{{ task.id }}" id="nice-{{ task.id }}"
-                   onchange="onNiceChange(this)" />
-            <label class="task-pick-label" for="nice-{{ task.id }}">
-              <div class="task-pick-check">✓</div>
-              <div class="task-pick-body">
-                <div class="task-pick-title">{{ task.title }}</div>
-                <div class="task-pick-meta">
-                  <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
-                  {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date.strftime('%b %-d') }}</span>{% endif %}
-                  {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
-                  {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
-                </div>
+              <div class="energy-card" id="ec-flow" onclick="pickEnergy('flow')">
+                <input type="radio" name="energy_today" value="flow" id="e_flow" />
+                <span class="energy-emoji">🌊</span>
+                <span class="energy-label">In the flow</span>
               </div>
-            </label>
+              <div class="energy-card" id="ec-low" onclick="pickEnergy('low')">
+                <input type="radio" name="energy_today" value="low" id="e_low" />
+                <span class="energy-emoji">😴</span>
+                <span class="energy-label">Low energy</span>
+              </div>
+              <div class="energy-card" id="ec-scattered" onclick="pickEnergy('scattered')">
+                <input type="radio" name="energy_today" value="scattered" id="e_scattered" />
+                <span class="energy-emoji">🌪</span>
+                <span class="energy-label">A bit scattered</span>
+              </div>
+            </div>
+
+            <div class="step-nav">
+              <button class="btn-wiz-next" id="next-0" onclick="goNext(0)">
+                <span class="btn-label">Next →</span>
+                <span class="spinner"></span>
+              </button>
+            </div>
+            <a class="skip-link" href="{{ base }}/my-day">Skip check-in →</a>
           </div>
-          {% endfor %}
         </div>
-        <div class="pick-counter">Selected: <span class="cnt" id="nice-count">0</span> / 2</div>
-        {% else %}
-        <div class="task-empty">No open tasks yet.</div>
-        {% endif %}
+
+        <!-- ══ STEP 2: Brain dump ════════════════════════════════════════ -->
+        <div class="wiz-step">
+          <div class="step-card">
+            <div class="step-eyebrow">💭 Step 2 — Brain Dump</div>
+            <h2 class="step-heading">Anything on your mind?</h2>
+            <p class="step-sub">Each line becomes an Inbox item. Write anything — worries, ideas, reminders. Empty heads focus better.</p>
+
+            <textarea class="brain-textarea" id="brain-dump-field"
+              placeholder="Random thoughts, worries, ideas...&#10;Each new line = one inbox item."></textarea>
+
+            <div class="step-nav">
+              <button class="btn-wiz-back" onclick="goBack(1)">← Back</button>
+              <button class="btn-wiz-next" onclick="goNext(1)">
+                <span class="btn-label">Next →</span>
+                <span class="spinner"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ STEP 3: Wins ══════════════════════════════════════════════ -->
+        <div class="wiz-step">
+          <div class="step-card">
+            <div class="step-eyebrow">🎯 Step 3 — Must-Dos</div>
+            <h2 class="step-heading">Pick your 3 must-dos for today.</h2>
+            <p class="step-sub">These are your wins. If nothing else happens, these count.</p>
+
+            {% if tasks %}
+            <div class="task-pick-list" id="wins-list">
+              {% for task in tasks %}
+              <div class="task-pick-item" id="win-item-{{ task.id }}" data-task-id="{{ task.id }}">
+                <input type="checkbox" name="win_ids" value="{{ task.id }}" id="win-{{ task.id }}"
+                       onchange="onWinChange(this)" />
+                <label class="task-pick-label" for="win-{{ task.id }}">
+                  <div class="task-pick-check">✓</div>
+                  <div class="task-pick-body">
+                    <div class="task-pick-title">{{ task.title }}</div>
+                    <div class="task-pick-meta">
+                      <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
+                      {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date.strftime('%b %-d') }}</span>{% endif %}
+                      {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
+                      {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
+                    </div>
+                  </div>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="pick-counter">Selected: <span class="cnt" id="win-count">0</span> / 3</div>
+            {% else %}
+            <div class="task-empty">No open tasks yet — add some from the Tasks page.</div>
+            {% endif %}
+
+            <div class="step-nav">
+              <button class="btn-wiz-back" onclick="goBack(2)">← Back</button>
+              <button class="btn-wiz-next" onclick="goNext(2)">
+                <span class="btn-label">Next →</span>
+                <span class="spinner"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ STEP 4: Nice-to-haves ════════════════════════════════════ -->
+        <div class="wiz-step">
+          <div class="step-card">
+            <div class="step-eyebrow">✨ Step 4 — Nice-to-Haves</div>
+            <h2 class="step-heading">Any bonus tasks? Pick up to 2.</h2>
+            <p class="step-sub">These are extras — if energy allows. Zero guilt if they don't happen today.</p>
+
+            {% if tasks %}
+            <div class="task-pick-list" id="nice-list">
+              {% for task in tasks %}
+              <div class="task-pick-item" id="nice-item-{{ task.id }}" data-task-id="{{ task.id }}">
+                <input type="checkbox" name="nice_ids" value="{{ task.id }}" id="nice-{{ task.id }}"
+                       onchange="onNiceChange(this)" />
+                <label class="task-pick-label" for="nice-{{ task.id }}">
+                  <div class="task-pick-check">✓</div>
+                  <div class="task-pick-body">
+                    <div class="task-pick-title">{{ task.title }}</div>
+                    <div class="task-pick-meta">
+                      <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
+                      {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date.strftime('%b %-d') }}</span>{% endif %}
+                      {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
+                      {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
+                    </div>
+                  </div>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="pick-counter">Selected: <span class="cnt" id="nice-count">0</span> / 2</div>
+            {% else %}
+            <div class="task-empty">No open tasks yet.</div>
+            {% endif %}
+
+            <div class="step-nav">
+              <button class="btn-wiz-back" onclick="goBack(3)">← Back</button>
+              <button class="btn-wiz-next" id="submit-btn" onclick="submitCheckin(this)">
+                <span class="btn-label">Start my day ✦</span>
+                <span class="spinner"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /wiz-track -->
+    </div><!-- /wiz-viewport -->
+
+    <!-- ══ DONE SCREEN (outside slider) ═════════════════════════════════ -->
+    <div id="done-screen" style="display:none; width:100%; max-width:600px;">
+      <div class="step-card done-screen">
+        <span class="done-icon">🎉</span>
+        <h2 class="done-title">Day is set up!</h2>
+        <p class="done-sub" id="done-sub-text">You've got your focus. Time to make it happen.</p>
+        <div class="done-stats" id="done-stats"></div>
+        <a class="btn-goto-myday" href="{{ base }}/my-day">Go to My Day →</a>
+        <p class="redirect-note" id="redirect-note">Redirecting in 3s…</p>
       </div>
+    </div>
 
-      <!-- ── Submit ────────────────────────────────────────────────────── -->
-      <div class="submit-wrap">
-        <button type="submit" class="btn-submit-main">Let's go ✦</button>
-        <a class="skip-link" href="{{ base }}/my-day">Skip for now →</a>
-      </div>
+  </div><!-- /wizard-shell -->
 
-    </form>
-  </main>
-
-<script src="{{ base }}/static/app.js?v=13"></script>
+<script src="{{ base }}/static/app.js?v=14"></script>
 <script>
-  // ── Energy card selection ──────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentStep = 0;
+  const TOTAL = 4;
+  const BASE = "{{ base }}";
+
+  // ── Step navigation ────────────────────────────────────────────────────────
+  function goTo(n) {
+    const track = document.getElementById('wiz-track');
+    track.style.transform = `translateX(-${n * 100}%)`;
+    currentStep = n;
+    // Update dots
+    for (let i = 0; i < TOTAL; i++) {
+      const dot = document.getElementById(`dot-${i}`);
+      dot.classList.remove('active', 'done');
+      if (i < n) dot.classList.add('done');
+      else if (i === n) dot.classList.add('active');
+    }
+    document.getElementById('step-label').textContent = `Step ${n + 1} of ${TOTAL}`;
+  }
+
+  function goNext(fromStep) {
+    if (fromStep < TOTAL - 1) goTo(fromStep + 1);
+  }
+
+  function goBack(fromStep) {
+    if (fromStep > 0) goTo(fromStep - 1);
+  }
+
+  // ── Energy card selection ──────────────────────────────────────────────────
   function pickEnergy(val) {
     document.querySelectorAll('.energy-card').forEach(c => c.classList.remove('selected'));
     document.getElementById('ec-' + val).classList.add('selected');
     document.getElementById('e_' + val).checked = true;
+    // Auto-advance after brief visual feedback
+    setTimeout(() => goNext(0), 280);
   }
 
-  // ── Win selection: max 3, sync with nice list ──────────────────────────
+  // ── Win selection: max 3, sync with nice list ──────────────────────────────
   function onWinChange(cb) {
     const wins = Array.from(document.querySelectorAll('#wins-list input[type="checkbox"]:checked'));
     if (wins.length > 3) { cb.checked = false; return; }
@@ -410,14 +581,13 @@
     syncNiceList();
   }
 
-  // ── Nice selection: max 2, can't overlap with wins ─────────────────────
+  // ── Nice selection: max 2, can't overlap with wins ─────────────────────────
   function onNiceChange(cb) {
     const nices = Array.from(document.querySelectorAll('#nice-list input[type="checkbox"]:checked'));
     if (nices.length > 2) { cb.checked = false; return; }
     document.getElementById('nice-count').textContent = nices.length;
   }
 
-  // Hide tasks in Section 4 that are already selected as wins
   function syncNiceList() {
     const winIds = new Set(
       Array.from(document.querySelectorAll('#wins-list input:checked')).map(i => i.value)
@@ -432,9 +602,98 @@
         item.classList.remove('win-selected');
       }
     });
-    // Recount nices
     const nices = Array.from(document.querySelectorAll('#nice-list input:checked'));
-    document.getElementById('nice-count').textContent = nices.length;
+    const el = document.getElementById('nice-count');
+    if (el) el.textContent = nices.length;
+  }
+
+  // ── Fetch submit ───────────────────────────────────────────────────────────
+  async function submitCheckin(btn) {
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    const fd = new FormData();
+
+    // Energy
+    const energyRadio = document.querySelector('input[name="energy_today"]:checked');
+    if (energyRadio) fd.append('energy_today', energyRadio.value);
+
+    // Brain dump
+    const brainText = document.getElementById('brain-dump-field').value;
+    fd.append('brain_dump', brainText);
+
+    // Win IDs
+    document.querySelectorAll('#wins-list input[type="checkbox"]:checked').forEach(cb => {
+      fd.append('win_ids', cb.value);
+    });
+
+    // Nice IDs
+    document.querySelectorAll('#nice-list input[type="checkbox"]:checked').forEach(cb => {
+      fd.append('nice_ids', cb.value);
+    });
+
+    try {
+      const resp = await fetch(`${BASE}/morning-checkin`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'fetch' },
+        body: fd,
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        showDone(data);
+      } else {
+        throw new Error('Server error');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      // Fallback: plain form submit
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `${BASE}/morning-checkin`;
+      for (const [k, v] of fd.entries()) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = k;
+        inp.value = v;
+        form.appendChild(inp);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }
+
+  // ── Done screen ────────────────────────────────────────────────────────────
+  function showDone(data) {
+    // Hide progress + slider
+    document.getElementById('wiz-progress').style.display = 'none';
+    document.querySelector('.wiz-viewport').style.display = 'none';
+
+    // Build done screen
+    const wins = data.wins || 0;
+    const nice = data.nice || 0;
+    const inbox = data.inbox_added || 0;
+    const statsEl = document.getElementById('done-stats');
+    statsEl.innerHTML = `
+      <div><span class="done-stat-val">${wins}</span><span class="done-stat-lbl">Must-dos</span></div>
+      <div><span class="done-stat-val">${nice}</span><span class="done-stat-lbl">Bonus</span></div>
+      <div><span class="done-stat-val">${inbox}</span><span class="done-stat-lbl">Inbox items</span></div>`;
+
+    document.getElementById('done-screen').style.display = 'block';
+
+    // Countdown redirect
+    let secs = 3;
+    const noteEl = document.getElementById('redirect-note');
+    const tick = setInterval(() => {
+      secs--;
+      if (secs <= 0) {
+        clearInterval(tick);
+        window.location.href = data.redirect || `${BASE}/my-day`;
+      } else {
+        noteEl.textContent = `Redirecting in ${secs}s…`;
+      }
+    }, 1000);
   }
 </script>
 </body>

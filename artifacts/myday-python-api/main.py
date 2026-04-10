@@ -341,6 +341,20 @@ async def morning_checkin_post(
             task.today_category = "nice"
 
     db.commit()
+
+    # AJAX / fetch() callers get JSON; plain form submissions get redirect
+    is_fetch = (
+        request.headers.get("X-Requested-With") == "fetch"
+        or "application/json" in request.headers.get("Accept", "")
+    )
+    if is_fetch:
+        return JSONResponse({
+            "ok": True,
+            "redirect": f"{BASE}/my-day",
+            "wins": len(win_ids),
+            "nice": len(nice_ids),
+            "inbox_added": len(lines),
+        })
     return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
 
 
