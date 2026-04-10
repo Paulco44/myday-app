@@ -94,8 +94,8 @@ html.dark .cop-body,
 html.dark .suggest-toggle,
 html.dark .empty-box,
 html.dark .time-col-body,
-html.dark .done-row,
-html.dark .checkin-cta { background: #242424 !important; border-color: #3A3A3A; }
+html.dark .done-row
+{ background: #2A2A2A !important; border-color: #3A3A3A; }
 
 /* NOW strip */
 html.dark .now-strip { background: #2D2800 !important; border-color: #FFCC00; border-left-color: #FFCC00; }
@@ -104,13 +104,7 @@ html.dark .now-title  { color: #FFDD55 !important; }
 html.dark .now-empty .prompt { color: #FFDD55 !important; }
 
 /* Stat pills */
-html.dark .stat         { background: #2A2A2A !important; border-color: #3A3A3A; color: #A3A3A3; }
-html.dark .stat.streak  { background: #FFCC00 !important; color: #1A1A1A; border-color: #FFCC00; }
-html.dark .stat.streak .val { color: #1A1A1A !important; }
-html.dark .stat.done    { background: #0A2929 !important; color: #2DD4BF; border-color: #2DD4BF; }
-html.dark .stat.done .val { color: #2DD4BF !important; }
-html.dark .stat.overdue { background: #2D1200 !important; border-color: #F97316; color: #F97316; }
-html.dark .stat.overdue-none { background: #0A2929 !important; color: #2DD4BF; border-color: #2DD4BF; }
+/* old stat pills removed — stats are now inline text in page header */
 
 /* Controls */
 html.dark .ctrl-btn { background: #333 !important; border-color: #444; color: #A3A3A3; }
@@ -176,7 +170,8 @@ html.dark .preset-btn     { background: #242424 !important; border-color: #3A3A3
 html.dark .preset-btn.selected,
 html.dark .preset-btn:hover { background: #2D2800 !important; border-color: #FFCC00; }
 html.dark .preset-btn.selected .minutes { color: #FFCC00; }
-html.dark .btn-start-focus { background: #FFCC00 !important; color: #1A1A1A; }
+html.dark .btn-start-focus { background: transparent !important; color: var(--accent) !important; border-color: var(--accent) !important; }
+html.dark .btn-start-focus:hover { background: var(--accent) !important; color: #1A1A1A !important; }
 html.dark .ring-arc       { stroke: #FFCC00 !important; }
 html.dark .ring-time      { color: #F5F5F0 !important; }
 html.dark .btn-done       { background: #2DD4BF !important; color: #1A1A1A; }
