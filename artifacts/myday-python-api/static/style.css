@@ -640,3 +640,192 @@ html.dark .card-estimate { background: #2A2A2A; }
 .energy-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
 .energy-filter-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 html.dark .energy-filter-btn.active { background: #2D2800; }
+
+/* ════════════════════════════════════════════════════════════════
+   PHASE 2 — Day Flow Bar (T001)
+════════════════════════════════════════════════════════════════ */
+.day-flow-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: .3rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.dfb-step {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .55rem;
+  border-radius: .4rem;
+  transition: background .15s;
+  text-decoration: none;
+  color: inherit;
+}
+.dfb-step.done   { color: var(--success); }
+.dfb-step.active { color: var(--accent); font-weight: 700; background: var(--accent-soft); }
+.dfb-step.pending { color: var(--text-faint); }
+.dfb-arrow { color: var(--border); padding: 0 .15rem; }
+
+/* ════════════════════════════════════════════════════════════════
+   PHASE 2 — My Day widescreen 3-column grid (T004)
+════════════════════════════════════════════════════════════════ */
+@media (min-width: 1200px) {
+  .myday-page main {
+    max-width: 1300px !important;
+    padding: 1.5rem 2rem 4rem !important;
+  }
+  .myday-grid {
+    display: grid;
+    grid-template-columns: 270px 1fr;
+    gap: 0 1.75rem;
+    align-items: start;
+  }
+  /* Left column: CoP (sticky sidebar) */
+  .md-left  { position: sticky; top: 1rem; }
+  /* Center column: main workflow content */
+  .md-center { display: flex; flex-direction: column; gap: 0; }
+}
+
+/* Energy banner (T003) */
+.energy-banner {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: .65rem;
+  padding: .6rem 1rem;
+  margin-bottom: 1rem;
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+.energy-banner .eb-icon { font-size: 1.1rem; }
+.energy-banner .eb-body { flex: 1; line-height: 1.4; }
+.energy-banner .eb-level { font-weight: 800; }
+
+/* Right column cards */
+.md-right-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: .7rem;
+  padding: .85rem 1rem;
+}
+.md-right-card h3 {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: .6rem;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PHASE 2 — Meetings search + filter bar (T002)
+════════════════════════════════════════════════════════════════ */
+.meetings-toolbar {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.meetings-search {
+  flex: 1;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: .45rem;
+  padding: .5rem .85rem;
+  font-size: .88rem;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color .15s;
+}
+.meetings-search:focus { outline: none; border-color: var(--accent); }
+.meetings-search::placeholder { color: var(--text-faint); }
+.mfilter-bar { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.mfilter-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: .4rem;
+  padding: .3rem .75rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s, color .15s, background .15s;
+  white-space: nowrap;
+}
+.mfilter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mfilter-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
+.day-group.hidden { display: none; }
+.item-card.hidden { display: none; }
+
+/* ════════════════════════════════════════════════════════════════
+   PHASE 2 — Inbox master-detail split panel (T005)
+════════════════════════════════════════════════════════════════ */
+@media (min-width: 1100px) {
+  .inbox-split { display: grid; grid-template-columns: 380px 1fr; gap: 0; align-items: start; }
+  .inbox-list-panel { border-right: 1px solid var(--border); padding-right: 0; min-height: 60vh; }
+  .inbox-detail-panel { padding: 1.5rem 1.5rem 4rem; min-height: 60vh; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; }
+  .inbox-detail-panel.empty { display: flex; align-items: center; justify-content: center; color: var(--text-faint); font-size: .9rem; }
+  /* Make list items more compact in split mode */
+  .inbox-split .inbox-card { border-radius: 0; border-left: none; border-right: none; border-top: none; }
+  .inbox-split .inbox-card:first-child { border-top: 1px solid var(--border); }
+  .inbox-split .inbox-card.active-detail { background: var(--accent-soft); border-color: var(--accent); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PHASE 2 — Inline quick-capture (T006)
+════════════════════════════════════════════════════════════════ */
+.inline-quickadd {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: .5rem .75rem;
+  background: var(--surface);
+  border: 1.5px dashed var(--border);
+  border-radius: .65rem;
+  transition: border-color .15s;
+}
+.inline-quickadd:focus-within {
+  border-color: var(--accent);
+  border-style: solid;
+}
+.iqa-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: .9rem;
+  color: var(--text);
+  padding: .2rem .1rem;
+}
+.iqa-input::placeholder { color: var(--text-faint); }
+.iqa-btn {
+  background: var(--accent);
+  color: #1A1A1A;
+  border: none;
+  border-radius: .4rem;
+  padding: .3rem .8rem;
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+.iqa-btn:hover { opacity: .85; }
+.iqa-success { color: var(--success); font-size: .82rem; font-weight: 600; padding: .1rem .3rem; }

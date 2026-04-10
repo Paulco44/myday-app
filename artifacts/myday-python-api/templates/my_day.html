@@ -8,11 +8,12 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=12" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=13" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+    /* widescreen handled in style.css */
 
     /* ── Brain dump success banner ── */
     .dump-banner { background: var(--success-soft); border: 1px solid var(--success-border); border-radius: .75rem; padding: .85rem 1.1rem; display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; font-size: .88rem; color: var(--success); font-weight: 500; }
@@ -351,6 +352,10 @@
     </div>
     {% endif %}
 
+    <!-- ── Widescreen 2-column grid starts ── -->
+    <div class="myday-grid">
+    <aside class="md-left">
+
     <!-- ── CoP accordion ── -->
     <details class="cop-accordion">
       <summary>
@@ -380,6 +385,32 @@
         </div>
       </div>
     </details>
+
+    </aside><!-- /md-left -->
+    <div class="md-center">
+
+    {% if energy_today %}
+    {% set eb_map = {'high': ('🚀', 'High energy', 'Your creative tasks are sorted to the top — this is your power hour.'),
+                     'flow': ('🌊', 'Flow state', 'Perfect conditions for deep work. Creative tasks surface first.'),
+                     'low':  ('🌿', 'Low energy', 'Low-energy tasks are prioritised — small wins still count.'),
+                     'scattered': ('🌀', 'Scattered', 'Starting small is still starting. Bite-sized tasks are up first.')} %}
+    {% set eb = eb_map.get(energy_today, ('✦', energy_today, '')) %}
+    <div class="energy-banner">
+      <span class="eb-icon">{{ eb[0] }}</span>
+      <div class="eb-body">
+        <span class="eb-level">{{ eb[1] }}</span> — {{ eb[2] }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Inline Quick-Capture ── -->
+    <form class="inline-quickadd" method="post" action="{{ base }}/tasks/quick-add"
+          onsubmit="return iqSubmit(this)">
+      <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
+      <input class="iqa-input" type="text" name="title" placeholder="Capture a thought… (Enter to add)"
+             autocomplete="off" maxlength="200" />
+      <button class="iqa-btn" type="submit">＋ Add</button>
+    </form>
 
     <!-- ── NOW Focus Strip ── -->
     {% if now_task %}
@@ -744,6 +775,9 @@
     </div>
     {% endif %}
 
+    </div><!-- /md-center -->
+    </div><!-- /myday-grid -->
+
   </main>
 
   <!-- ── Floating Action Button ── -->
@@ -912,6 +946,6 @@
     }
 
   </script>
-  <script src="{{ base }}/static/app.js?v=12"></script>
+  <script src="{{ base }}/static/app.js?v=13"></script>
 </body>
 </html>

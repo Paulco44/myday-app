@@ -442,6 +442,103 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ─── Day Flow Bar (injected below nav on flow pages) ─────────────────────────
+(function() {
+  const flowPages = ['/my-day', '/morning-checkin', '/focus', '/close-day'];
+  const onFlow = flowPages.some(p => window.location.pathname.includes(p));
+  if (!onFlow) return;
+
+  const base = (window._MYDAY_BASE || window.location.pathname.split('/my-day')[0].split('/morning')[0].split('/focus')[0].split('/close')[0]).replace(/\/$/, '');
+  const apiBase = base || '/task-manager';
+
+  fetch(apiBase + '/api/today-status')
+    .then(r => r.json())
+    .then(s => {
+      const steps = [
+        { key: 'checkin',  label: '✦ Check-In',  done: s.has_checkin, href: apiBase + '/morning-checkin' },
+        { key: 'my-day',   label: '☀ My Day',    done: s.started,     href: apiBase + '/my-day' },
+        { key: 'focus',    label: '⏱ Focus',     done: false,         href: apiBase + '/focus' },
+        { key: 'close',    label: '🌙 Close Day', done: s.day_closed,  href: apiBase + '/close-day' },
+      ];
+      const path = window.location.pathname;
+      let activeIdx = 1;
+      if (path.includes('/morning')) activeIdx = 0;
+      else if (path.includes('/focus'))  activeIdx = 2;
+      else if (path.includes('/close'))  activeIdx = 3;
+
+      const bar = document.createElement('div');
+      bar.className = 'day-flow-bar';
+      bar.setAttribute('role', 'navigation');
+      bar.setAttribute('aria-label', 'Daily flow progress');
+
+      steps.forEach((step, i) => {
+        if (i > 0) {
+          const arrow = document.createElement('span');
+          arrow.className = 'dfb-arrow';
+          arrow.textContent = '›';
+          bar.appendChild(arrow);
+        }
+        const el = document.createElement('a');
+        el.href = step.href;
+        el.className = 'dfb-step';
+        if (i === activeIdx) el.classList.add('active');
+        else if (step.done)  el.classList.add('done');
+        else                 el.classList.add('pending');
+        el.textContent = (step.done && i !== activeIdx ? '✓ ' : '') + step.label;
+        bar.appendChild(el);
+      });
+
+      const nav = document.querySelector('nav');
+      if (nav) nav.insertAdjacentElement('afterend', bar);
+    })
+    .catch(() => {}); // silent fail — not critical
+})();
+
+// ─── Task-row click toggle (sticky meta expansion) ───────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.task-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('button, a, form, input')) return;
+      row.classList.toggle('expanded');
+    });
+  });
+
+  // CoP accordion: persist open/closed state in localStorage
+  const cop = document.querySelector('.cop-accordion');
+  if (cop) {
+    const stored = localStorage.getItem('myday-cop-open');
+    if (stored === 'true') cop.setAttribute('open', '');
+    else if (stored === 'false') cop.removeAttribute('open');
+    cop.addEventListener('toggle', () => {
+      localStorage.setItem('myday-cop-open', cop.open ? 'true' : 'false');
+    });
+  }
+});
+
+// ─── Inline Quick-Capture (iqSubmit) ─────────────────────────────────────────
+function iqSubmit(form) {
+  const input = form.querySelector('.iqa-input');
+  const title = input.value.trim();
+  if (!title) return false;
+
+  const data = new FormData(form);
+  fetch(form.action, { method: 'POST', body: data })
+    .then(r => {
+      if (r.ok || r.redirected) {
+        input.value = '';
+        // Show brief ✓ confirmation
+        let msg = form.querySelector('.iqa-success');
+        if (!msg) { msg = document.createElement('span'); msg.className = 'iqa-success'; form.appendChild(msg); }
+        msg.textContent = '✓ Added';
+        setTimeout(() => { msg.textContent = ''; }, 1800);
+        // Soft-reload just the wins / plan sections after a short delay
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    })
+    .catch(() => { form.submit(); }); // fallback: normal submit
+  return false; // prevent default form submit
+}
+
 // ─── Quick-Add: energy type toggle ──────────────────────────────────────────
 function setQuickEnergy(btn) {
   const alreadyActive = btn.classList.contains('active');

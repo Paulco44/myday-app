@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meetings — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=12" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=13" />
   <style>
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
 
@@ -109,6 +109,20 @@
 
     {% if day_summaries %}
 
+      <!-- ── Search + Filter toolbar ── -->
+      <div class="meetings-toolbar">
+        <input type="search" class="meetings-search" id="mtb-search"
+               placeholder="Search notes…" autocomplete="off" aria-label="Search meetings" />
+        <div class="mfilter-bar" role="group" aria-label="Filter by status">
+          <span style="font-size:.78rem;font-weight:600;color:var(--text-muted);margin-right:.15rem;">Filter:</span>
+          <button class="mfilter-btn active" data-filter="all">All</button>
+          <button class="mfilter-btn" data-filter="new">🔵 New</button>
+          <button class="mfilter-btn" data-filter="reviewing">◎ Reviewing</button>
+          <button class="mfilter-btn" data-filter="promoted">✓ Promoted</button>
+          <button class="mfilter-btn" data-filter="archived">📁 Archived</button>
+        </div>
+      </div>
+
       <!-- Quick link to inbox if anything unreviewed -->
       {% set total_unreviewed = namespace(n=0) %}
       {% for g in day_summaries %}{% set total_unreviewed.n = total_unreviewed.n + g.unreviewed_count %}{% endfor %}
@@ -120,7 +134,8 @@
       {% endif %}
 
       {% for group in day_summaries %}
-        <div class="day-group">
+        <div class="day-group" data-date="{{ group.date }}"
+             data-statuses="{{ group.by_source.values() | sum(start=[]) | map(attribute='status') | join(',') }}">
           <div class="day-header">
             <div>
               <span class="day-title">
@@ -154,7 +169,9 @@
 
               <div class="item-list">
                 {% for item in source_items %}
-                  <a class="item-card stripe-{{ item.source }}" href="{{ base }}/inbox/{{ item.id }}">
+                  <a class="item-card stripe-{{ item.source }}" href="{{ base }}/inbox/{{ item.id }}"
+                     data-status="{{ item.status }}"
+                     data-search="{{ (item.title ~ ' ' ~ (item.summary or '')) | lower }}">
                     <div class="item-card-body">
                       <div class="item-title">{{ item.title }}</div>
                       {% if item.summary %}
@@ -204,6 +221,39 @@
 
   </main>
 
-  <script src="{{ base }}/static/app.js?v=12"></script>
+  <script src="{{ base }}/static/app.js?v=13"></script>
+  <script>
+  (function() {
+    const search  = document.getElementById('mtb-search');
+    const fBtns   = document.querySelectorAll('.mfilter-btn');
+    let   activeFilter = 'all';
+
+    function applyFilters() {
+      const q = search.value.trim().toLowerCase();
+      fBtns.forEach(b => b.classList.toggle('active', b.dataset.filter === activeFilter));
+
+      document.querySelectorAll('.day-group').forEach(group => {
+        let groupVisible = false;
+        group.querySelectorAll('.item-card').forEach(card => {
+          const matchStatus = activeFilter === 'all' || card.dataset.status === activeFilter;
+          const matchSearch = !q || card.dataset.search.includes(q) ||
+                              card.querySelector('.item-title')?.textContent.toLowerCase().includes(q);
+          const vis = matchStatus && matchSearch;
+          card.classList.toggle('hidden', !vis);
+          if (vis) groupVisible = true;
+        });
+        // Hide source-sections with no visible cards
+        group.querySelectorAll('.source-section').forEach(sec => {
+          const anyVisible = [...sec.querySelectorAll('.item-card')].some(c => !c.classList.contains('hidden'));
+          sec.style.display = anyVisible ? '' : 'none';
+        });
+        group.classList.toggle('hidden', !groupVisible);
+      });
+    }
+
+    fBtns.forEach(b => b.addEventListener('click', () => { activeFilter = b.dataset.filter; applyFilters(); }));
+    search.addEventListener('input', applyFilters);
+  })();
+  </script>
 </body>
 </html>

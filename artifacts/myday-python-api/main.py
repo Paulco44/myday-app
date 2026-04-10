@@ -161,7 +161,14 @@ def compute_streak(db: Session) -> int:
     return streak
 
 
-def build_suggestions(db: Session, today: date, exclude_ids: set) -> list:
+ENERGY_TO_TAG = {
+    "high":      "creative",
+    "flow":      "creative",
+    "low":       "low_energy",
+    "scattered": "low_energy",
+}
+
+def build_suggestions(db: Session, today: date, exclude_ids: set, energy_today: Optional[str] = None) -> list:
     base_filter = [
         models.Task.is_today == False,
         models.Task.status != "done",
@@ -184,12 +191,20 @@ def build_suggestions(db: Session, today: date, exclude_ids: set) -> list:
         .all()
     )
     seen: set = set(exclude_ids)
-    result = []
+    all_tasks = []
     for task in overdue + due_today + high_no_date:
         if task.id not in seen:
             seen.add(task.id)
-            result.append(task)
-    return result[:SUGGESTIONS_CAP]
+            all_tasks.append(task)
+
+    # Boost energy-matching tasks to the top when energy_today is known
+    if energy_today and energy_today in ENERGY_TO_TAG:
+        matched_tag = ENERGY_TO_TAG[energy_today]
+        matched = [t for t in all_tasks if t.energy_tag == matched_tag]
+        rest    = [t for t in all_tasks if t.energy_tag != matched_tag]
+        all_tasks = matched + rest
+
+    return all_tasks[:SUGGESTIONS_CAP]
 
 
 def clear_focus_state(db: Session, state: str, exclude_id: Optional[int] = None):
@@ -381,10 +396,11 @@ async def my_day(
     )
     daily_log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
     today_started = daily_log.started if daily_log else False
+    energy_today  = daily_log.energy_today if daily_log else None
     streak = compute_streak(db)
 
-    # Suggestions (exclude already-today tasks)
-    suggestions = build_suggestions(db, today, active_today_ids)
+    # Suggestions (exclude already-today tasks, boost energy-matched)
+    suggestions = build_suggestions(db, today, active_today_ids, energy_today=energy_today)
 
     cop_initiatives = get_cop_initiatives_this_month(db, "Paul")
     current_month_name = MONTH_NAMES[today.month]
@@ -461,8 +477,20 @@ async def my_day(
             "time_blocks": TIME_BLOCKS,
             "energy_tags": ENERGY_TAGS,
             "inbox_today": inbox_today,
+            "energy_today": energy_today,
         },
     )
+
+
+@app.get(f"{BASE}/api/today-status")
+def today_status_api(db: Session = Depends(get_db)):
+    today = date.today()
+    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    return {
+        "has_checkin": bool(log and log.has_morning_checkin),
+        "started":     bool(log and log.started),
+        "day_closed":  bool(log and log.day_closed),
+    }
 
 
 @app.post(f"{BASE}/my-day/start-today")

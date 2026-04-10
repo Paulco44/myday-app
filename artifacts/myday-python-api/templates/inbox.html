@@ -7,10 +7,24 @@
 
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=12" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=13" />
 
   <style>
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+    @media (min-width: 1100px) {
+      main { max-width: 1360px !important; padding: 1.5rem 2rem 4rem !important; }
+      .inbox-page-inner { display: grid; grid-template-columns: 400px 1fr; gap: 0; align-items: start; border: 1px solid var(--border); border-radius: .85rem; overflow: hidden; background: var(--surface); min-height: 70vh; }
+      .inbox-list-panel { border-right: 1px solid var(--border); overflow-y: auto; max-height: 84vh; }
+      .inbox-list-panel .inbox-list { gap: 0; }
+      .inbox-list-panel .inbox-card { border-radius: 0; border: none; border-bottom: 1px solid var(--border-subtle); padding: .85rem 1.1rem; }
+      .inbox-list-panel .inbox-card:hover { border-bottom-color: var(--border-subtle); background: var(--bg); }
+      .inbox-list-panel .inbox-card.active-detail { background: var(--accent-soft) !important; border-left: 3px solid var(--accent) !important; }
+      .inbox-detail-frame { border: none; width: 100%; min-height: 84vh; background: var(--bg); display: block; }
+      .inbox-detail-placeholder { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: .5rem; color: var(--text-faint); font-size: .9rem; min-height: 60vh; }
+    }
+    @media (max-width: 1099px) {
+      .inbox-detail-frame, .inbox-detail-placeholder { display: none !important; }
+    }
 
     /* ── Page header ── */
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
@@ -114,57 +128,100 @@
       {% endif %}
     </div>
 
-    {% if not items %}
-      <div class="empty-state">
-        <div class="icon">📭</div>
-        <strong>{% if show_archived %}Nothing archived yet{% else %}Inbox zero{% endif %}</strong>
-        <p>{% if show_archived %}Archived notes will appear here.{% else %}New meeting notes will appear here once imported.{% endif %}</p>
-      </div>
-    {% else %}
-      <div class="inbox-list">
-        {% for item in items %}
-          <a class="inbox-card status-{{ item.status }}" href="{{ base }}/inbox/{{ item.id }}">
-            <div class="inbox-card-body">
-              <div class="inbox-card-title">{{ item.title }}</div>
-              <div class="inbox-card-meta">
-                <span class="badge badge-{{ item.source_type | default('whisper') }}">🎙 {{ item.source_type | default('meeting') }}</span>
-                <span class="badge badge-{{ item.status }}">
-                  {% if item.status == 'new' %}● New
-                  {% elif item.status == 'reviewing' %}◎ Reviewing
-                  {% elif item.status == 'promoted' %}✓ Task created
-                  {% else %}{{ item.status }}{% endif %}
+    <div class="inbox-page-inner">
+      <!-- ── List panel (left) ── -->
+      <div class="inbox-list-panel">
+        {% if not items %}
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <strong>{% if show_archived %}Nothing archived yet{% else %}Inbox zero{% endif %}</strong>
+            <p>{% if show_archived %}Archived notes will appear here.{% else %}New meeting notes will appear here once imported.{% endif %}</p>
+          </div>
+        {% else %}
+          <div class="inbox-list">
+            {% for item in items %}
+              <a class="inbox-card status-{{ item.status }}" href="{{ base }}/inbox/{{ item.id }}"
+                 data-detail-url="{{ base }}/inbox/{{ item.id }}">
+                <div class="inbox-card-body">
+                  <div class="inbox-card-title">{{ item.title }}</div>
+                  <div class="inbox-card-meta">
+                    <span class="badge badge-{{ item.source_type | default('whisper') }}">🎙 {{ item.source_type | default('meeting') }}</span>
+                    <span class="badge badge-{{ item.status }}">
+                      {% if item.status == 'new' %}● New
+                      {% elif item.status == 'reviewing' %}◎ Reviewing
+                      {% elif item.status == 'promoted' %}✓ Task created
+                      {% else %}{{ item.status }}{% endif %}
+                    </span>
+                    {% if item.suggested_actions_json %}
+                      <span class="action-pill">{{ item.suggested_actions_json.count('"') // 2 }} suggestions</span>
+                    {% endif %}
+                    <span>{{ item.created_at.strftime('%b %d, %I:%M %p') }}</span>
+                  </div>
+                  {% if item.summary %}
+                    <div class="inbox-card-summary">{{ item.summary }}</div>
+                  {% elif item.raw_content %}
+                    <div class="inbox-card-summary">{{ item.raw_content[:200] }}</div>
+                  {% endif %}
+                </div>
+                <span class="btn-review">
+                  {% if item.status == 'promoted' %}View →{% else %}Review →{% endif %}
                 </span>
-                {% if item.suggested_actions_json %}
-                  {% set action_count = item.suggested_actions_json | length %}
-                  <span class="action-pill">{{ item.suggested_actions_json.count('"') // 2 }} suggestions</span>
-                {% endif %}
-                <span>{{ item.created_at.strftime('%b %d, %I:%M %p') }}</span>
-              </div>
-              {% if item.summary %}
-                <div class="inbox-card-summary">{{ item.summary }}</div>
-              {% elif item.raw_content %}
-                <div class="inbox-card-summary">{{ item.raw_content[:200] }}</div>
-              {% endif %}
+              </a>
+            {% endfor %}
+          </div>
+
+          {% if not show_archived and archived_count %}
+            <div class="archived-link" style="padding:1rem;border-top:1px solid var(--border-subtle);">
+              <a href="{{ base }}/inbox/archived">View {{ archived_count }} archived note{{ 's' if archived_count != 1 }}</a>
             </div>
-            <span class="btn-review">
-              {% if item.status == 'promoted' %}View →{% else %}Review →{% endif %}
-            </span>
-          </a>
-        {% endfor %}
-      </div>
-    {% endif %}
+          {% endif %}
+          <div class="archived-link" style="padding:.5rem 1rem 1.25rem;font-size:.8rem;">
+            <a href="{{ base }}/integrations/notion">⚙ Configure Notion import</a>
+          </div>
+        {% endif %}
+      </div><!-- /inbox-list-panel -->
 
-    {% if not show_archived and archived_count %}
-      <div class="archived-link">
-        <a href="{{ base }}/inbox/archived">View {{ archived_count }} archived note{{ 's' if archived_count != 1 }}</a>
+      <!-- ── Detail panel (right, desktop only) ── -->
+      <div class="inbox-detail-placeholder" id="inbox-detail-placeholder">
+        <div style="font-size:2rem;opacity:.35;">📄</div>
+        <p>Select a note to review it here</p>
       </div>
-    {% endif %}
+      <iframe class="inbox-detail-frame" id="inbox-detail-frame" title="Note detail"
+              style="display:none;" src="about:blank"></iframe>
 
-    <div class="archived-link" style="margin-top:1.5rem;">
-      <a href="{{ base }}/integrations/notion">⚙ Configure Notion import</a>
-    </div>
+    </div><!-- /inbox-page-inner -->
   </main>
 
-  <script src="{{ base }}/static/app.js?v=12"></script>
+  <script src="{{ base }}/static/app.js?v=13"></script>
+  <script>
+  (function() {
+    const isWide = () => window.innerWidth >= 1100;
+    const frame = document.getElementById('inbox-detail-frame');
+    const placeholder = document.getElementById('inbox-detail-placeholder');
+
+    document.querySelectorAll('.inbox-card[data-detail-url]').forEach(card => {
+      card.addEventListener('click', e => {
+        if (!isWide()) return; // mobile: let normal nav happen
+        e.preventDefault();
+        document.querySelectorAll('.inbox-card').forEach(c => c.classList.remove('active-detail'));
+        card.classList.add('active-detail');
+        placeholder.style.display = 'none';
+        frame.style.display = 'block';
+        frame.src = card.dataset.detailUrl;
+      });
+    });
+
+    // When a form inside the iframe submits (e.g. "create task"), reload the list
+    frame.addEventListener('load', () => {
+      try {
+        const frameUrl = frame.contentWindow.location.href;
+        // If the iframe navigated to the inbox list itself (redirect after action), reload outer
+        if (frameUrl.includes('/inbox') && !frameUrl.includes('/inbox/')) {
+          window.location.reload();
+        }
+      } catch(err) {}
+    });
+  })();
+  </script>
 </body>
 </html>
