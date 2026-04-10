@@ -8,7 +8,7 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=13" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=14" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -25,7 +25,7 @@
     .page-header-left .date { color: var(--text-muted); margin-top: .15rem; font-size: .84rem; }
     .header-stats { font-size: .84rem; font-weight: 600; color: var(--text-muted); }
     .hs-sep { color: var(--border); margin: 0 .15rem; }
-    .hs-warn { color: var(--warning-text); }
+    .hs-warn { color: var(--text-muted); font-weight: 700; }
     .btn-start { background: var(--accent); color: #fff; border: none; border-radius: .45rem; padding: .45rem 1rem; font-size: .84rem; font-weight: 700; cursor: pointer; transition: opacity .15s; white-space: nowrap; text-decoration: none; font-family: inherit; }
     html.dark .btn-start { color: #1A1A1A; }
     .btn-start:hover { background: var(--accent-hover); opacity: 1; }
@@ -44,7 +44,7 @@
     .cop-row { display: flex; align-items: baseline; gap: .4rem; padding: .25rem 0; font-size: .8rem; flex-wrap: wrap; }
     .cop-tag { display: inline-block; padding: .08rem .4rem; border-radius: .25rem; font-size: .82rem; font-weight: 600; white-space: nowrap; }
     .cop-tag-topic { background: var(--accent-soft); color: var(--accent-text); }
-    .cop-tag-type { background: var(--warning-soft); color: var(--warning-text); }
+    .cop-tag-type { background: var(--surface-alt, var(--surface)); color: var(--text-muted); border: 1px solid var(--border); }
     .cop-tag-market { background: var(--success-soft); color: var(--success); }
     .cop-empty { font-size: .8rem; color: var(--text-faint); font-style: italic; }
 
@@ -158,7 +158,7 @@
     @media (max-width: 600px) { .time-grid { grid-template-columns: 1fr; } }
     .time-col { border-radius: .65rem; overflow: hidden; }
     .time-col-head { padding: .55rem .85rem; font-size:.82rem; font-weight: 700; display: flex; align-items: center; gap: .4rem; }
-    .time-col-head.morning { background: var(--warning-soft); color: var(--warning-text); border: 1px solid var(--warning-border); border-bottom: none; }
+    .time-col-head.morning { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent); border-bottom: none; }
     .time-col-head.afternoon { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-bottom: none; }
     html.dark .time-col-head.afternoon { background: #0F2240; color: #93C5FD; border-color: #1E40AF; }
     .time-col-head.evening { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; border-bottom: none; }
@@ -172,13 +172,13 @@
     .suggestion-list { display: flex; flex-direction: column; gap: .4rem; }
     .suggestion-row { background: var(--surface); border: 1px solid var(--border); border-radius: .55rem; padding: .6rem .85rem; display: flex; align-items: flex-start; gap: .65rem; }
     .suggestion-row.overdue { border-left: 3px solid var(--danger); }
-    .suggestion-row.due-today { border-left: 3px solid var(--warning); }
+    .suggestion-row.due-today { border-left: 3px solid var(--accent); }
     .suggestion-body { flex: 1; min-width: 0; }
     .suggestion-title { font-weight: 600; font-size: .86rem; line-height: 1.4; margin-bottom: .2rem; }
     .suggestion-meta { display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; }
     .suggestion-actions { display: flex; gap: .35rem; flex-shrink: 0; flex-wrap: wrap; }
     .tag-overdue { background: var(--danger-light); color: var(--danger); font-size: .82rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px; }
-    .tag-today { background: var(--warning-soft); color: var(--warning-text); font-size: .82rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px; }
+    .tag-today { background: var(--accent-soft); color: var(--accent-text); font-size: .82rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px; }
     .tag-high { background: var(--accent-soft); color: var(--accent-text); font-size: .82rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px; }
 
     .btn-add-today { background: var(--accent-soft); color: var(--accent-text); border: none; border-radius: .4rem; padding: .3rem .75rem; font-size:.82rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .1s; font-family: inherit; }
@@ -195,10 +195,10 @@
     .wins-head .wcount.nice-count { background: #f3e8ff; color: #7c3aed; }
     html.dark .wins-head .wcount.nice-count { background: #2D1A5E; color: #C4B5FD; }
 
-    .win-row { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: .6rem; padding: .6rem .85rem; display: flex; align-items: flex-start; gap: .65rem; transition: box-shadow .15s; }
-    .win-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-    .nice-row { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid #a78bfa; border-radius: .6rem; padding: .6rem .85rem; display: flex; align-items: flex-start; gap: .65rem; transition: box-shadow .15s; }
-    .nice-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .win-row { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: .5rem; padding: .4rem .75rem; display: flex; align-items: center; gap: .5rem; transition: box-shadow .15s; }
+    .win-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .nice-row { background: var(--surface); border: 1px solid var(--border-subtle); border-left: 3px solid var(--border); border-radius: .5rem; padding: .4rem .75rem; display: flex; align-items: center; gap: .5rem; transition: box-shadow .15s; }
+    .nice-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
     .win-row.is-done { opacity: .6; }
     .win-row.is-done .win-title { text-decoration: line-through; color: var(--text-muted); }
     .win-body { flex: 1; min-width: 0; }
