@@ -22,7 +22,7 @@ BASE = "/task-manager"
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 STATUSES = ["backlog", "todo", "doing", "waiting", "done", "dropped"]
-STATUS_LABELS = {"backlog": "Backlog", "todo": "To Do", "doing": "Doing", "waiting": "Waiting", "done": "Done"}
+STATUS_LABELS = {"backlog": "Backlog", "todo": "To Do", "doing": "Doing", "waiting": "Waiting", "done": "Done", "dropped": "Dropped"}
 
 MUST_DO_CAP = 6
 TODAY_VISIBLE_CAP = 4  # max Later Today tasks shown before "+N more"

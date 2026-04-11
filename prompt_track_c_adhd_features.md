@@ -1,0 +1,331 @@
+# Track C — Mejoras ADHD de Alto Impacto
+
+## Contexto general
+
+MyDay es una app de productividad personal para un usuario con ADHD/ENFP. El flujo diario tiene tres anclas:
+
+1. **Morning Check-In** (`/task-manager/morning-checkin`) — ya implementado ✅
+2. **Focus Mode** (`/task-manager/focus`) — existe pero necesita mejoras significativas
+3. **Evening Reset** (`/task-manager/close-day`) — existe básico pero necesita rediseño completo
+
+Este prompt cubre 4 áreas: Evening Reset, Focus Timer, keyboard-first flow, y weekly review dashboard.
+
+---
+
+## Reglas de diseño (NO NEGOCIABLES)
+
+Estas reglas aplican a TODOS los cambios de este prompt:
+
+1. **Usar los design tokens existentes** — Todos los colores deben venir de `static/tokens.css` (variables `--md-*`). No hardcodear colores hex. Primary = indigo, success = green. Solo 2 colores de acción.
+2. **Font: Lexend** — Ya importada en `style.css`. Usar `var(--md-font-family)` para todo texto.
+3. **WCAG AA contraste** — Body text 4.5:1, large text 3:1. Ya verificado en tokens actuales, no degradar.
+4. **Mobile-first responsive** — Single column en mobile, expandir en 900px+ y 1200px+. Seguir el breakpoint pattern de `style.css`.
+5. **No shame language** — Nunca usar "failed", "missed", "behind". Usar "carried forward", "rolled to tomorrow", "showing up counts".
+6. **HTMX/fetch para interacciones** — No full page reloads. Usar `fetch()` con JSON responses como el pattern existente en `app.js`.
+7. **Bump cache version** — Cada template modificado debe tener `?v=17` en sus `<link>` y `<script>` tags (actualmente en v=16).
+8. **Dark mode** — Todos los estilos deben respetar el theme switcher existente. Usar variables `--md-*` que ya tienen light/dark variants.
+
+---
+
+## 1. Evening Reset — Rediseño completo
+
+### Ruta: `GET /task-manager/close-day` (ya existe, rediseñar)
+
+### Qué existe hoy
+La ruta `close_day_get` en `main.py` (línea ~534) ya:
+- Lee tasks con `today_flag == True` separados en wins/nice + done/incomplete
+- Calcula `score_pct` (wins done / total wins)
+- Lee `daily_log.day_closed`
+
+El template `close_day.html` (~333 líneas) muestra esta info básica. **Rediseñar completamente.**
+
+### Diseño nuevo: 4 secciones secuenciales
+
+La Evening Reset debe sentirse como un cierre suave del día, no como un reporte. El tono es reflexivo y gentil.
+
+#### Sección 1: "How'd it go?" — Resumen visual del día
+- Mostrar un mini-dashboard con 3 métricas grandes:
+  - **Completed today**: número de tasks marcados done hoy (contar `completed_at` = today)
+  - **Wins landed**: cuántos `today_category == "win"` están done vs total planned
+  - **Streak**: días consecutivos que el usuario hizo check-in (leer de `daily_logs` tabla, contar filas consecutivas con `started == True` hacia atrás desde hoy)
+- Si completó al menos 1 win: mostrar mensaje positivo tipo "You showed up and delivered. That's what counts."
+- Si completó 0 wins pero hizo check-in: "You showed up today. That alone is progress."
+- **No mostrar porcentajes que se sientan como calificación.** El `score_pct` actual es problemático — reemplazar con lenguaje cualitativo.
+
+#### Sección 2: "Carry forward" — Roll incomplete tasks
+- Listar tasks de hoy que NO están done, agrupados:
+  - `today_category == "win"` primero (estos importaban)
+  - `today_category == "nice"` después
+- Para cada task, dar 3 opciones con botones inline (sin redirect):
+  - **→ Tomorrow** (default): Mantener `is_today = True` pero resetear `focus_state` a null. El task aparecerá en sugerencias mañana.
+  - **→ Later**: Quitar `is_today`, `today_flag`, `today_category`. El task vuelve al backlog.
+  - **✕ Drop**: Marcar `status = "dropped"` (agregar este status si no existe en el modelo). No eliminar — el task queda para referencia.
+- Implementar con `fetch()` PATCH individual por task. Actualizar el DOM inline (quitar el task de la lista con fade out) sin reload.
+
+#### Sección 3: "Inbox today" — Resumen de lo que llegó
+- Mostrar stats de InboxItems creados hoy:
+  - New (sin revisar)
+  - Promoted (convertidos a task/project/note)
+  - Archived
+- Si hay items sin revisar: mostrar link suave "You have X items to review when you're ready" con link a `/task-manager/inbox`
+- Si no hay inbox items hoy: no mostrar esta sección.
+
+#### Sección 4: "Close the day" — Botón final
+- Un botón grande: "Close Today ✓"
+- Al hacer click: `POST /task-manager/close-day` (ya existe). Debe:
+  - Marcar `daily_log.day_closed = True`
+  - Resetear `is_today = False` y `today_flag = False` para TODOS los tasks que están done (los incomplete ya se manejaron en sección 2)
+  - Resetear `focus_state = null` para todos los tasks
+  - Mostrar confirmación inline: "Day closed. See you tomorrow. 🌙"
+- Si el día ya fue cerrado (`already_closed == True`): mostrar estado cerrado con mensaje "Today is already wrapped up" y opción de reabrir.
+
+### Backend changes necesarios
+- Agregar status `"dropped"` como valor válido en el modelo Task si no existe
+- Agregar endpoint `PATCH /task-manager/tasks/{id}/evening-action` que acepte `action: "tomorrow" | "later" | "drop"` y haga la lógica correspondiente
+- Modificar `close_day_post` para incluir el reset completo de flags
+- Calcular streak real: query `daily_logs` tabla ordenada por `date DESC` donde `started == True`, contar consecutivos
+
+---
+
+## 2. Focus Timer — Upgrade real
+
+### Ruta: `GET /task-manager/focus` (ya existe, mejorar)
+
+### Qué existe hoy
+- La ruta `focus_mode` (línea ~1358) busca el task con `focus_state == "now"`
+- `focus.html` (~553 líneas) tiene alguna UI de timer básica
+- `POST /focus/complete` registra la sesión pero NO marca el task como done
+- El Kanban React ya tiene brown noise (`useBrownNoise` hook)
+
+### Diseño nuevo: Focus mode inmersivo
+
+#### Timer visual circular
+- SVG circular countdown timer (radio ~120px) con:
+  - Stroke que disminuye progresivamente (indigo `var(--md-primary)` sobre `var(--md-surface-alt)`)
+  - Minutos:segundos grandes en el centro (Lexend, font-weight 700, ~2.5rem)
+  - Debajo del círculo: nombre del task actual (truncar a 2 líneas max)
+- Duración default: 20 minutos
+- Botones de preset: 15 / 20 / 30 / 45 min (pill buttons, el seleccionado con fondo `var(--md-primary)`)
+- Input numérico custom también disponible (min 5, max 90)
+
+#### Controles del timer
+- **Start** → cambia a **Pause** (toggle). Usar `setInterval` con 1000ms.
+- **Reset** — vuelve al tiempo original
+- **+5 min** — agrega 5 minutos al timer actual (ADHD: a veces necesitas "un poquito más")
+- Al llegar a 0:00:
+  - Mostrar "Session complete!" con animación suave (fade in, no bounce exagerado)
+  - Sonar un tono suave (Web Audio API, 440Hz sine wave, 200ms, volume 0.3) — NO usar archivo de audio externo
+  - Ofrecer 2 botones: "✓ Mark as done" y "→ Another round"
+  - "Mark as done": `POST /task-manager/tasks/{id}/status` con status=done + `POST /focus/complete`
+  - "Another round": resetear timer al mismo duration y empezar de nuevo
+
+#### Brown noise toggle
+- Toggle switch en la esquina superior derecha del timer: "🔊 Brown Noise"
+- Implementar generación de brown noise con Web Audio API directamente (no depender del hook React del Kanban):
+  ```
+  AudioContext → createBufferSource con ruido browniano generado proceduralmente
+  ```
+- El brown noise se activa/desactiva independiente del timer
+- Guardar preferencia en localStorage (`myday_brown_noise_on`)
+- Volume slider pequeño debajo del toggle (range input, 0-100)
+
+#### Distraction-free mode
+- Al iniciar el timer, la página entra en modo enfocado:
+  - Ocultar navbar completamente (display: none con transición)
+  - Fondo cambia a color más oscuro/calmado: `var(--md-bg)` → un tono ligeramente más oscuro
+  - Solo visible: timer + nombre del task + controles + brown noise toggle
+  - Subtareas del task actual visibles debajo (si las tiene) como checklist simple
+- Botón "Exit Focus" siempre visible (esquina superior izquierda, sutil) para salir sin completar
+- La tecla `Escape` también sale del modo focus
+
+#### Backend changes
+- Modificar `POST /focus/complete` para opcionalmente marcar el task como done:
+  - Agregar parámetro `mark_done: bool = Form(default=False)`
+  - Si `mark_done`, actualizar `task.status = "done"` y `task.completed_at = datetime.utcnow()`
+- Guardar sesiones de focus para el weekly review:
+  - Crear modelo `FocusSession` (o agregar a DailyLog):
+    ```
+    id, task_id, started_at, duration_minutes, completed (bool), date
+    ```
+  - `POST /focus/complete` crea una FocusSession row
+  - Esto alimenta el weekly review dashboard después
+
+---
+
+## 3. Keyboard-first flow — Expandir atajos
+
+### Qué existe hoy
+En `app.js` (línea ~394) hay un listener global con:
+- `F` → Focus mode
+- `D` → Done (NOW task)
+- `N` → Quick add modal
+- `?` → Show shortcuts help
+
+### Nuevos atajos a agregar
+
+Agregar al mismo listener existente en `app.js`:
+
+| Tecla | Acción | Contexto |
+|-------|--------|----------|
+| `J` | Mover selección abajo en lista de tasks | My Day, Tasks page |
+| `K` | Mover selección arriba en lista de tasks | My Day, Tasks page |
+| `Enter` | Abrir/expandir task seleccionado | My Day, Tasks page |
+| `Space` | Toggle expand/collapse del task seleccionado | My Day |
+| `1` | Mover task seleccionado a NOW | My Day |
+| `2` | Mover task seleccionado a NEXT | My Day |
+| `3` | Mover task seleccionado a LATER | My Day |
+| `E` | Evening Reset (ir a /close-day) | Cualquier página |
+| `M` | Morning Check-In (ir a /morning-checkin) | Cualquier página |
+| `Escape` | Cerrar modal / salir de focus / deseleccionar | Global |
+
+### Implementación J/K navigation
+- Mantener un índice de "task seleccionado" en memoria (variable global `selectedTaskIdx`)
+- Los tasks navigables son todos los elementos con clase `.task-card` en el DOM
+- El task seleccionado recibe una clase `.kbd-selected` con:
+  ```css
+  .kbd-selected {
+    outline: 2px solid var(--md-primary);
+    outline-offset: 2px;
+    border-radius: var(--md-radius-md);
+  }
+  ```
+- Al cambiar selección, hacer scroll suave (`scrollIntoView({ behavior: 'smooth', block: 'nearest' })`)
+- `1/2/3` hacen `fetch()` POST a `/tasks/{id}/focus-state` con el focus_state correspondiente
+- Reset `selectedTaskIdx` a -1 cuando se navega a otra página
+
+### Actualizar el help overlay
+- Expandir el HTML del `?` shortcut overlay para incluir todos los nuevos atajos
+- Organizar en secciones: "Navigation", "Actions", "Pages"
+
+---
+
+## 4. Weekly Review Dashboard — Nueva página
+
+### Ruta: `GET /task-manager/weekly-review` (nueva)
+
+### Propósito
+Vista de los últimos 7 días que refuerza "showed up" sin shame. El tono es: "Here's what happened this week" — informativo, no evaluativo.
+
+### Layout
+
+#### Header
+- Título: "Your Week" (no "Weekly Performance" ni "Weekly Report")
+- Subtitle: rango de fechas (ej: "Apr 4 – Apr 10, 2026")
+
+#### Row 1: Streak + consistency
+- **Current streak**: número grande (Lexend, 3rem, font-weight 800, color `var(--md-primary)`)
+  - Debajo: "days in a row" en texto pequeño muted
+- **This week**: X de 7 días con check-in (ej: "5 of 7 days")
+  - Representar como 7 dots/circles en fila:
+    - Filled con `var(--md-primary)` = día con check-in
+    - Border only con `var(--md-border)` = día sin check-in
+    - Hoy = ligeramente más grande o con ring
+  - Debajo de cada dot: initial del día (M T W T F S S)
+- Mensaje contextual:
+  - 7/7: "Perfect week. You showed up every day."
+  - 5-6/7: "Strong consistency. Keep the rhythm."
+  - 3-4/7: "You showed up more days than not. That's real."
+  - 1-2/7: "Every day you show up is a win."
+  - 0/7: "Fresh start this week." (no shame)
+
+#### Row 2: Daily breakdown (chart simple)
+- Gráfico de barras horizontales stacked, 1 barra por día (7 barras):
+  - Segmento verde (`var(--md-success)`): tasks completed
+  - Segmento indigo (`var(--md-primary)` con opacity 0.3): tasks planned but not completed
+  - Label izquierdo: día (Mon, Tue, etc.)
+  - Label derecho: "3 of 5" (completed of total planned)
+- Implementar con CSS puro (divs con width porcentual) — NO necesita librería de charts.
+- Si un día tiene 0 planned: mostrar barra gris mínima con "—"
+
+#### Row 3: Focus time (si hay FocusSession data)
+- Total minutos de focus esta semana
+- Promedio por día activo
+- Mostrar solo si hay al menos 1 FocusSession en la semana; si no, no mostrar esta row
+
+#### Row 4: Top wins
+- Listar hasta 5 tasks completados esta semana que tenían `today_category == "win"`
+- Si no hay wins: "No wins tagged this week — that's okay. Showing up is the real win."
+
+### Backend
+- Nuevo endpoint `GET /task-manager/weekly-review`
+- Queries necesarios:
+  - `daily_logs` de los últimos 7 días (streak, check-in days)
+  - Tasks con `completed_at` en los últimos 7 días (por día)
+  - Tasks con `today_flag == True` por día (planned — necesita historical tracking, ver nota)
+  - `FocusSession` rows de los últimos 7 días (si el modelo existe)
+  - Tasks con `today_category == "win"` y `status == "done"` y `completed_at` esta semana
+
+### Nota sobre historical "planned" count
+El sistema actual no guarda cuántos tasks estaban "planned" cada día (is_today es un flag mutable). Para V1 del weekly review:
+- Usar `daily_logs.has_completed_task` como proxy de "active day"
+- Para "planned", contar tasks que tienen `today_flag == True` OR `completed_at` en ese día como aproximación
+- En el futuro se puede agregar un snapshot diario, pero no es necesario ahora
+
+### Agregar al nav
+- Agregar "Review" al navbar entre "Notes" y "Integrations" en TODOS los templates
+- Icono sugerido: ninguno (mantener texto clean como el resto del nav)
+
+---
+
+## 5. Agregar al Day Flow Bar
+
+El flow bar en `app.js` (línea ~460+) muestra los pasos del día: Check-In → My Day → Focus → Close Day.
+
+- Mantener los 4 pasos existentes
+- El step "Close Day" ahora debe linkear al Evening Reset rediseñado
+- Agregar visual indicator si el día ya fue cerrado (checkmark en el step)
+
+---
+
+## Archivos que se modifican
+
+### Modificar:
+- `main.py` — Nuevas rutas + modificar close_day + focus_complete
+- `models.py` — Agregar FocusSession model, agregar "dropped" status
+- `static/app.js` — Keyboard shortcuts + J/K navigation
+- `static/style.css` — Nuevos estilos para timer, weekly review, keyboard selection (usar variables `--md-*`)
+- `templates/close_day.html` — Rediseño completo Evening Reset
+- `templates/focus.html` — Rediseño completo Focus Timer
+- TODOS los templates — Agregar "Review" al nav, bump a `?v=17`
+
+### Crear:
+- `templates/weekly_review.html` — Nueva página
+- Migration en `database.py` o startup: crear tabla `focus_sessions`
+
+### NO modificar:
+- `static/tokens.css` — Los tokens están correctos, solo consumirlos
+- `artifacts/myday-kanban/` — No tocar el React Kanban en este track
+- `shared/tokens.css` — No modificar
+
+---
+
+## Orden de implementación sugerido
+
+1. **FocusSession model + migration** (prerequisito para focus timer y weekly review)
+2. **Focus Timer upgrade** (alto impacto, el usuario lo necesita para trabajar)
+3. **Evening Reset rediseño** (cierra el loop diario)
+4. **Keyboard shortcuts** (incremental, bajo riesgo)
+5. **Weekly Review dashboard** (necesita data de los otros features)
+6. **Nav + flow bar updates** (cosmético, al final)
+
+---
+
+## Testing checklist
+
+Después de implementar, verificar:
+
+- [ ] Focus timer cuenta regresivo funciona correctamente (no se desincroniza)
+- [ ] Brown noise se genera y se detiene sin memory leaks (cleanup AudioContext)
+- [ ] Timer completion tone suena una sola vez
+- [ ] "Mark as done" desde focus realmente marca el task como done
+- [ ] Evening Reset muestra tasks incompletos correctamente
+- [ ] "→ Tomorrow" / "→ Later" / "✕ Drop" actualizan sin reload
+- [ ] "Close Today" resetea todos los flags
+- [ ] Weekly review muestra datos de los últimos 7 días
+- [ ] Streak calculation es correcta (días consecutivos, no total)
+- [ ] J/K navigation funciona en My Day sin interferir con inputs
+- [ ] Todos los nuevos shortcuts aparecen en el `?` help overlay
+- [ ] Dark mode se ve correcto en todas las páginas nuevas/modificadas
+- [ ] Mobile responsive: timer se ve bien en pantallas pequeñas
+- [ ] Todos los templates tienen `?v=17` en CSS/JS links
+- [ ] "Review" aparece en el nav de TODAS las páginas
