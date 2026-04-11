@@ -21,7 +21,7 @@ from database import engine, get_db, Base, SessionLocal
 BASE = "/task-manager"
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
-STATUSES = ["backlog", "todo", "doing", "waiting", "done"]
+STATUSES = ["backlog", "todo", "doing", "waiting", "done", "dropped"]
 STATUS_LABELS = {"backlog": "Backlog", "todo": "To Do", "doing": "Doing", "waiting": "Waiting", "done": "Done"}
 
 MUST_DO_CAP = 6
@@ -112,6 +112,26 @@ def _bridge_available(db: Session) -> bool:
         return True
     except Exception:
         return False
+
+
+# ─── Streak helper ────────────────────────────────────────────────────────────
+
+def calc_streak(db: Session) -> int:
+    """Count consecutive days (ending today) where daily_log.started == True."""
+    today = date.today()
+    streak = 0
+    check_date = today
+    for _ in range(365):  # cap at 1 year to prevent infinite loop
+        log = db.query(models.DailyLog).filter(
+            models.DailyLog.date == check_date,
+            models.DailyLog.started == True,
+        ).first()
+        if log:
+            streak += 1
+            check_date -= timedelta(days=1)
+        else:
+            break
+    return streak
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -533,7 +553,7 @@ async def start_today(db: Session = Depends(get_db)):
 @app.get(f"{BASE}/close-day", response_class=HTMLResponse)
 async def close_day_get(request: Request, db: Session = Depends(get_db)):
     today = date.today()
-    now_hour = datetime.now().hour  # 0–23 local server hour
+    now_hour = datetime.now().hour
 
     # All today_flag tasks
     flagged_all = (
@@ -543,24 +563,74 @@ async def close_day_get(request: Request, db: Session = Depends(get_db)):
         .all()
     )
     wins_done       = [t for t in flagged_all if t.today_category == "win"  and t.status == "done"]
-    wins_incomplete = [t for t in flagged_all if t.today_category == "win"  and t.status != "done"]
+    wins_incomplete = [t for t in flagged_all if t.today_category == "win"  and t.status not in ("done", "dropped")]
     nice_done       = [t for t in flagged_all if t.today_category == "nice" and t.status == "done"]
-    nice_incomplete = [t for t in flagged_all if t.today_category == "nice" and t.status != "done"]
+    nice_incomplete = [t for t in flagged_all if t.today_category == "nice" and t.status not in ("done", "dropped")]
 
     daily_log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
     already_closed = daily_log.day_closed if daily_log else False
 
-    total_wins    = len(wins_done) + len(wins_incomplete)
-    score_pct     = int(len(wins_done) / total_wins * 100) if total_wins else 0
+    # Completed today (any task with completed_at = today)
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end   = datetime.combine(today + timedelta(days=1), datetime.min.time())
+    completed_today_count = (
+        db.query(models.Task)
+        .filter(models.Task.completed_at >= today_start, models.Task.completed_at < today_end)
+        .count()
+    )
+
+    # Wins stats
+    wins_total = len(wins_done) + len(wins_incomplete)
+    wins_done_count = len(wins_done)
+
+    # Streak
+    streak = calc_streak(db)
+
+    # Contextual message (no shame)
+    if wins_done_count >= 1:
+        if wins_done_count == wins_total and wins_total > 0:
+            day_msg = "You delivered on every win you planned. That's real."
+        else:
+            day_msg = "You showed up and delivered. That's what counts."
+    elif daily_log and daily_log.started:
+        day_msg = "You showed up today. That alone is progress."
+    else:
+        day_msg = "Tomorrow is a fresh start. Rest up."
+
+    # Inbox stats for today
+    inbox_today_new = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.created_at >= today_start, models.InboxItem.status == "new")
+        .count()
+    )
+    inbox_today_promoted = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.created_at >= today_start, models.InboxItem.status == "promoted")
+        .count()
+    )
+    inbox_today_archived = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.created_at >= today_start, models.InboxItem.status == "archived")
+        .count()
+    )
+    inbox_today_total = inbox_today_new + inbox_today_promoted + inbox_today_archived
 
     return templates.TemplateResponse(request, "close_day.html", {
-        "wins_done":       wins_done,
-        "wins_incomplete": wins_incomplete,
-        "nice_done":       nice_done,
-        "nice_incomplete": nice_incomplete,
-        "already_closed":  already_closed,
-        "now_hour":        now_hour,
-        "score_pct":       score_pct,
+        "wins_done":             wins_done,
+        "wins_incomplete":       wins_incomplete,
+        "nice_done":             nice_done,
+        "nice_incomplete":       nice_incomplete,
+        "already_closed":        already_closed,
+        "now_hour":              now_hour,
+        "completed_today_count": completed_today_count,
+        "wins_done_count":       wins_done_count,
+        "wins_total":            wins_total,
+        "streak":                streak,
+        "day_msg":               day_msg,
+        "inbox_today_new":       inbox_today_new,
+        "inbox_today_promoted":  inbox_today_promoted,
+        "inbox_today_archived":  inbox_today_archived,
+        "inbox_today_total":     inbox_today_total,
         "base": BASE,
     })
 
@@ -568,29 +638,18 @@ async def close_day_get(request: Request, db: Session = Depends(get_db)):
 @app.post(f"{BASE}/close-day")
 async def close_day_post(request: Request, db: Session = Depends(get_db)):
     today = date.today()
-    form  = await request.form()
 
-    # Process each incomplete task's action choice
+    # Clear flags on all completed today_flag tasks; reset focus_state
     flagged_all = db.query(models.Task).filter(models.Task.today_flag == True).all()
     for task in flagged_all:
-        if task.status == "done":
-            # Completed tasks: just clear flags
-            task.today_flag     = False
-            task.today_category = None
-            continue
+        task.focus_state    = None  # always clear focus state
+        task.today_flag     = False
+        task.today_category = None
+        if task.status not in ("done", "dropped"):
+            # Incomplete tasks not already handled by evening-action → roll to tomorrow
+            task.is_today = True
 
-        action = form.get(f"action_{task.id}", "rollover")
-        if action == "backlog":
-            task.status         = "todo"
-            task.is_today       = False
-            task.today_flag     = False
-            task.today_category = None
-        else:  # rollover
-            task.is_today       = True
-            task.today_flag     = False
-            task.today_category = None
-
-    # Mark the day as closed in the daily log
+    # Mark the day as closed
     log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
     if not log:
         log = models.DailyLog(date=today)
@@ -598,7 +657,53 @@ async def close_day_post(request: Request, db: Session = Depends(get_db)):
     log.day_closed = True
     db.commit()
 
+    is_fetch = request.headers.get("X-Requested-With") == "fetch"
+    if is_fetch:
+        return JSONResponse({"ok": True})
     return RedirectResponse(url=f"{BASE}/my-day", status_code=303)
+
+
+@app.post(f"{BASE}/close-day/reopen")
+async def close_day_reopen(request: Request, db: Session = Depends(get_db)):
+    today = date.today()
+    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    if log:
+        log.day_closed = False
+        db.commit()
+    is_fetch = request.headers.get("X-Requested-With") == "fetch"
+    if is_fetch:
+        return JSONResponse({"ok": True})
+    return RedirectResponse(url=f"{BASE}/close-day", status_code=303)
+
+
+@app.patch(f"{BASE}/tasks/{{task_id}}/evening-action")
+async def evening_action(task_id: int, request: Request, db: Session = Depends(get_db)):
+    """Per-task action during Evening Reset: tomorrow | later | drop."""
+    body = await request.json()
+    action = body.get("action", "tomorrow")
+
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if action == "tomorrow":
+        task.is_today       = True
+        task.today_flag     = False  # will be re-set in morning check-in
+        task.focus_state    = None
+    elif action == "later":
+        task.is_today       = False
+        task.today_flag     = False
+        task.today_category = None
+        task.focus_state    = None
+    elif action == "drop":
+        task.status         = "dropped"
+        task.today_flag     = False
+        task.today_category = None
+        task.focus_state    = None
+
+    task.updated_at = datetime.utcnow()
+    db.commit()
+    return JSONResponse({"ok": True, "action": action, "task_id": task_id})
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/set-today")
@@ -1371,17 +1476,129 @@ def focus_mode(request: Request, db: Session = Depends(get_db)):
 def focus_complete(
     task_id: int = Form(...),
     duration_minutes: int = Form(default=20),
+    mark_done: bool = Form(default=False),
     db: Session = Depends(get_db),
 ):
+    today = date.today()
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if task:
         task.updated_at = datetime.utcnow()
-        mark_today_started(db, date.today())
-        db.commit()
+        if mark_done and task.status != "done":
+            task.status = "done"
+            task.completed_at = datetime.utcnow()
+        mark_today_started(db, today)
+
+    # Record the focus session
+    session = models.FocusSession(
+        task_id=task_id,
+        started_at=datetime.utcnow() - timedelta(minutes=duration_minutes),
+        duration_minutes=max(1, duration_minutes),
+        completed=True,
+        date=today,
+    )
+    db.add(session)
+    db.commit()
+
     return JSONResponse({
         "status": "ok",
         "task_id": task_id,
         "duration": duration_minutes,
+        "marked_done": mark_done and task is not None,
+    })
+
+
+# ─── Weekly Review ───────────────────────────────────────────────────────────
+
+@app.get(f"{BASE}/weekly-review", response_class=HTMLResponse)
+def weekly_review(request: Request, db: Session = Depends(get_db)):
+    today = date.today()
+    week_start = today - timedelta(days=6)
+
+    # Build 7-day array (oldest → newest)
+    days = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        log = db.query(models.DailyLog).filter(models.DailyLog.date == d).first()
+        d_start = datetime.combine(d, datetime.min.time())
+        d_end   = datetime.combine(d + timedelta(days=1), datetime.min.time())
+        completed = (
+            db.query(models.Task)
+            .filter(models.Task.completed_at >= d_start, models.Task.completed_at < d_end)
+            .count()
+        )
+        # Planned proxy: today_flag tasks + completed tasks for that day
+        planned = completed  # V1 approximation (no historical snapshot)
+        if d == today:
+            planned = max(planned, db.query(models.Task).filter(models.Task.today_flag == True).count())
+        days.append({
+            "date":        d,
+            "day_name":    d.strftime("%a"),
+            "day_initial": d.strftime("%a")[0],
+            "has_checkin": log.started if log else False,
+            "is_today":    d == today,
+            "completed":   completed,
+            "planned":     max(planned, completed),
+        })
+
+    streak = calc_streak(db)
+    checkin_days = sum(1 for d in days if d["has_checkin"])
+
+    # Streak message
+    if checkin_days == 7:
+        streak_msg = "Perfect week. You showed up every day."
+    elif checkin_days >= 5:
+        streak_msg = "Strong consistency. Keep the rhythm."
+    elif checkin_days >= 3:
+        streak_msg = "You showed up more days than not. That's real."
+    elif checkin_days >= 1:
+        streak_msg = "Every day you show up is a win."
+    else:
+        streak_msg = "Fresh start this week."
+
+    # Focus sessions this week
+    total_focus_minutes = 0
+    avg_focus_minutes   = 0
+    has_focus_data      = False
+    try:
+        sessions = (
+            db.query(models.FocusSession)
+            .filter(models.FocusSession.date >= week_start, models.FocusSession.date <= today)
+            .all()
+        )
+        if sessions:
+            has_focus_data = True
+            total_focus_minutes = sum(s.duration_minutes for s in sessions)
+            active_days = len(set(s.date for s in sessions))
+            avg_focus_minutes = round(total_focus_minutes / active_days) if active_days else 0
+    except Exception:
+        pass
+
+    # Top wins this week (completed wins)
+    week_start_dt = datetime.combine(week_start, datetime.min.time())
+    top_wins = (
+        db.query(models.Task)
+        .filter(
+            models.Task.today_category == "win",
+            models.Task.status == "done",
+            models.Task.completed_at >= week_start_dt,
+        )
+        .order_by(models.Task.completed_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    return templates.TemplateResponse(request, "weekly_review.html", {
+        "base":                 BASE,
+        "today":                today,
+        "week_start":           week_start,
+        "days":                 days,
+        "streak":               streak,
+        "checkin_days":         checkin_days,
+        "streak_msg":           streak_msg,
+        "total_focus_minutes":  total_focus_minutes,
+        "avg_focus_minutes":    avg_focus_minutes,
+        "has_focus_data":       has_focus_data,
+        "top_wins":             top_wins,
     })
 
 

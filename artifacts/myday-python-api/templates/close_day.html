@@ -3,100 +3,96 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Close the Day — MyDay</title>
-
+  <title>Evening Reset — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=16" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-
   <style>
-    main { max-width: 720px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+    main { max-width: 680px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
 
-    /* ── Hero ── */
-    .hero { text-align: center; margin-bottom: 2rem; }
-    .hero-badge { display: inline-flex; align-items: center; gap: .4rem; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: .3rem .9rem; font-size:.82rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; }
-    .hero h1 { font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: .5rem; line-height: 1.2; }
-    .hero .sub { font-size: .95rem; color: var(--text-muted); line-height: 1.6; }
+    /* ── Page header ── */
+    .er-header { margin-bottom: 2rem; }
+    .er-badge { display: inline-flex; align-items: center; gap: .4rem; background: var(--md-primary-soft); border: 1px solid var(--md-primary-soft); border-radius: 999px; padding: .25rem .85rem; font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--md-primary-text); margin-bottom: .75rem; }
+    .er-header h1 { font-size: 1.7rem; font-weight: 800; color: var(--md-text); margin: 0 0 .35rem; }
+    .er-header .day-msg { font-size: .95rem; color: var(--md-text-muted); line-height: 1.6; }
 
-    /* ── Early warning ── */
-    .early-warn { background: var(--warning-soft); border: 1px solid var(--warning-border); border-radius: .65rem; padding: .75rem 1.1rem; margin-bottom: 1.5rem; font-size: .85rem; color: var(--warning-text); display: flex; gap: .6rem; align-items: flex-start; }
+    /* ── Section wrapper ── */
+    .er-section { margin-bottom: 2rem; }
+    .er-section-title { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--md-text-faint); margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--md-border); }
 
-    /* ── Already closed banner ── */
-    .already-closed { background: var(--success-soft); border: 1px solid var(--success-border); border-radius: .65rem; padding: 1.1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: .75rem; font-size: .9rem; color: var(--success); font-weight: 600; }
+    /* ── Metric cards (Section 1) ── */
+    .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-bottom: 1.5rem; }
+    @media (max-width: 480px) { .metric-row { grid-template-columns: 1fr; } }
+    .metric-card { background: var(--md-surface); border: 1px solid var(--md-border); border-radius: var(--md-radius-lg); padding: 1rem 1.1rem; text-align: center; }
+    .metric-num { font-size: 2.2rem; font-weight: 800; color: var(--md-primary); line-height: 1; margin-bottom: .25rem; font-family: var(--font-display); }
+    .metric-num.success { color: var(--md-success); }
+    .metric-label { font-size: .78rem; font-weight: 600; color: var(--md-text-muted); line-height: 1.3; }
+    .metric-sub { font-size: .72rem; color: var(--md-text-faint); margin-top: .15rem; }
 
-    /* ── Score ring ── */
-    .score-wrap { display: flex; justify-content: center; margin-bottom: 2rem; }
-    .score-ring { width: 120px; height: 120px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 6px solid var(--accent); background: var(--surface); }
-    .score-ring.full { border-color: var(--success); }
-    .score-ring.empty { border-color: var(--border); }
-    .score-num  { font-size: 2rem; font-weight: 900; color: var(--accent); line-height: 1; }
-    .score-ring.full .score-num { color: var(--success); }
-    .score-ring.empty .score-num { color: var(--text-faint); }
-    .score-label { font-size:.82rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+    /* ── Done tasks (completed) ── */
+    .done-list { display: flex; flex-direction: column; gap: .4rem; }
+    .done-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .85rem; background: var(--md-success-soft); border: 1px solid var(--md-success-border); border-radius: var(--md-radius); }
+    .done-check { color: var(--md-success); font-size: .95rem; flex-shrink: 0; }
+    .done-title { flex: 1; font-weight: 600; font-size: .88rem; color: var(--md-text-muted); text-decoration: line-through; }
+    .done-cat { font-size: .72rem; font-weight: 700; padding: .1rem .4rem; border-radius: .25rem; flex-shrink: 0; }
+    .done-cat.win  { background: var(--md-primary-soft); color: var(--md-primary-text); }
+    .done-cat.nice { background: #ede9fe; color: #5b21b6; }
+    html.dark .done-cat.nice { background: #2D1A5E; color: #C4B5FD; }
 
-    /* ── Section ── */
-    .section { margin-bottom: 2rem; }
-    .section-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .85rem; border-bottom: 1px solid var(--border); padding-bottom: .6rem; }
-    .section-head h2 { font-size: 1rem; font-weight: 800; color: var(--text); }
-    .section-head .badge { background: var(--accent-soft); color: var(--accent-text); font-size: .7rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px; }
-    .section-head .badge.success { background: var(--success-soft); color: var(--success); }
-    .section-empty { font-size: .85rem; color: var(--text-faint); font-style: italic; padding: .5rem 0; }
+    /* ── Carry forward task rows ── */
+    .carry-row { background: var(--md-surface); border: 1px solid var(--md-border); border-radius: var(--md-radius-lg); padding: .85rem 1rem; margin-bottom: .5rem; transition: opacity .3s ease, max-height .35s ease; overflow: hidden; }
+    .carry-row.is-win  { border-left: 3px solid var(--md-primary); }
+    .carry-row.is-nice { border-left: 3px solid #a78bfa; }
+    .carry-row.acted { opacity: .45; pointer-events: none; }
+    .carry-title { font-weight: 600; font-size: .9rem; color: var(--md-text); margin-bottom: .45rem; line-height: 1.4; }
+    .carry-meta { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: .6rem; }
+    .carry-tag { font-size: .72rem; font-weight: 700; padding: .1rem .4rem; border-radius: .25rem; }
+    .carry-tag.win  { background: var(--md-primary-soft); color: var(--md-primary-text); }
+    .carry-tag.nice { background: #ede9fe; color: #5b21b6; }
+    html.dark .carry-tag.nice { background: #2D1A5E; color: #C4B5FD; }
+    .carry-actions { display: flex; gap: .45rem; flex-wrap: wrap; }
+    .carry-btn { border: 1px solid var(--md-border); border-radius: var(--md-radius); padding: .3rem .75rem; font-size: .82rem; font-weight: 600; color: var(--md-text-muted); background: var(--md-ctrl-bg); cursor: pointer; font-family: var(--font-body); transition: all .12s; }
+    .carry-btn:hover { background: var(--md-primary-soft); border-color: var(--md-primary); color: var(--md-primary-text); }
+    .carry-btn.selected-tomorrow { background: var(--md-primary-soft); border-color: var(--md-primary); color: var(--md-primary-text); }
+    .carry-btn.selected-later    { background: var(--md-surface-alt); border-color: var(--md-border); color: var(--md-text-muted); }
+    .carry-btn.selected-drop     { background: var(--md-danger-soft); border-color: var(--md-danger-border); color: var(--md-danger); }
+    .carry-status { font-size: .78rem; color: var(--md-text-faint); font-style: italic; margin-left: auto; align-self: center; }
 
-    /* ── Win rows (done) ── */
-    .win-done-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .75rem; border-radius: .5rem; background: var(--success-soft); border: 1px solid var(--success-border); margin-bottom: .4rem; }
-    .win-done-icon { color: var(--success); font-size: 1rem; flex-shrink: 0; }
-    .win-done-title { flex: 1; font-weight: 600; font-size: .88rem; color: var(--text); text-decoration: line-through; color: var(--text-muted); }
-    .win-done-cat { font-size:.82rem; font-weight: 700; padding: .08rem .35rem; border-radius: .25rem; background: var(--accent-soft); color: var(--accent-text); flex-shrink: 0; }
-    .win-done-cat.nice { background: #f3e8ff; color: #7c3aed; }
-    html.dark .win-done-cat.nice { background: #2D1A5E; color: #C4B5FD; }
+    /* ── Inbox stats ── */
+    .inbox-stat-row { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .inbox-chip { background: var(--md-ctrl-bg); border: 1px solid var(--md-border); border-radius: var(--md-radius); padding: .35rem .75rem; font-size: .82rem; font-weight: 600; color: var(--md-text-muted); }
+    .inbox-chip span { color: var(--md-text); margin-right: .25rem; }
+    .inbox-review-link { display: block; margin-top: .75rem; font-size: .85rem; color: var(--md-primary); font-weight: 600; text-decoration: none; }
+    .inbox-review-link:hover { text-decoration: underline; }
 
-    /* ── Incomplete task rows ── */
-    .incomplete-row { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; padding: .75rem 1rem; margin-bottom: .5rem; display: flex; align-items: flex-start; gap: .85rem; }
-    .incomplete-row.is-win { border-left: 3px solid var(--accent); }
-    .incomplete-row.is-nice { border-left: 3px solid #a78bfa; }
-    .incomplete-body { flex: 1; min-width: 0; }
-    .incomplete-title { font-weight: 600; font-size: .9rem; color: var(--text); line-height: 1.35; margin-bottom: .35rem; }
-    .incomplete-meta { display: flex; gap: .3rem; flex-wrap: wrap; align-items: center; margin-bottom: .55rem; }
-    .incomplete-choices { display: flex; gap: .5rem; }
-    .choice-label { display: flex; align-items: center; gap: .35rem; cursor: pointer; border: 1px solid var(--border); border-radius: .45rem; padding: .3rem .7rem; font-size:.82rem; font-weight: 600; color: var(--text-muted); transition: all .12s; user-select: none; }
-    .choice-label:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
-    .choice-label input[type="radio"] { display: none; }
-    .choice-label.selected-rollover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
-    .choice-label.selected-backlog  { border-color: var(--danger); color: var(--danger); background: var(--danger-light); }
-
-    /* ── Priority / energy pills ── */
-    .pri-high   { color: #dc2626; font-weight: 700; font-size: .7rem; }
-    .pri-medium { color: #d97706; font-size: .7rem; }
-    .pri-low    { color: var(--text-faint); font-size: .7rem; }
-    .etag { display: inline-block; padding: .08rem .35rem; border-radius: .25rem; font-size:.82rem; font-weight: 600; }
-    .etag-creative   { background: #ede9fe; color: #5b21b6; }
-    .etag-admin      { background: #dbeafe; color: #1e40af; }
-    .etag-social     { background: #d1fae5; color: #065f46; }
-    .etag-low_energy { background: #fef9c3; color: #854d0e; }
-    html.dark .etag-creative   { background: #2D1A5E; color: #C4B5FD; }
-    html.dark .etag-admin      { background: #0F2240; color: #93C5FD; }
-    html.dark .etag-social     { background: #052E16; color: #6EE7B7; }
-    html.dark .etag-low_energy { background: #2D2000; color: #FDE68A; }
-
-    /* ── Quick-select all ── */
-    .quick-select { display: flex; gap: .5rem; margin-bottom: .75rem; }
-    .btn-quick { background: none; border: 1px solid var(--border); border-radius: .4rem; padding: .22rem .65rem; font-size:.82rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: all .1s; }
-    .btn-quick:hover { border-color: var(--accent); color: var(--accent-text); }
+    /* ── Already closed ── */
+    .closed-banner { background: var(--md-success-soft); border: 1px solid var(--md-success-border); border-radius: var(--md-radius-lg); padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: .85rem; }
+    .closed-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .closed-text strong { display: block; font-weight: 700; color: var(--md-success-text); margin-bottom: .2rem; }
+    .closed-text p { font-size: .85rem; color: var(--md-text-muted); margin: 0; }
+    .closed-actions { display: flex; gap: .65rem; margin-top: .85rem; flex-wrap: wrap; }
 
     /* ── CTA ── */
-    .cta-wrap { text-align: center; margin-top: 2.5rem; }
-    .btn-close-day { background: var(--accent); color: #fff; border: none; border-radius: .6rem; padding: .9rem 2.5rem; font-size: 1rem; font-weight: 800; cursor: pointer; font-family: inherit; transition: opacity .15s, transform .12s; letter-spacing: .01em; }
-    html.dark .btn-close-day { color: #1A1A1A; }
-    .btn-close-day:hover { opacity: .9; }
+    .cta-section { text-align: center; padding-top: 1.5rem; }
+    .btn-close-day { background: var(--md-primary); color: #fff; border: none; border-radius: var(--md-radius-lg); padding: .95rem 2.75rem; font-size: 1rem; font-weight: 800; cursor: pointer; font-family: var(--font-body); letter-spacing: .01em; transition: opacity .15s, transform .12s; }
+    html.dark .btn-close-day { color: #fff; }
+    .btn-close-day:hover { opacity: .88; }
     .btn-close-day:active { transform: scale(.97); }
-    .cta-hint { font-size:.82rem; color: var(--text-faint); margin-top: .6rem; }
+    .cta-hint { font-size: .8rem; color: var(--md-text-faint); margin-top: .65rem; }
+    .cta-done-msg { font-size: 1rem; font-weight: 700; color: var(--md-success-text); margin-top: .85rem; display: none; }
 
     /* ── Nothing today ── */
-    .nothing-wrap { text-align: center; padding: 2.5rem 1rem; }
+    .nothing-wrap { text-align: center; padding: 3rem 1rem; }
     .nothing-wrap .icon { font-size: 2.5rem; margin-bottom: .75rem; }
-    .nothing-wrap .msg { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .4rem; }
-    .nothing-wrap .hint { font-size: .85rem; color: var(--text-muted); }
+    .nothing-wrap .msg { font-size: 1rem; font-weight: 700; color: var(--md-text); margin-bottom: .4rem; }
+    .nothing-wrap .hint { font-size: .85rem; color: var(--md-text-muted); }
+
+    /* ── Early notice ── */
+    .early-notice { background: var(--md-warning-soft); border: 1px solid var(--md-warning-border); border-radius: var(--md-radius); padding: .6rem 1rem; font-size: .82rem; color: var(--md-warning-text); display: flex; gap: .5rem; margin-bottom: 1.25rem; }
+
+    /* ── Buttons (reuse global .btn) ── */
+    .btn-ghost-sm { background: none; border: 1px solid var(--md-border); border-radius: var(--md-radius); padding: .35rem .85rem; font-size: .82rem; font-weight: 600; color: var(--md-text-muted); cursor: pointer; font-family: var(--font-body); transition: all .12s; }
+    .btn-ghost-sm:hover { border-color: var(--md-primary); color: var(--md-primary); }
   </style>
 </head>
 <body>
@@ -106,7 +102,7 @@
       <a href="{{ base }}/my-day">My Day</a>
       <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
       <a href="{{ base }}/focus" class="nav-focus">Focus</a>
-      <a href="{{ base }}/close-day" class="active" style="color:var(--accent);font-weight:700;">🌙 Close Day</a>
+      <a href="{{ base }}/close-day" class="active" style="color:var(--md-primary);font-weight:700;">🌙 Close Day</a>
       <span class="nav-sep"></span>
       <a href="{{ base }}/inbox">Inbox</a>
       <a href="{{ base }}/meetings">Meetings</a>
@@ -115,6 +111,7 @@
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
       <a href="{{ base }}/notes">Notes</a>
+      <a href="{{ base }}/weekly-review">Review</a>
       <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>
     <div class="focus-controls">
@@ -125,209 +122,261 @@
 
   <main>
 
-    <!-- ── Hero ── -->
-    <div class="hero">
-      <div class="hero-badge">🌙 Evening Reset</div>
-      <h1>Close the Day</h1>
-      <p class="sub">Review what you shipped, decide what to carry forward,<br>then let the rest go.</p>
+    <div class="er-header">
+      <div class="er-badge">🌙 Evening Reset</div>
+      <h1>How'd it go?</h1>
+      <p class="day-msg">{{ day_msg }}</p>
     </div>
 
     {% if now_hour < 16 %}
-    <div class="early-warn">
+    <div class="early-notice">
       <span>⏰</span>
-      <span>It's a bit early — but wrapping up is always valid. Take your time.</span>
+      <span>Closing early is always valid. Whenever you're ready.</span>
     </div>
     {% endif %}
 
-    {% if already_closed %}
-    <div class="already-closed">
-      <span style="font-size:1.3rem;">✅</span>
-      <div>You already closed the day. You're done — rest easy.<br>
-        <a href="{{ base }}/my-day" style="color:var(--success);font-size:.82rem;">← Back to My Day</a>
-      </div>
-    </div>
-    {% endif %}
-
-    {% set has_any = wins_done or wins_incomplete or nice_done or nice_incomplete %}
-
-    {% if not has_any %}
-    <div class="nothing-wrap">
-      <div class="icon">🎯</div>
-      <div class="msg">No tasks were flagged for today.</div>
-      <div class="hint">Do a morning check-in tomorrow to set your wins and nice-to-haves.</div>
-      <div style="margin-top:1.5rem;">
-        <a href="{{ base }}/my-day" style="color:var(--accent);font-weight:600;font-size:.9rem;">← Back to My Day</a>
-      </div>
-    </div>
-
-    {% else %}
-
-    <!-- ── Score ── -->
-    <div class="score-wrap">
-      {% if score_pct == 100 %}
-      <div class="score-ring full">
-        <div class="score-num">🏆</div>
-        <div class="score-label">All wins done</div>
-      </div>
-      {% elif score_pct == 0 and wins_incomplete %}
-      <div class="score-ring empty">
-        <div class="score-num">0%</div>
-        <div class="score-label">wins done</div>
-      </div>
-      {% else %}
-      <div class="score-ring">
-        <div class="score-num">{{ score_pct }}%</div>
-        <div class="score-label">wins done</div>
-      </div>
-      {% endif %}
-    </div>
-
-    <form method="post" action="{{ base }}/close-day" id="close-form">
-
-      <!-- ── Section 1: Completed wins ── -->
-      {% if wins_done or nice_done %}
-      <div class="section">
-        <div class="section-head">
-          <h2>✅ Shipped today</h2>
-          <span class="badge success">{{ wins_done | length + nice_done | length }}</span>
+    <!-- ═══ SECTION 1: Metrics ══════════════════════════════════════════════ -->
+    <div class="er-section">
+      <div class="er-section-title">Today at a glance</div>
+      <div class="metric-row">
+        <div class="metric-card">
+          <div class="metric-num{{ ' success' if completed_today_count > 0 else '' }}">{{ completed_today_count }}</div>
+          <div class="metric-label">Completed today</div>
+          <div class="metric-sub">across all tasks</div>
         </div>
+        <div class="metric-card">
+          <div class="metric-num{{ ' success' if wins_done_count == wins_total and wins_total > 0 else '' }}">
+            {{ wins_done_count }}{% if wins_total %}<span style="font-size:1.1rem;font-weight:600;color:var(--md-text-faint);">/{{ wins_total }}</span>{% endif %}
+          </div>
+          <div class="metric-label">Wins landed</div>
+          <div class="metric-sub">{{ 'all done' if wins_done_count == wins_total and wins_total > 0 else ('planned today' if wins_total else 'none planned') }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-num">{{ streak }}</div>
+          <div class="metric-label">Day streak</div>
+          <div class="metric-sub">days in a row</div>
+        </div>
+      </div>
+
+      {% if wins_done or nice_done %}
+      <div class="er-section-title" style="margin-top:1.5rem;">Shipped today ✓</div>
+      <div class="done-list">
         {% for task in wins_done %}
-        <div class="win-done-row">
-          <span class="win-done-icon">✓</span>
-          <span class="win-done-title">{{ task.title }}</span>
-          <span class="win-done-cat">Win</span>
+        <div class="done-row">
+          <span class="done-check">✓</span>
+          <span class="done-title">{{ task.title }}</span>
+          <span class="done-cat win">Win</span>
         </div>
         {% endfor %}
         {% for task in nice_done %}
-        <div class="win-done-row">
-          <span class="win-done-icon">✓</span>
-          <span class="win-done-title">{{ task.title }}</span>
-          <span class="win-done-cat nice">Nice-to-have</span>
+        <div class="done-row">
+          <span class="done-check">✓</span>
+          <span class="done-title">{{ task.title }}</span>
+          <span class="done-cat nice">Nice-to-have</span>
         </div>
         {% endfor %}
       </div>
       {% endif %}
+    </div>
 
-      <!-- ── Section 2: Incomplete tasks — decide fate ── -->
-      {% set incomplete_all = wins_incomplete + nice_incomplete %}
-      {% if incomplete_all %}
-      <div class="section">
-        <div class="section-head">
-          <h2>🔁 What to do with these?</h2>
-          <span class="badge">{{ incomplete_all | length }}</span>
-        </div>
-        <div class="quick-select">
-          <button type="button" class="btn-quick" onclick="selectAll('rollover')">Roll over all</button>
-          <button type="button" class="btn-quick" onclick="selectAll('backlog')">Backlog all</button>
-        </div>
-
-        {% for task in wins_incomplete %}
-        <div class="incomplete-row is-win" id="row-{{ task.id }}">
-          <div class="incomplete-body">
-            <div class="incomplete-title">{{ task.title }}</div>
-            <div class="incomplete-meta">
-              <span style="font-size:.82rem;font-weight:700;color:var(--accent);">WIN</span>
-              {% if task.energy_type %}<span class="etag etag-{{ task.energy_type }}">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
-              <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
-            </div>
-            <div class="incomplete-choices">
-              <label class="choice-label selected-rollover" id="lbl-rollover-{{ task.id }}">
-                <input type="radio" name="action_{{ task.id }}" value="rollover" checked
-                       onchange="updateChoice({{ task.id }}, 'rollover')">
-                🔁 Roll over
-              </label>
-              <label class="choice-label" id="lbl-backlog-{{ task.id }}">
-                <input type="radio" name="action_{{ task.id }}" value="backlog"
-                       onchange="updateChoice({{ task.id }}, 'backlog')">
-                📦 Backlog
-              </label>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-
-        {% for task in nice_incomplete %}
-        <div class="incomplete-row is-nice" id="row-{{ task.id }}">
-          <div class="incomplete-body">
-            <div class="incomplete-title">{{ task.title }}</div>
-            <div class="incomplete-meta">
-              <span style="font-size:.82rem;font-weight:700;color:#a78bfa;">NICE</span>
-              {% if task.energy_type %}<span class="etag etag-{{ task.energy_type }}">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
-              <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
-            </div>
-            <div class="incomplete-choices">
-              <label class="choice-label selected-rollover" id="lbl-rollover-{{ task.id }}">
-                <input type="radio" name="action_{{ task.id }}" value="rollover" checked
-                       onchange="updateChoice({{ task.id }}, 'rollover')">
-                🔁 Roll over
-              </label>
-              <label class="choice-label" id="lbl-backlog-{{ task.id }}">
-                <input type="radio" name="action_{{ task.id }}" value="backlog"
-                       onchange="updateChoice({{ task.id }}, 'backlog')">
-                📦 Backlog
-              </label>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
+    <!-- ═══ SECTION 2: Carry Forward ════════════════════════════════════════ -->
+    {% set incomplete_all = wins_incomplete + nice_incomplete %}
+    {% if incomplete_all and not already_closed %}
+    <div class="er-section" id="carry-section">
+      <div class="er-section-title">
+        What to carry forward
+        <span style="background:var(--md-primary-soft);color:var(--md-primary-text);font-size:.7rem;padding:.1rem .45rem;border-radius:999px;margin-left:.4rem;font-weight:700;">{{ incomplete_all | length }}</span>
       </div>
+      <p style="font-size:.85rem;color:var(--md-text-muted);margin-bottom:1rem;line-height:1.55;">
+        Choose what happens to each task. Anything not actioned gets carried to tomorrow automatically.
+      </p>
+
+      {% for task in wins_incomplete %}
+      <div class="carry-row is-win" id="carry-{{ task.id }}">
+        <div class="carry-title">{{ task.title }}</div>
+        <div class="carry-meta">
+          <span class="carry-tag win">Win</span>
+          {% if task.energy_type %}<span class="carry-tag" style="background:var(--md-ctrl-bg);color:var(--md-text-muted);">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
+          <span style="font-size:.72rem;color:var(--md-text-faint);font-weight:600;">{{ task.priority | upper }}</span>
+        </div>
+        <div class="carry-actions">
+          <button class="carry-btn" onclick="eveningAction({{ task.id }}, 'tomorrow', this)" title="Keep for tomorrow">→ Tomorrow</button>
+          <button class="carry-btn" onclick="eveningAction({{ task.id }}, 'later', this)" title="Move back to backlog">→ Later</button>
+          <button class="carry-btn" onclick="eveningAction({{ task.id }}, 'drop', this)" title="Drop this task">✕ Drop</button>
+          <span class="carry-status" id="status-{{ task.id }}"></span>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% for task in nice_incomplete %}
+      <div class="carry-row is-nice" id="carry-{{ task.id }}">
+        <div class="carry-title">{{ task.title }}</div>
+        <div class="carry-meta">
+          <span class="carry-tag nice">Nice-to-have</span>
+          {% if task.energy_type %}<span class="carry-tag" style="background:var(--md-ctrl-bg);color:var(--md-text-muted);">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
+          <span style="font-size:.72rem;color:var(--md-text-faint);font-weight:600;">{{ task.priority | upper }}</span>
+        </div>
+        <div class="carry-actions">
+          <button class="carry-btn" onclick="eveningAction({{ task.id }}, 'tomorrow', this)" title="Keep for tomorrow">→ Tomorrow</button>
+          <button class="carry-btn" onclick="eveningAction({{ task.id }}, 'later', this)" title="Move back to backlog">→ Later</button>
+          <button class="carry-btn" onclick="eveningAction({{ task.id }}, 'drop', this)" title="Drop this task">✕ Drop</button>
+          <span class="carry-status" id="status-{{ task.id }}"></span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ═══ SECTION 3: Inbox today ══════════════════════════════════════════ -->
+    {% if inbox_today_total > 0 %}
+    <div class="er-section">
+      <div class="er-section-title">Inbox today</div>
+      <div class="inbox-stat-row">
+        {% if inbox_today_new %}
+        <div class="inbox-chip"><span>{{ inbox_today_new }}</span> new</div>
+        {% endif %}
+        {% if inbox_today_promoted %}
+        <div class="inbox-chip"><span>{{ inbox_today_promoted }}</span> promoted</div>
+        {% endif %}
+        {% if inbox_today_archived %}
+        <div class="inbox-chip"><span>{{ inbox_today_archived }}</span> archived</div>
+        {% endif %}
+      </div>
+      {% if inbox_today_new > 0 %}
+      <a href="{{ base }}/inbox" class="inbox-review-link">
+        You have {{ inbox_today_new }} item{{ 's' if inbox_today_new != 1 }} to review when you're ready →
+      </a>
       {% endif %}
+    </div>
+    {% endif %}
 
-      <!-- ── CTA ── -->
-      <div class="cta-wrap">
-        <button class="btn-close-day" type="submit" onclick="fireCelebration()">
-          🌙 Close the Day
-        </button>
-        <div class="cta-hint">Rolls over selected tasks · clears everything else · you're done.</div>
+    <!-- ═══ SECTION 4: Close / Already closed ══════════════════════════════ -->
+    {% if already_closed %}
+    <div class="er-section">
+      <div class="closed-banner">
+        <div class="closed-icon">🌙</div>
+        <div class="closed-text">
+          <strong>Today is already wrapped up.</strong>
+          <p>You closed the day. Rest easy — see you tomorrow.</p>
+        </div>
       </div>
+      <div class="closed-actions">
+        <a href="{{ base }}/my-day" class="btn btn-primary" style="font-size:.85rem;padding:.5rem 1.25rem;">← Back to My Day</a>
+        <button class="btn-ghost-sm" onclick="reopenDay()">Reopen today</button>
+      </div>
+    </div>
+    {% else %}
+    <div class="cta-section">
+      <button class="btn-close-day" id="close-btn" onclick="closeDay()">
+        Close Today ✓
+      </button>
+      <div class="cta-hint">Clears today's flags · carries forward any unactioned tasks</div>
+      <div class="cta-done-msg" id="done-msg">Day closed. See you tomorrow. 🌙</div>
+    </div>
+    {% endif %}
 
-    </form>
+    {% if not wins_done and not nice_done and not wins_incomplete and not nice_incomplete and not already_closed %}
+    <div class="nothing-wrap" style="margin-top:2rem;">
+      <div class="icon">🎯</div>
+      <div class="msg">No tasks were flagged for today.</div>
+      <div class="hint">Do a morning check-in tomorrow to plan your wins and nice-to-haves.</div>
+      <div style="margin-top:1.5rem;">
+        <a href="{{ base }}/my-day" style="color:var(--md-primary);font-weight:600;font-size:.9rem;">← Back to My Day</a>
+      </div>
+    </div>
     {% endif %}
 
   </main>
 
-  <script src="{{ base }}/static/app.js?v=16"></script>
   <script>
-    // Highlight selected radio choice
-    function updateChoice(id, value) {
-      const rollLbl = document.getElementById('lbl-rollover-' + id);
-      const backLbl = document.getElementById('lbl-backlog-'  + id);
-      if (value === 'rollover') {
-        rollLbl.classList.add('selected-rollover');
-        rollLbl.classList.remove('selected-backlog');
-        backLbl.classList.remove('selected-rollover', 'selected-backlog');
-      } else {
-        backLbl.classList.add('selected-backlog');
-        backLbl.classList.remove('selected-rollover');
-        rollLbl.classList.remove('selected-rollover', 'selected-backlog');
-      }
+    const BASE = "{{ base }}";
+
+    // Per-task evening action (fetch PATCH)
+    function eveningAction(taskId, action, btn) {
+      const row = document.getElementById('carry-' + taskId);
+      const status = document.getElementById('status-' + taskId);
+
+      // Update button styles immediately (optimistic UI)
+      const btns = row.querySelectorAll('.carry-btn');
+      btns.forEach(b => b.classList.remove('selected-tomorrow','selected-later','selected-drop'));
+      btn.classList.add('selected-' + action);
+
+      const labels = { tomorrow: '→ Tomorrow', later: '→ Later', drop: '✕ Drop' };
+      const statusText = { tomorrow: 'carried forward', later: 'moved to backlog', drop: 'dropped' };
+      if (status) status.textContent = statusText[action] || '';
+
+      fetch(`${BASE}/tasks/${taskId}/evening-action`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            // Fade out the row after a beat
+            setTimeout(() => {
+              row.style.transition = 'opacity .4s ease, max-height .4s ease';
+              row.style.opacity = '0.3';
+              setTimeout(() => {
+                row.style.maxHeight = row.scrollHeight + 'px';
+                row.classList.add('acted');
+              }, 200);
+            }, 600);
+          }
+        })
+        .catch(() => {
+          if (status) status.textContent = 'error — try again';
+          btn.classList.remove('selected-' + action);
+        });
     }
 
-    // Quick-select all buttons
-    function selectAll(value) {
-      document.querySelectorAll('input[type="radio"][value="' + value + '"]').forEach(radio => {
-        radio.checked = true;
-        const taskId = radio.name.replace('action_', '');
-        updateChoice(taskId, value);
-      });
+    // Close the day
+    function closeDay() {
+      const btn = document.getElementById('close-btn');
+      if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+      fetch(`${BASE}/close-day`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'fetch' },
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            if (typeof confetti !== 'undefined') {
+              confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 }, colors: ['#818CF8','#4ADE80','#C4B5FD'] });
+            }
+            if (btn) { btn.style.display = 'none'; }
+            const msg = document.getElementById('done-msg');
+            if (msg) msg.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          if (btn) { btn.disabled = false; btn.textContent = 'Close Today ✓'; }
+        });
     }
 
-    // Celebration on close
-    function fireCelebration() {
-      if (typeof confetti === 'undefined') return;
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 }, colors: ['#FFCC00','#4F46E5','#10B981'] });
+    // Reopen the day
+    function reopenDay() {
+      fetch(`${BASE}/close-day/reopen`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'fetch' },
+      })
+        .then(r => r.json())
+        .then(data => { if (data.ok) window.location.reload(); })
+        .catch(() => window.location.reload());
     }
 
-    // Fire confetti if all wins are done
-    {% if score_pct == 100 %}
+    // Fire confetti if everything was shipped
+    {% if wins_done_count == wins_total and wins_total > 0 %}
     window.addEventListener('load', () => {
       setTimeout(() => {
         if (typeof confetti !== 'undefined') {
-          confetti({ particleCount: 120, spread: 90, origin: { y: 0.5 }, colors: ['#FFCC00','#10B981','#4F46E5'] });
+          confetti({ particleCount: 100, spread: 90, origin: { y: 0.5 }, colors: ['#818CF8','#4ADE80','#C4B5FD'] });
         }
-      }, 400);
+      }, 500);
     });
     {% endif %}
   </script>
+  <script src="{{ base }}/static/app.js?v=17"></script>
 </body>
 </html>

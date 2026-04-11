@@ -1000,3 +1000,10 @@ html.dark .energy-filter-btn.active { background: var(--md-primary-soft); }
 }
 .subtask-add-input:focus { border-bottom-color: var(--accent); }
 .subtask-add-input::placeholder { color: var(--text-faint); }
+
+/* ── Keyboard navigation selection highlight (Track C) ── */
+.kbd-selected {
+  outline: 2px solid var(--md-primary, var(--accent));
+  outline-offset: 2px;
+  border-radius: var(--md-radius, .55rem);
+}

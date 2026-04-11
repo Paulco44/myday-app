@@ -222,6 +222,19 @@ class CoPInitiative(Base):
     active_dec = Column(Boolean, default=False)
 
 
+class FocusSession(Base):
+    """Tracks individual focus timer sessions for analytics and weekly review."""
+    __tablename__ = "focus_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, nullable=True)        # focused task (no FK for compat)
+    started_at = Column(DateTime, nullable=True)    # approximate start time
+    duration_minutes = Column(Integer, nullable=False)
+    completed = Column(Boolean, default=True)       # did the timer reach 0?
+    date = Column(Date, nullable=False, default=date.today)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class NotionExportTarget(Base):
     """
     A configured Notion destination for exporting notes and projects.

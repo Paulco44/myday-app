@@ -4,244 +4,167 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Focus Mode — MyDay</title>
-  <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=16" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
   <style>
-    body { display: flex; flex-direction: column; }
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
 
-    /* ── Minimal nav ── */
+    /* ── Minimal focus nav ── */
     .focus-nav {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
+      background: var(--md-surface);
+      border-bottom: 1px solid var(--md-border);
+      padding: 0 1.5rem;
       display: flex;
       align-items: center;
       height: 3.25rem;
       flex-shrink: 0;
+      transition: opacity .3s ease;
     }
-    .focus-nav .logo { font-weight: 800; font-size: 1rem; color: var(--accent); text-decoration: none; }
-    .focus-nav .exit-link { margin-left: auto; font-size: .82rem; color: var(--text-muted); text-decoration: none; font-weight: 500; }
-    .focus-nav .exit-link:hover { color: var(--text); }
+    .focus-nav.hidden { opacity: 0; pointer-events: none; }
+    .focus-nav .logo { font-weight: 800; font-size: 1rem; color: var(--md-primary); text-decoration: none; font-family: var(--font-display); }
+    .focus-nav .exit-link { margin-left: auto; font-size: .82rem; color: var(--md-text-muted); text-decoration: none; font-weight: 500; }
+    .focus-nav .exit-link:hover { color: var(--md-text); }
+    .focus-nav .right { display: flex; align-items: center; gap: .5rem; margin-left: auto; }
+
+    /* ── Noise controls (in nav) ── */
+    .noise-ctrl { display: flex; align-items: center; gap: .45rem; }
+    .noise-toggle { background: var(--md-ctrl-bg); border: 1px solid var(--md-border); border-radius: var(--md-radius); padding: .3rem .65rem; font-size: .8rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); color: var(--md-text-muted); transition: all .12s; white-space: nowrap; }
+    .noise-toggle.active { background: var(--md-primary-soft); border-color: var(--md-primary); color: var(--md-primary-text); }
+    .noise-vol { width: 64px; height: 4px; accent-color: var(--md-primary); cursor: pointer; }
+
+    /* ── Exit focus button (floats top-left when nav hidden) ── */
+    .exit-focus-float {
+      position: fixed;
+      top: .85rem;
+      left: 1rem;
+      z-index: 200;
+      background: var(--md-ctrl-bg);
+      border: 1px solid var(--md-border);
+      border-radius: var(--md-radius);
+      padding: .3rem .75rem;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--md-text-muted);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      display: none;
+      transition: all .12s;
+    }
+    .exit-focus-float:hover { color: var(--md-text); border-color: var(--md-text-muted); }
+    body.focus-mode-active .exit-focus-float { display: block; }
+    body.focus-mode-active { background: var(--md-bg); }
 
     /* ── Page ── */
     main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.25rem 4rem; }
-
-    .focus-wrap { width: 100%; max-width: 520px; }
+    .focus-wrap { width: 100%; max-width: 500px; }
 
     /* ── No task state ── */
-    .no-task-box {
-      text-align: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 2.5rem 2rem;
-    }
+    .no-task-box { text-align: center; background: var(--md-surface); border: 1px solid var(--md-border); border-radius: var(--md-radius-xl); padding: 2.5rem 2rem; }
     .no-task-box .icon { font-size: 2.5rem; margin-bottom: .85rem; }
-    .no-task-box h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
-    .no-task-box p { color: var(--text-muted); font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.6; }
+    .no-task-box h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; color: var(--md-text); }
+    .no-task-box p { color: var(--md-text-muted); font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.6; }
 
     /* ── Task header card ── */
-    .task-card {
-      background: var(--focus-bg);
-      border: 2px solid var(--focus-ring);
-      border-radius: var(--radius-xl);
-      padding: 1.5rem 1.75rem 1.25rem;
-      margin-bottom: 1.75rem;
-      text-align: center;
-    }
-    .task-card .label {
-      font-size: .7rem;
-      font-weight: 800;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--accent-text);
-      margin-bottom: .55rem;
-    }
-    .task-card .task-title {
-      font-size: 1.45rem;
-      font-weight: 800;
-      line-height: 1.3;
-      color: var(--focus-now);
-      margin-bottom: .75rem;
-    }
-    .task-card .task-meta {
-      display: flex;
-      gap: .45rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .badge { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-size:.82rem; font-weight: 600; }
-
-    /* ── Idle state ── */
-    #idle-panel { }
-    .section-label {
-      font-size: .7rem;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--text-faint);
-      margin-bottom: .65rem;
-      text-align: center;
-    }
-    .preset-row {
-      display: flex;
-      gap: .6rem;
-      justify-content: center;
+    .task-header {
+      background: var(--md-focus-bg);
+      border: 2px solid var(--md-focus-ring);
+      border-radius: var(--md-radius-xl);
+      padding: 1.25rem 1.5rem;
       margin-bottom: 1.5rem;
-    }
-    .preset-btn {
-      flex: 1;
-      max-width: 120px;
-      background: var(--surface);
-      border: 2px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: .9rem .5rem;
       text-align: center;
-      cursor: pointer;
-      transition: border-color .15s, background .15s;
-      font-family: inherit;
     }
-    .preset-btn .minutes { font-size: 1.4rem; font-weight: 800; color: var(--text); display: block; }
-    .preset-btn .preset-label { font-size:.82rem; color: var(--text-muted); display: block; margin-top: .1rem; }
-    .preset-btn:hover { border-color: var(--accent); background: var(--accent-light); }
-    .preset-btn.selected {
-      border-color: var(--accent);
-      background: var(--accent-light);
-    }
-    .preset-btn.selected .minutes { color: var(--accent); }
+    .task-header .label { font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--md-primary-text); margin-bottom: .45rem; }
+    .task-header .task-title { font-size: 1.35rem; font-weight: 800; color: var(--md-focus-now); line-height: 1.3; margin-bottom: .65rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .task-header .task-meta { display: flex; gap: .4rem; justify-content: center; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: .12rem .5rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+
+    /* ── Idle panel ── */
+    #idle-panel { }
+    .section-label { font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--md-text-faint); margin-bottom: .65rem; text-align: center; }
+
+    .preset-row { display: flex; gap: .5rem; justify-content: center; margin-bottom: .85rem; }
+    .preset-btn { flex: 1; max-width: 88px; background: var(--md-surface); border: 2px solid var(--md-border); border-radius: var(--md-radius-lg); padding: .75rem .4rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; font-family: var(--font-body); }
+    .preset-btn .minutes { font-size: 1.3rem; font-weight: 800; color: var(--md-text); display: block; font-family: var(--font-display); }
+    .preset-btn .preset-label { font-size: .72rem; color: var(--md-text-muted); display: block; margin-top: .1rem; }
+    .preset-btn:hover, .preset-btn.selected { border-color: var(--md-primary); background: var(--md-primary-soft); }
+    .preset-btn.selected .minutes { color: var(--md-primary); }
+
+    .custom-row { display: flex; align-items: center; justify-content: center; gap: .5rem; margin-bottom: 1.25rem; }
+    .custom-row label { font-size: .8rem; color: var(--md-text-muted); font-weight: 600; }
+    .custom-input { width: 60px; text-align: center; border: 1px solid var(--md-border); border-radius: var(--md-radius); padding: .3rem .4rem; background: var(--md-ctrl-bg); color: var(--md-text); font-family: var(--font-body); font-size: .9rem; font-weight: 700; }
 
     .start-row { text-align: center; }
-    .btn-start-focus {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-lg);
-      padding: .85rem 2.5rem;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background .15s, transform .1s;
-      font-family: inherit;
-    }
-    .btn-start-focus:hover { background: var(--accent-hover); }
-    .btn-start-focus:active { transform: scale(.98); }
+    .btn-start { background: var(--md-primary); color: #fff; border: none; border-radius: var(--md-radius-lg); padding: .85rem 2.75rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity .15s, transform .1s; font-family: var(--font-body); }
+    .btn-start:hover { opacity: .88; }
+    .btn-start:active { transform: scale(.98); }
 
     /* ── Timer panel ── */
     #timer-panel { display: none; text-align: center; }
 
-    .phase-label {
-      font-size: .7rem;
-      font-weight: 800;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      margin-bottom: .5rem;
-    }
-    .phase-running { color: var(--accent); }
-    .phase-paused  { color: var(--warning); }
+    .phase-label { font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-bottom: .5rem; }
+    .phase-running { color: var(--md-primary); }
+    .phase-paused  { color: var(--md-warning); }
 
-    .countdown {
-      font-size: 4rem;
-      font-weight: 800;
-      letter-spacing: -.04em;
-      color: var(--text);
-      line-height: 1;
-      margin-bottom: 1rem;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* ── SVG Ring countdown ── */
-    .ring-wrap { display: flex; justify-content: center; margin-bottom: 1.75rem; }
+    .ring-wrap { display: flex; justify-content: center; margin-bottom: 1.5rem; }
     .ring-inner { position: relative; width: 210px; height: 210px; display: flex; align-items: center; justify-content: center; }
     .ring-svg { transform: rotate(-90deg); position: absolute; top: 0; left: 0; }
-    .ring-bg  { fill: none; stroke: var(--border); stroke-width: 10; }
-    .ring-arc { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 314.16; stroke-dashoffset: 0; transition: stroke-dashoffset .5s linear; }
-    .ring-time { position: relative; font-size: 2.5rem; font-weight: 800; color: var(--text); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .ring-bg  { fill: none; stroke: var(--md-border); stroke-width: 10; }
+    .ring-arc { fill: none; stroke: var(--md-primary); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 314.16; stroke-dashoffset: 0; transition: stroke-dashoffset .5s linear; }
+    .ring-time { position: relative; font-size: 2.5rem; font-weight: 800; color: var(--md-text); letter-spacing: -.04em; font-variant-numeric: tabular-nums; font-family: var(--font-display); }
 
-    /* Timer action buttons */
-    .timer-actions {
-      display: flex;
-      gap: .65rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .btn-timer {
-      border: none;
-      border-radius: var(--radius);
-      padding: .65rem 1.4rem;
-      font-size: .9rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity .15s;
-    }
+    .timer-actions { display: flex; gap: .55rem; justify-content: center; flex-wrap: wrap; margin-bottom: .65rem; }
+    .btn-timer { border: none; border-radius: var(--md-radius); padding: .6rem 1.25rem; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: var(--font-body); transition: opacity .15s; }
     .btn-timer:hover { opacity: .88; }
-    .btn-done  { background: var(--success); color: #fff; }
-    .btn-pause { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
-    .btn-stop  { background: var(--surface); color: var(--text-muted); font-size: .82rem; padding: .55rem 1.1rem; border: 1.5px solid var(--border); }
+    .btn-done  { background: var(--md-success); color: #fff; }
+    .btn-pause { background: var(--md-surface); color: var(--md-text); border: 1.5px solid var(--md-border) !important; }
+    .btn-plus  { background: var(--md-primary-soft); color: var(--md-primary-text); border: 1px solid var(--md-primary) !important; font-size: .82rem; }
+    .btn-stop  { background: var(--md-surface); color: var(--md-text-muted); font-size: .8rem; padding: .5rem 1rem; border: 1.5px solid var(--md-border) !important; }
 
-    /* ── Pause state notice ── */
-    #paused-notice {
-      display: none;
-      background: var(--warning-light);
-      border: 1px solid var(--warning-border);
-      border-radius: var(--radius-lg);
-      padding: .9rem 1.1rem;
-      font-size: .86rem;
-      color: var(--warning-text);
-      margin-top: 1rem;
-      text-align: center;
-    }
-    #paused-notice strong { font-weight: 700; }
+    #paused-notice { display: none; background: var(--md-warning-soft); border: 1px solid var(--md-warning-border); border-radius: var(--md-radius-lg); padding: .75rem 1rem; font-size: .84rem; color: var(--md-warning-text); margin-top: .75rem; text-align: center; }
 
-    /* ── Stopped state ── */
-    #stopped-panel {
+    /* ── Session complete panel ── */
+    #complete-panel {
       display: none;
       text-align: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
+      background: var(--md-surface);
+      border: 1px solid var(--md-border);
+      border-radius: var(--md-radius-xl);
       padding: 2rem;
-      margin-top: 1rem;
     }
+    #complete-panel .icon { font-size: 2.2rem; margin-bottom: .65rem; }
+    #complete-panel h3 { font-size: 1.15rem; font-weight: 800; color: var(--md-text); margin-bottom: .35rem; }
+    #complete-panel p { color: var(--md-text-muted); font-size: .88rem; margin-bottom: 1.4rem; line-height: 1.55; }
+    .complete-actions { display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Stopped panel ── */
+    #stopped-panel { display: none; text-align: center; background: var(--md-surface); border: 1px solid var(--md-border); border-radius: var(--md-radius-xl); padding: 2rem; margin-top: 1rem; }
     #stopped-panel .icon { font-size: 2rem; margin-bottom: .5rem; }
-    #stopped-panel h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; }
-    #stopped-panel p { color: var(--text-muted); font-size: .86rem; margin-bottom: 1.25rem; }
+    #stopped-panel h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; color: var(--md-text); }
+    #stopped-panel p { color: var(--md-text-muted); font-size: .86rem; margin-bottom: 1.25rem; }
 
-    /* ── Done state (after server confirms) ── */
-    #done-panel {
-      display: none;
-      text-align: center;
-      background: var(--success-light);
-      border: 1px solid var(--success-border);
-      border-radius: var(--radius-xl);
-      padding: 2.25rem 2rem;
-    }
+    /* ── Done panel ── */
+    #done-panel { display: none; text-align: center; background: var(--md-success-soft); border: 1px solid var(--md-success-border); border-radius: var(--md-radius-xl); padding: 2.25rem 2rem; }
     #done-panel .icon { font-size: 2.5rem; margin-bottom: .65rem; }
-    #done-panel h3 { font-size: 1.15rem; font-weight: 800; color: var(--success); margin-bottom: .4rem; }
-    #done-panel .done-msg { color: #065f46; font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.55; }
+    #done-panel h3 { font-size: 1.15rem; font-weight: 800; color: var(--md-success-text); margin-bottom: .4rem; }
+    #done-panel .done-msg { color: var(--md-success-text); font-size: .88rem; margin-bottom: 1.5rem; line-height: 1.55; opacity: .85; }
     .done-actions { display: flex; gap: .65rem; justify-content: center; flex-wrap: wrap; }
-
-    /* Error state */
-    #error-notice {
-      display: none;
-      background: var(--danger-light);
-      border: 1px solid var(--danger-border);
-      border-radius: var(--radius);
-      padding: .75rem 1rem;
-      font-size: .84rem;
-      color: var(--danger);
-      margin-top: 1rem;
-    }
   </style>
 </head>
 <body>
-  <nav class="focus-nav" style="justify-content:space-between;">
+  <!-- Exit focus button (visible when nav is hidden) -->
+  <button class="exit-focus-float" onclick="exitFocusMode()">← Exit Focus</button>
+
+  <nav class="focus-nav" id="focus-nav">
     <a class="logo" href="{{ base }}/">MyDay</a>
-    <div style="display:flex;align-items:center;gap:.5rem;">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
+    <div class="right">
+      <!-- Brown noise controls -->
+      <div class="noise-ctrl">
+        <button class="noise-toggle" id="noise-toggle-btn" onclick="toggleBrownNoise(this)" title="Brown noise for deep focus">🔊 Brown Noise</button>
+        <input type="range" class="noise-vol" id="noise-vol" min="0" max="100" value="40" oninput="setNoiseVolume(this.value)" title="Noise volume" />
+      </div>
       <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
-      <a class="exit-link" href="{{ base }}/my-day" style="margin-left:.5rem;">← Exit Focus</a>
+      <a class="exit-link" href="{{ base }}/my-day" style="margin-left:.25rem;">← Exit</a>
     </div>
   </nav>
 
@@ -249,39 +172,28 @@
     <div class="focus-wrap">
 
       {% if not now_task %}
-      <!-- ── No active now task ── -->
       <div class="no-task-box">
         <div class="icon">🎯</div>
         <h2>No active focus task</h2>
-        <p>
-          Set one task as "Now" on your My Day page, then come back here
-          to start a focused block.
-        </p>
+        <p>Set one task as "Now" on your My Day page, then come back here to start a focused block.</p>
         <a href="{{ base }}/my-day" class="btn btn-primary">← Back to My Day</a>
       </div>
 
       {% else %}
-      <!-- ── Active now task: show timer UI ── -->
 
-      <!-- Task header card (always visible) -->
-      <div class="task-card">
+      <!-- Task header (always visible) -->
+      <div class="task-header">
         <div class="label">⚡ Now — Single Focus</div>
         <div class="task-title">{{ now_task.title }}</div>
         <div class="task-meta">
           {% if now_task.energy_tag %}
-          <span class="badge etag-{{ now_task.energy_tag }}">
-            {{ now_task.energy_tag.replace('_', ' ') }}
-          </span>
+          <span class="badge etag-{{ now_task.energy_tag }}">{{ now_task.energy_tag.replace('_', ' ') }}</span>
           {% endif %}
           {% if now_task.time_block %}
-          <span class="badge tblock-{{ now_task.time_block }}">
-            {{ now_task.time_block.capitalize() }}
-          </span>
+          <span class="badge tblock-{{ now_task.time_block }}">{{ now_task.time_block.capitalize() }}</span>
           {% endif %}
           {% if now_task.due_date %}
-          <span class="badge" style="background:var(--border);color:var(--text-muted);">
-            Due {{ now_task.due_date.strftime('%b %-d') }}
-          </span>
+          <span class="badge" style="background:var(--md-ctrl-bg);color:var(--md-text-muted);">Due {{ now_task.due_date.strftime('%b %-d') }}</span>
           {% endif %}
         </div>
       </div>
@@ -289,7 +201,12 @@
       <!-- ── IDLE PANEL ── -->
       <div id="idle-panel">
         <div class="section-label">Choose a focus block length</div>
+
         <div class="preset-row">
+          <button class="preset-btn" data-minutes="15" onclick="selectPreset(this)">
+            <span class="minutes">15</span>
+            <span class="preset-label">min · Short</span>
+          </button>
           <button class="preset-btn selected" data-minutes="20" onclick="selectPreset(this)">
             <span class="minutes">20</span>
             <span class="preset-label">min · Quick</span>
@@ -303,8 +220,15 @@
             <span class="preset-label">min · Deep</span>
           </button>
         </div>
+
+        <div class="custom-row">
+          <label for="custom-min">Custom:</label>
+          <input type="number" id="custom-min" class="custom-input" min="5" max="90" placeholder="20" oninput="selectCustom(this.value)" />
+          <span style="font-size:.8rem;color:var(--md-text-faint);">min (5–90)</span>
+        </div>
+
         <div class="start-row">
-          <button class="btn-start-focus" onclick="startFocus()">▶ Start Focus</button>
+          <button class="btn-start" onclick="startFocus()">▶ Start Focus</button>
         </div>
       </div>
 
@@ -312,7 +236,6 @@
       <div id="timer-panel">
         <div class="phase-label phase-running" id="phase-label">Focusing</div>
 
-        <!-- SVG Shrinking-Disk Ring -->
         <div class="ring-wrap">
           <div class="ring-inner">
             <svg class="ring-svg" viewBox="0 0 120 120" width="210" height="210">
@@ -324,8 +247,9 @@
         </div>
 
         <div class="timer-actions">
-          <button class="btn-timer btn-done"  onclick="doneFocus()">✓ Done</button>
+          <button class="btn-timer btn-done"  onclick="sessionComplete()">✓ Done</button>
           <button class="btn-timer btn-pause" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+          <button class="btn-timer btn-plus"  onclick="addMinutes(5)">+5 min</button>
           <button class="btn-timer btn-stop"  onclick="stopFocus()">⏹ Stop</button>
         </div>
         <div id="paused-notice">
@@ -333,33 +257,39 @@
         </div>
       </div>
 
+      <!-- ── SESSION COMPLETE PANEL ── -->
+      <div id="complete-panel">
+        <div class="icon">⏱</div>
+        <h3 id="complete-headline">Session complete!</h3>
+        <p id="complete-msg">You put the time in. What would you like to do?</p>
+        <div class="complete-actions">
+          <button class="btn btn-primary" onclick="doneFocus(true)">✓ Mark as done</button>
+          <button class="btn btn-ghost" onclick="anotherRound()">→ Another round</button>
+        </div>
+      </div>
+
       <!-- ── STOPPED PANEL ── -->
       <div id="stopped-panel">
         <div class="icon">☁️</div>
         <h3>Focus stopped — no worries</h3>
-        <p>Every bit of time you put in counts. We'll pick this up later when you're ready.</p>
+        <p>Every bit of time counts. Pick this up whenever you're ready.</p>
         <div style="display:flex;gap:.65rem;justify-content:center;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="resetToIdle()">Try again</button>
           <a href="{{ base }}/my-day" class="btn btn-ghost">Back to My Day</a>
         </div>
       </div>
 
-      <!-- ── DONE PANEL (shown after server confirms) ── -->
+      <!-- ── DONE PANEL ── -->
       <div id="done-panel">
         <div class="icon">✨</div>
         <h3 id="done-headline">Nice work — you showed up.</h3>
-        <div class="done-msg" id="done-msg">
-          You focused on this task. That's what matters.
-        </div>
+        <div class="done-msg" id="done-msg">You focused on this task. That's what matters.</div>
         <div class="done-actions">
           <a href="{{ base }}/my-day?from_focus=1" class="btn btn-primary">Back to My Day</a>
           <a href="{{ base }}/focus" class="btn btn-ghost">Another focus block</a>
         </div>
       </div>
 
-      <div id="error-notice"></div>
-
-      <!-- Hidden data for JS -->
       <input type="hidden" id="task-id" value="{{ now_task.id }}" />
       {% endif %}
 
@@ -367,33 +297,164 @@
   </main>
 
   <script>
-    // ── State ───────────────────────────────────────────────────────────────
-    // Uses wall-clock timestamps so the timer stays accurate even when
-    // the browser throttles setInterval (hidden tab, inactive window, etc.)
+    // ── State ─────────────────────────────────────────────────────────────────
     let selectedMinutes  = 20;
     let totalSeconds     = 0;
     let remainingSeconds = 0;
     let timerInterval    = null;
     let isPaused         = false;
-    let segmentStart     = null;   // Date.now() when the current run segment began
-    let accumulatedMs    = 0;      // total ms counted in prior (completed) segments
+    let segmentStart     = null;
+    let accumulatedMs    = 0;
+    let _toneArmed       = true;   // play tone once when timer reaches 0
     const BASE           = "{{ base }}";
 
-    // ── Preset selection ─────────────────────────────────────────────────────
+    // ── Brown Noise ───────────────────────────────────────────────────────────
+    let _noiseCtx  = null;
+    let _noiseNode = null;
+    let _noiseGain = null;
+
+    function _genBrownBuffer(ctx) {
+      const bufferSize = 2 * ctx.sampleRate;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let lastOut = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = data[i];
+        data[i] *= 3.5;
+      }
+      return buffer;
+    }
+
+    function toggleBrownNoise(btn) {
+      if (_noiseCtx && _noiseNode) {
+        _noiseNode.stop();
+        _noiseNode.disconnect();
+        _noiseNode = null;
+        _noiseCtx.close().catch(() => {});
+        _noiseCtx = null;
+        btn.classList.remove('active');
+        try { localStorage.setItem('myday_brown_noise_on', '0'); } catch(e) {}
+        return;
+      }
+      try {
+        _noiseCtx = new (window.AudioContext || window.webkitAudioContext)();
+        _noiseGain = _noiseCtx.createGain();
+        const vol = parseInt(document.getElementById('noise-vol')?.value || '40', 10);
+        _noiseGain.gain.value = vol / 100;
+        _noiseGain.connect(_noiseCtx.destination);
+        _noiseNode = _noiseCtx.createBufferSource();
+        _noiseNode.buffer = _genBrownBuffer(_noiseCtx);
+        _noiseNode.loop = true;
+        _noiseNode.connect(_noiseGain);
+        _noiseNode.start();
+        btn.classList.add('active');
+        try { localStorage.setItem('myday_brown_noise_on', '1'); } catch(e) {}
+      } catch(e) {
+        console.warn('Brown noise unavailable:', e);
+      }
+    }
+
+    function setNoiseVolume(val) {
+      if (_noiseGain) _noiseGain.gain.value = parseInt(val, 10) / 100;
+    }
+
+    // Restore noise pref from localStorage
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        if (localStorage.getItem('myday_brown_noise_on') === '1') {
+          const btn = document.getElementById('noise-toggle-btn');
+          if (btn) toggleBrownNoise(btn);
+        }
+      } catch(e) {}
+    });
+
+    // ── Distraction-free mode ─────────────────────────────────────────────────
+    function enterFocusMode() {
+      const nav = document.getElementById('focus-nav');
+      if (nav) nav.classList.add('hidden');
+      document.body.classList.add('focus-mode-active');
+    }
+
+    function exitFocusMode() {
+      const nav = document.getElementById('focus-nav');
+      if (nav) nav.classList.remove('hidden');
+      document.body.classList.remove('focus-mode-active');
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      resetToIdle();
+    }
+
+    // Escape key exits focus mode
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('focus-mode-active')) {
+        exitFocusMode();
+        e.preventDefault();
+      }
+    });
+
+    // ── Completion tone (Web Audio API) ───────────────────────────────────────
+    function playCompletionTone() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = 440;
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.01);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
+        // Second softer tone
+        setTimeout(() => {
+          try {
+            const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
+            const o2 = ctx2.createOscillator();
+            const g2 = ctx2.createGain();
+            o2.connect(g2);
+            g2.connect(ctx2.destination);
+            o2.type = 'sine';
+            o2.frequency.value = 554; // C# above A
+            g2.gain.setValueAtTime(0, ctx2.currentTime);
+            g2.gain.linearRampToValueAtTime(0.2, ctx2.currentTime + 0.01);
+            g2.gain.linearRampToValueAtTime(0, ctx2.currentTime + 0.25);
+            o2.start(ctx2.currentTime);
+            o2.stop(ctx2.currentTime + 0.3);
+          } catch(e) {}
+        }, 220);
+      } catch(e) {}
+    }
+
+    // ── Preset selection ──────────────────────────────────────────────────────
     function selectPreset(btn) {
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       selectedMinutes = parseInt(btn.dataset.minutes, 10);
+      const ci = document.getElementById('custom-min');
+      if (ci) ci.value = '';
+    }
+
+    function selectCustom(val) {
+      const mins = parseInt(val, 10);
+      if (mins >= 5 && mins <= 90) {
+        selectedMinutes = mins;
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
+      }
     }
 
     // ── Wall-clock remaining ──────────────────────────────────────────────────
     function computeRemaining() {
       const runningMs = segmentStart !== null ? Date.now() - segmentStart : 0;
-      const elapsedS  = Math.floor((accumulatedMs + runningMs) / 1000);
-      return Math.max(0, totalSeconds - elapsedS);
+      return Math.max(0, totalSeconds - Math.floor((accumulatedMs + runningMs) / 1000));
     }
 
-    // ── Notification permission (request silently on start) ──────────────────
+    // ── Notification permission ───────────────────────────────────────────────
     function _requestNotifyPermission() {
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().catch(() => {});
@@ -401,24 +462,20 @@
     }
     function _fireTimerNotification() {
       if ('Notification' in window && Notification.permission === 'granted') {
-        try {
-          new Notification("⏱ Time's up!", { body: "Your focus block is complete — great work." });
-        } catch(e) {}
+        try { new Notification("⏱ Time's up!", { body: "Your focus block is complete — great work." }); } catch(e) {}
       }
     }
 
-    // ── Start focus ──────────────────────────────────────────────────────────
+    // ── Start focus ───────────────────────────────────────────────────────────
     function startFocus() {
       totalSeconds   = selectedMinutes * 60;
       accumulatedMs  = 0;
       segmentStart   = Date.now();
       isPaused       = false;
+      _toneArmed     = true;
       _requestNotifyPermission();
 
-      document.getElementById('idle-panel').style.display    = 'none';
-      document.getElementById('stopped-panel').style.display = 'none';
-      document.getElementById('done-panel').style.display    = 'none';
-      document.getElementById('timer-panel').style.display   = 'block';
+      _showPanel('timer-panel');
       document.getElementById('paused-notice').style.display = 'none';
       document.getElementById('pause-btn').textContent       = '⏸ Pause';
       document.getElementById('phase-label').textContent     = 'Focusing';
@@ -428,9 +485,18 @@
       remainingSeconds = totalSeconds;
       updateDisplay();
       timerInterval = setInterval(tick, 500);
+
+      enterFocusMode();
     }
 
-    // ── Tick ─────────────────────────────────────────────────────────────────
+    // ── +5 min ────────────────────────────────────────────────────────────────
+    function addMinutes(n) {
+      totalSeconds += n * 60;
+      remainingSeconds = computeRemaining();
+      updateDisplay();
+    }
+
+    // ── Tick ──────────────────────────────────────────────────────────────────
     function tick() {
       if (isPaused) return;
       remainingSeconds = computeRemaining();
@@ -438,12 +504,15 @@
       if (remainingSeconds <= 0) {
         clearInterval(timerInterval);
         timerInterval = null;
-        _fireTimerNotification();
-        doneFocus();
+        if (_toneArmed) {
+          _toneArmed = false;
+          playCompletionTone();
+          _fireTimerNotification();
+        }
+        sessionComplete();
       }
     }
 
-    // ── Snap display when tab becomes visible again ───────────────────────────
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && timerInterval && !isPaused) {
         remainingSeconds = computeRemaining();
@@ -451,13 +520,14 @@
         if (remainingSeconds <= 0) {
           clearInterval(timerInterval);
           timerInterval = null;
+          playCompletionTone();
           _fireTimerNotification();
-          doneFocus();
+          sessionComplete();
         }
       }
     });
 
-    // ── Update countdown + SVG ring ───────────────────────────────────────────
+    // ── Update display ────────────────────────────────────────────────────────
     function updateDisplay() {
       const m = Math.floor(remainingSeconds / 60);
       const s = remainingSeconds % 60;
@@ -465,89 +535,106 @@
         String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
       const circumference = 2 * Math.PI * 50;
       const pct = totalSeconds > 0 ? remainingSeconds / totalSeconds : 1;
-      document.getElementById('ring-arc').style.strokeDashoffset =
-        circumference * (1 - pct);
+      document.getElementById('ring-arc').style.strokeDashoffset = circumference * (1 - pct);
     }
 
     // ── Pause / Resume ────────────────────────────────────────────────────────
     function togglePause() {
       isPaused = !isPaused;
-      const notice = document.getElementById('paused-notice');
-      const btn    = document.getElementById('pause-btn');
-      const phase  = document.getElementById('phase-label');
       if (isPaused) {
-        // Freeze the elapsed count
-        if (segmentStart !== null) {
-          accumulatedMs += Date.now() - segmentStart;
-          segmentStart = null;
-        }
-        notice.style.display = 'block';
-        btn.textContent      = '▶ Resume';
-        phase.textContent    = 'Paused';
-        phase.className      = 'phase-label phase-paused';
+        if (segmentStart !== null) { accumulatedMs += Date.now() - segmentStart; segmentStart = null; }
+        document.getElementById('paused-notice').style.display = 'block';
+        document.getElementById('pause-btn').textContent = '▶ Resume';
+        document.getElementById('phase-label').textContent = 'Paused';
+        document.getElementById('phase-label').className  = 'phase-label phase-paused';
       } else {
-        // Start a new segment from now
         segmentStart = Date.now();
-        notice.style.display = 'none';
-        btn.textContent      = '⏸ Pause';
-        phase.textContent    = 'Focusing';
-        phase.className      = 'phase-label phase-running';
+        document.getElementById('paused-notice').style.display = 'none';
+        document.getElementById('pause-btn').textContent = '⏸ Pause';
+        document.getElementById('phase-label').textContent = 'Focusing';
+        document.getElementById('phase-label').className  = 'phase-label phase-running';
       }
     }
 
-    // ── Stop ─────────────────────────────────────────────────────────────────
+    // ── Stop ──────────────────────────────────────────────────────────────────
     function stopFocus() {
       clearInterval(timerInterval);
       timerInterval = null;
       segmentStart  = null;
-      document.getElementById('timer-panel').style.display   = 'none';
-      document.getElementById('stopped-panel').style.display = 'block';
+      exitFocusMode();
+      _showPanel('stopped-panel');
+    }
+
+    // ── Session complete (mid-flow decision point) ────────────────────────────
+    function sessionComplete() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      segmentStart = null;
+      exitFocusMode();
+
+      const runningMs      = 0; // already captured when timer stopped
+      const totalElapsedMs = accumulatedMs + (segmentStart !== null ? Date.now() - segmentStart : 0);
+      const minutesFocused = Math.max(1, Math.ceil((totalSeconds > 0 ? totalSeconds * 1000 : totalElapsedMs) / 60000));
+
+      const headline = document.getElementById('complete-headline');
+      const msg      = document.getElementById('complete-msg');
+      if (headline) headline.textContent = `Session complete — ${selectedMinutes} min focused!`;
+      if (msg) msg.textContent = 'That was real work. Mark the task done or start another round?';
+
+      _showPanel('complete-panel');
+    }
+
+    // ── Another round ─────────────────────────────────────────────────────────
+    function anotherRound() {
+      // Record session without marking done
+      const taskId = document.getElementById('task-id')?.value;
+      const body = new URLSearchParams({ task_id: taskId || '0', duration_minutes: selectedMinutes });
+      fetch(`${BASE}/focus/complete`, { method: 'POST', body }).catch(() => {});
+      // Reset timer
+      _showPanel('idle-panel');
+      startFocus();
     }
 
     // ── Done — POST to server ─────────────────────────────────────────────────
-    function doneFocus() {
-      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-
+    function doneFocus(markDone = false) {
       const taskId        = document.getElementById('task-id')?.value;
-      const runningMs     = segmentStart !== null ? Date.now() - segmentStart : 0;
-      const totalElapsedMs = accumulatedMs + runningMs;
-      const minutesFocused = Math.max(1, Math.ceil(totalElapsedMs / 60000));
-
-      document.getElementById('timer-panel').style.display = 'none';
-
       const body = new URLSearchParams({
-        task_id:          taskId || '',
-        duration_minutes: minutesFocused,
+        task_id:          taskId || '0',
+        duration_minutes: selectedMinutes,
+        mark_done:        markDone ? '1' : '0',
       });
 
       fetch(`${BASE}/focus/complete`, { method: 'POST', body })
         .then(r => r.json())
         .then(data => {
-          const mins = data.duration || minutesFocused;
+          const mins = data.duration || selectedMinutes;
           document.getElementById('done-headline').textContent =
-            `Nice work — ${mins} min focused.`;
+            markDone ? `Task done — ${mins} min focused. ✓` : `Nice work — ${mins} min focused.`;
           document.getElementById('done-msg').textContent =
-            "You showed up and put the time in. That's what matters. " +
-            "Head back to My Day when you're ready.";
-          document.getElementById('done-panel').style.display = 'block';
+            markDone
+              ? 'Task marked as done. Head back to My Day to pick what\'s next.'
+              : 'You showed up and put the time in. That\'s what matters.';
+          _showPanel('done-panel');
         })
         .catch(() => {
-          document.getElementById('done-headline').textContent =
-            `Focus block complete — ${minutesFocused} min.`;
-          document.getElementById('done-msg').textContent =
-            "We couldn't record this on the server, but your work still counts. " +
-            "Head back to My Day.";
-          document.getElementById('done-panel').style.display = 'block';
+          document.getElementById('done-headline').textContent = `Focus block complete — ${selectedMinutes} min.`;
+          document.getElementById('done-msg').textContent = 'Your work counts. Head back to My Day.';
+          _showPanel('done-panel');
         });
     }
 
     // ── Reset to idle ─────────────────────────────────────────────────────────
     function resetToIdle() {
-      document.getElementById('stopped-panel').style.display = 'none';
-      document.getElementById('idle-panel').style.display    = 'block';
+      _showPanel('idle-panel');
     }
 
+    // ── Panel switcher ────────────────────────────────────────────────────────
+    function _showPanel(id) {
+      ['idle-panel','timer-panel','complete-panel','stopped-panel','done-panel'].forEach(p => {
+        const el = document.getElementById(p);
+        if (el) el.style.display = (p === id) ? (id === 'idle-panel' ? 'block' : 'block') : 'none';
+      });
+    }
   </script>
-  <script src="{{ base }}/static/app.js?v=16"></script>
+  <script src="{{ base }}/static/app.js?v=17"></script>
 </body>
 </html>

@@ -387,31 +387,106 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ── 1.6 Keyboard shortcuts for My Day ────────────────────────────────────────
-// F = go to Focus mode, D = mark NOW task as done, N = open quick-add (existing)
+// ── 1.6 Keyboard shortcuts (expanded in Track C) ─────────────────────────────
+// Navigation: J/K = up/down task list, Enter = expand, Space = toggle
+// Actions: 1/2/3 = focus state, D = done NOW task, N = quick-add, F = focus
+// Pages: E = evening reset, M = morning checkin
+// UI: Escape = close modal / deselect, ? = help
+
+let _selectedTaskIdx = -1;
+
+function _getNavTasks() {
+  return Array.from(document.querySelectorAll('.task-card, .win-row, .task-row'));
+}
+
+function _selectTask(idx) {
+  const tasks = _getNavTasks();
+  if (!tasks.length) return;
+  _selectedTaskIdx = Math.max(0, Math.min(idx, tasks.length - 1));
+  tasks.forEach((t, i) => t.classList.toggle('kbd-selected', i === _selectedTaskIdx));
+  tasks[_selectedTaskIdx]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function _clearTaskSelection() {
+  _selectedTaskIdx = -1;
+  _getNavTasks().forEach(t => t.classList.remove('kbd-selected'));
+}
+
+function _getBase() {
+  const m = window.location.pathname.match(/^(\/[^/]+)\//);
+  return (m ? m[1] : '') || '/task-manager';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  const _BASE = window.location.pathname.split('/').slice(0, 2).join('/');
   document.addEventListener('keydown', (e) => {
     // Don't fire shortcuts when typing in inputs
     if (e.target.closest('input, textarea, select, [contenteditable]')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-    const key = e.key.toLowerCase();
+    const key = e.key;
+    const keyL = key.toLowerCase();
+    const base = _getBase();
 
-    // F → Focus mode
-    if (key === 'f') {
-      const focusLink = document.querySelector('a[href*="/focus"]');
-      if (focusLink) { window.location.href = focusLink.href; e.preventDefault(); }
+    // ── Escape: close modal / deselect / exit focus mode
+    if (key === 'Escape') {
+      _clearTaskSelection();
+      document.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch(ex) {} });
+      const helpEl = document.getElementById('shortcuts-help');
+      if (helpEl) helpEl.remove();
+      return;
     }
 
-    // D → Done NOW task (submit the done button in the now-strip)
-    if (key === 'd') {
+    // ── J/K: navigate task list (only when tasks exist in DOM)
+    const tasks = _getNavTasks();
+    if (keyL === 'j' && tasks.length) {
+      _selectTask(_selectedTaskIdx < 0 ? 0 : _selectedTaskIdx + 1);
+      e.preventDefault();
+      return;
+    }
+    if (keyL === 'k' && tasks.length) {
+      _selectTask(_selectedTaskIdx <= 0 ? 0 : _selectedTaskIdx - 1);
+      e.preventDefault();
+      return;
+    }
+
+    // ── Enter / Space: expand selected task
+    if ((key === 'Enter' || key === ' ') && _selectedTaskIdx >= 0 && tasks[_selectedTaskIdx]) {
+      tasks[_selectedTaskIdx].click();
+      e.preventDefault();
+      return;
+    }
+
+    // ── 1/2/3: move selected task to NOW / NEXT / LATER
+    if (['1','2','3'].includes(key) && _selectedTaskIdx >= 0) {
+      const row = tasks[_selectedTaskIdx];
+      const taskId = row?.dataset?.taskId || row?.id?.replace(/\D/g, '');
+      const stateMap = { '1': 'now', '2': 'next', '3': 'later_today' };
+      if (taskId && stateMap[key]) {
+        fetch(`${base}/tasks/${taskId}/focus-state`, {
+          method: 'POST',
+          body: new URLSearchParams({ focus_state: stateMap[key] }),
+        }).then(() => setTimeout(() => window.location.reload(), 250)).catch(() => {});
+        e.preventDefault();
+      }
+      return;
+    }
+
+    // ── F → Focus mode
+    if (keyL === 'f') {
+      const link = document.querySelector('a[href*="/focus"]');
+      if (link) { window.location.href = link.href; e.preventDefault(); }
+      return;
+    }
+
+    // ── D → Done NOW task
+    if (keyL === 'd') {
       const doneBtn = document.querySelector('.now-strip .btn-done-now, .now-strip .btn-check');
       if (doneBtn) { doneBtn.closest('form')?.submit(); e.preventDefault(); }
+      return;
     }
 
-    // N → Open quick-add modal (native dialog)
-    if (key === 'n') {
+    // ── N → Quick-add modal
+    if (keyL === 'n') {
       const modal = document.querySelector('.quick-modal');
       if (modal && typeof modal.showModal === 'function' && !modal.open) {
         modal.showModal();
@@ -419,25 +494,70 @@ document.addEventListener('DOMContentLoaded', () => {
         if (input) setTimeout(() => input.focus(), 50);
         e.preventDefault();
       }
+      return;
     }
 
-    // ? → Show keyboard shortcuts help
-    if (key === '?' || (e.shiftKey && key === '/')) {
+    // ── M → Morning Check-In
+    if (keyL === 'm') {
+      const link = document.querySelector('a[href*="/morning-checkin"]');
+      if (link) { window.location.href = link.href; e.preventDefault(); }
+      return;
+    }
+
+    // ── E → Evening Reset
+    if (keyL === 'e') {
+      const link = document.querySelector('a[href*="/close-day"]');
+      if (link) { window.location.href = link.href; e.preventDefault(); }
+      return;
+    }
+
+    // ── R → Weekly Review
+    if (keyL === 'r') {
+      const link = document.querySelector('a[href*="/weekly-review"]');
+      if (link) { window.location.href = link.href; e.preventDefault(); }
+      return;
+    }
+
+    // ── ? → Help overlay
+    if (key === '?' || (e.shiftKey && keyL === '/')) {
       const existing = document.getElementById('shortcuts-help');
       if (existing) { existing.remove(); return; }
+      const kbd = (k) => `<kbd style="background:var(--md-ctrl-bg,var(--ctrl-bg));padding:.15rem .45rem;border-radius:.28rem;font-weight:700;font-family:inherit;border:1px solid var(--md-border,var(--border));font-size:.82rem;">${k}</kbd>`;
       const help = document.createElement('div');
       help.id = 'shortcuts-help';
-      help.style.cssText = 'position:fixed;bottom:2rem;right:2rem;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:.85rem;padding:1.25rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,.2);font-size:.88rem;line-height:2;max-width:280px;';
+      help.style.cssText = 'position:fixed;bottom:2rem;right:2rem;z-index:9999;background:var(--md-surface,var(--surface));border:1px solid var(--md-border,var(--border));border-radius:.85rem;padding:1.35rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,.22);font-size:.85rem;line-height:1.9;max-width:310px;font-family:var(--font-body,inherit);';
       help.innerHTML = `
-        <div style="font-weight:800;margin-bottom:.5rem;color:var(--accent);">Keyboard Shortcuts</div>
-        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">N</kbd> Quick add task</div>
-        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">F</kbd> Focus mode</div>
-        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">D</kbd> Done (NOW task)</div>
-        <div><kbd style="background:var(--ctrl-bg);padding:.15rem .4rem;border-radius:.25rem;font-weight:700;font-family:inherit;">?</kbd> Show this help</div>
-        <div style="margin-top:.5rem;font-size:.82rem;color:var(--text-faint);cursor:pointer;" onclick="this.parentElement.remove()">Click to close</div>
+        <div style="font-weight:800;margin-bottom:.6rem;color:var(--md-primary,var(--accent));">Keyboard Shortcuts</div>
+        <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--md-text-faint,#9CA3AF);margin-bottom:.35rem;">Navigation</div>
+        <div>${kbd('J')} / ${kbd('K')} &nbsp;Move down / up in task list</div>
+        <div>${kbd('Enter')} / ${kbd('Space')} &nbsp;Expand selected task</div>
+        <div style="margin-top:.5rem;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--md-text-faint,#9CA3AF);margin-bottom:.35rem;">Actions</div>
+        <div>${kbd('1')} / ${kbd('2')} / ${kbd('3')} &nbsp;Set selected → NOW / NEXT / LATER</div>
+        <div>${kbd('D')} &nbsp;Mark NOW task as done</div>
+        <div>${kbd('N')} &nbsp;Quick add task</div>
+        <div style="margin-top:.5rem;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--md-text-faint,#9CA3AF);margin-bottom:.35rem;">Pages</div>
+        <div>${kbd('F')} &nbsp;Focus mode</div>
+        <div>${kbd('M')} &nbsp;Morning Check-In</div>
+        <div>${kbd('E')} &nbsp;Evening Reset</div>
+        <div>${kbd('R')} &nbsp;Weekly Review</div>
+        <div>${kbd('Esc')} &nbsp;Close / deselect</div>
+        <div>${kbd('?')} &nbsp;Show this help</div>
+        <div style="margin-top:.65rem;font-size:.78rem;color:var(--md-text-faint,#9CA3AF);cursor:pointer;" onclick="this.parentElement.remove()">Click anywhere to close</div>
       `;
       document.body.appendChild(help);
-      setTimeout(() => { document.addEventListener('click', function handler(ev) { if (!help.contains(ev.target)) { help.remove(); document.removeEventListener('click', handler); } }); }, 100);
+      setTimeout(() => {
+        document.addEventListener('click', function handler(ev) {
+          if (!help.contains(ev.target)) { help.remove(); document.removeEventListener('click', handler); }
+        });
+      }, 100);
+    }
+  });
+
+  // Add data-task-id to task rows so 1/2/3 can find the task ID
+  document.querySelectorAll('.task-card[id], .win-row[data-id], .task-row[data-task-id]').forEach(row => {
+    if (!row.dataset.taskId) {
+      const m = (row.id || row.dataset.id || '').match(/\d+/);
+      if (m) row.dataset.taskId = m[0];
     }
   });
 });

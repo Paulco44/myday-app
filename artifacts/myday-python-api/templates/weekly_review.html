@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Week — MyDay</title>
+  <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <style>
+    main { max-width: 760px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+
+    /* ── Page header ── */
+    .wr-header { margin-bottom: 2rem; }
+    .wr-badge { display: inline-flex; align-items: center; gap: .4rem; background: var(--md-primary-soft); border-radius: 999px; padding: .25rem .85rem; font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--md-primary-text); margin-bottom: .75rem; }
+    .wr-header h1 { font-size: 1.7rem; font-weight: 800; color: var(--md-text); margin: 0 0 .25rem; font-family: var(--font-display); }
+    .wr-dates { font-size: .88rem; color: var(--md-text-muted); }
+
+    /* ── Section ── */
+    .wr-section { background: var(--md-surface); border: 1px solid var(--md-border); border-radius: var(--md-radius-xl); padding: 1.5rem 1.75rem; margin-bottom: 1.25rem; }
+    .wr-section-title { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--md-text-faint); margin-bottom: 1.1rem; }
+
+    /* ── Row 1: Streak + consistency ── */
+    .streak-grid { display: grid; grid-template-columns: auto 1fr; gap: 2rem; align-items: start; }
+    @media (max-width: 540px) { .streak-grid { grid-template-columns: 1fr; gap: 1rem; } }
+
+    .streak-block { text-align: center; }
+    .streak-num { font-size: 3.25rem; font-weight: 800; color: var(--md-primary); line-height: 1; font-family: var(--font-display); }
+    .streak-label { font-size: .78rem; color: var(--md-text-muted); font-weight: 600; margin-top: .2rem; }
+
+    .consistency-block { }
+    .dots-row { display: flex; gap: .5rem; margin-bottom: .6rem; flex-wrap: wrap; }
+    .day-dot-wrap { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+    .day-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid var(--md-border);
+      background: transparent;
+      transition: background .2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .day-dot.filled { background: var(--md-primary); border-color: var(--md-primary); }
+    .day-dot.is-today { box-shadow: 0 0 0 3px var(--md-primary-soft); }
+    .day-initial { font-size: .68rem; font-weight: 700; color: var(--md-text-faint); letter-spacing: .03em; }
+    .consistency-msg { font-size: .88rem; color: var(--md-text-muted); font-style: italic; line-height: 1.5; }
+    .checkin-count { font-size: .82rem; font-weight: 700; color: var(--md-text-muted); margin-bottom: .65rem; }
+    .checkin-count span { color: var(--md-primary); }
+
+    /* ── Row 2: Daily breakdown chart ── */
+    .chart-rows { display: flex; flex-direction: column; gap: .55rem; }
+    .chart-row { display: grid; grid-template-columns: 3rem 1fr 4rem; gap: .6rem; align-items: center; }
+    .chart-day { font-size: .78rem; font-weight: 700; color: var(--md-text-muted); text-align: right; }
+    .chart-bar-track { height: 20px; background: var(--md-ctrl-bg); border-radius: 4px; overflow: hidden; position: relative; }
+    .chart-bar-completed { height: 100%; background: var(--md-success); border-radius: 4px; transition: width .4s ease; min-width: 2px; }
+    .chart-bar-planned { height: 100%; background: var(--md-primary); opacity: .25; border-radius: 4px; position: absolute; top: 0; left: 0; z-index: 0; }
+    .chart-bar-completed { position: relative; z-index: 1; }
+    .chart-count { font-size: .75rem; color: var(--md-text-faint); font-weight: 600; text-align: right; white-space: nowrap; }
+
+    /* ── Row 3: Focus time ── */
+    .focus-stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .focus-stat { }
+    .focus-stat-num { font-size: 1.6rem; font-weight: 800; color: var(--md-primary); font-family: var(--font-display); line-height: 1; }
+    .focus-stat-label { font-size: .78rem; color: var(--md-text-muted); font-weight: 600; margin-top: .2rem; }
+
+    /* ── Row 4: Top wins ── */
+    .wins-list { display: flex; flex-direction: column; gap: .4rem; }
+    .win-item { display: flex; align-items: center; gap: .65rem; padding: .6rem .85rem; background: var(--md-success-soft); border: 1px solid var(--md-success-border); border-radius: var(--md-radius); }
+    .win-check { color: var(--md-success); font-size: .95rem; flex-shrink: 0; }
+    .win-title { flex: 1; font-weight: 600; font-size: .88rem; color: var(--md-text); }
+    .win-date { font-size: .72rem; color: var(--md-text-faint); flex-shrink: 0; }
+    .no-wins { font-size: .88rem; color: var(--md-text-faint); font-style: italic; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="{{ base }}/">MyDay</a>
+    <div class="nav-links">
+      <a href="{{ base }}/my-day">My Day</a>
+      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
+      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
+      <a href="{{ base }}/close-day">🌙 Close Day</a>
+      <span class="nav-sep"></span>
+      <a href="{{ base }}/inbox">Inbox</a>
+      <a href="{{ base }}/meetings">Meetings</a>
+      <span class="nav-sep"></span>
+      <a href="/">Kanban</a>
+      <a href="{{ base }}/tasks-page">Tasks</a>
+      <a href="{{ base }}/projects-list">Projects</a>
+      <a href="{{ base }}/notes">Notes</a>
+      <a href="{{ base }}/weekly-review" class="active" style="color:var(--md-primary);font-weight:700;">Review</a>
+      <a href="{{ base }}/cop-admin">CoP Admin</a>
+    </div>
+    <div class="focus-controls">
+      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
+      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <div class="wr-header">
+      <div class="wr-badge">📊 Weekly Review</div>
+      <h1>Your Week</h1>
+      <div class="wr-dates">{{ week_start.strftime('%b %-d') }} – {{ today.strftime('%b %-d, %Y') }}</div>
+    </div>
+
+    <!-- ═══ Row 1: Streak + Consistency ════════════════════════════════════ -->
+    <div class="wr-section">
+      <div class="wr-section-title">Streak &amp; consistency</div>
+      <div class="streak-grid">
+        <div class="streak-block">
+          <div class="streak-num">{{ streak }}</div>
+          <div class="streak-label">days in a row</div>
+        </div>
+        <div class="consistency-block">
+          <div class="checkin-count"><span>{{ checkin_days }}</span> of 7 days with check-in</div>
+          <div class="dots-row">
+            {% for d in days %}
+            <div class="day-dot-wrap">
+              <div class="day-dot{{ ' filled' if d.has_checkin else '' }}{{ ' is-today' if d.is_today else '' }}">
+                {% if d.has_checkin and not d.is_today %}<span style="color:#fff;font-size:.7rem;font-weight:800;">✓</span>{% endif %}
+              </div>
+              <span class="day-initial">{{ d.day_initial }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="consistency-msg">{{ streak_msg }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Row 2: Daily breakdown chart ══════════════════════════════════ -->
+    <div class="wr-section">
+      <div class="wr-section-title">Daily breakdown</div>
+      <div class="chart-rows">
+        {% for d in days %}
+        {% set planned_pct = (d.completed / d.planned * 100) | int if d.planned > 0 else 0 %}
+        <div class="chart-row">
+          <span class="chart-day">{{ d.day_name }}</span>
+          <div class="chart-bar-track">
+            {% if d.planned > 0 %}
+            <div class="chart-bar-planned" style="width:100%;"></div>
+            <div class="chart-bar-completed" style="width:{{ planned_pct }}%;"></div>
+            {% else %}
+            <div style="height:100%;background:var(--md-border-subtle);border-radius:4px;"></div>
+            {% endif %}
+          </div>
+          <span class="chart-count">
+            {% if d.planned > 0 %}{{ d.completed }}&nbsp;of&nbsp;{{ d.planned }}
+            {% else %}—{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:1.5rem;margin-top:.85rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--md-text-muted);">
+          <div style="width:12px;height:12px;background:var(--md-success);border-radius:2px;"></div> Completed
+        </div>
+        <div style="display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--md-text-muted);">
+          <div style="width:12px;height:12px;background:var(--md-primary);opacity:.3;border-radius:2px;"></div> Planned
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Row 3: Focus time (conditional) ══════════════════════════════ -->
+    {% if has_focus_data %}
+    <div class="wr-section">
+      <div class="wr-section-title">Focus time</div>
+      <div class="focus-stat-row">
+        <div class="focus-stat">
+          <div class="focus-stat-num">{{ total_focus_minutes }}</div>
+          <div class="focus-stat-label">total minutes this week</div>
+        </div>
+        <div class="focus-stat">
+          <div class="focus-stat-num">{{ avg_focus_minutes }}</div>
+          <div class="focus-stat-label">avg min per active day</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══ Row 4: Top wins ══════════════════════════════════════════════ -->
+    <div class="wr-section">
+      <div class="wr-section-title">Wins this week</div>
+      {% if top_wins %}
+      <div class="wins-list">
+        {% for task in top_wins %}
+        <div class="win-item">
+          <span class="win-check">✓</span>
+          <span class="win-title">{{ task.title }}</span>
+          {% if task.completed_at %}
+          <span class="win-date">{{ task.completed_at.strftime('%a %-d') }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="no-wins">
+        No wins tagged this week — that's okay.<br>Showing up is the real win.
+      </div>
+      {% endif %}
+    </div>
+
+  </main>
+
+  <script src="{{ base }}/static/app.js?v=17"></script>
+</body>
+</html>
