@@ -57,8 +57,8 @@
   --popover-foreground: 222 47% 11%;
   --popover-border: 214 32% 91%;
   
-  --primary: 48 100% 50%;          /* MyDay yellow — #FFCC00 */
-  --primary-foreground: 222 47% 11%; /* dark text on yellow */
+  --primary: 243 75% 59%;          /* MyDay indigo — #4F46E5 */
+  --primary-foreground: 0 0% 100%;   /* white text on indigo */
   
   --secondary: 210 40% 96%;
   --secondary-foreground: 222 47% 11%;
@@ -74,7 +74,7 @@
   
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 48 100% 50%;
+  --ring: 243 75% 59%;
   
   --radius: 0.75rem;
 
@@ -95,7 +95,7 @@
   --popover-foreground: 210 40% 98%;
   --popover-border: 217 33% 17%;
   
-  --primary: 48 100% 50%;           /* MyDay yellow — #FFCC00 */
+  --primary: 234 89% 74%;           /* MyDay indigo dark — #818CF8 */
   --primary-foreground: 222 47% 11%;
   
   --secondary: 217 33% 17%;
@@ -112,7 +112,7 @@
   
   --border: 217 33% 17%;
   --input: 217 33% 17%;
-  --ring: 48 100% 50%;
+  --ring: 234 89% 74%;
 
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);

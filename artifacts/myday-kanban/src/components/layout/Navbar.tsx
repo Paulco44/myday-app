@@ -70,10 +70,10 @@ export function Navbar() {
             {noiseActive ? "Noise On" : "Noise"}
           </Button>
 
-          {/* Unified DB badge */}
-          <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200" title="Kanban and Task Manager share the same PostgreSQL database">
-            <span>✓</span>
-            <span>Shared DB</span>
+          {/* Bridge badge — honest about the link type */}
+          <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/25" title="Kanban cards can be linked to Task Manager tasks via the bridge">
+            <span>↔</span>
+            <span>Linked via Bridge</span>
           </div>
         </div>
       </div>

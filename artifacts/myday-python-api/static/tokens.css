@@ -1,0 +1,130 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MyDay — Shared Design Tokens
+   ═══════════════════════════════════════════════════════════════════════════
+   Single source of truth for colors, typography, and spacing across both apps:
+   - Python Task Manager (style.css imports this)
+   - React Kanban (index.css imports this)
+
+   Color strategy:
+   - Primary: Indigo (action, links, CTAs)
+   - Success: Green (done states, positive feedback)
+   - Warning: Amber (caution, soft alerts — used sparingly)
+   - Danger: Red (destructive, overdue)
+   - Everything else: Neutrals (stone-based warm grays)
+
+   Typography: Lexend (display + body) — designed for readability,
+   beneficial for ADHD/dyslexia. Falls back to system sans-serif.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ── */
+:root {
+  --font-body:    'Lexend', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Lexend', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+/* ── Light mode ── */
+:root {
+  /* Surfaces */
+  --md-bg:              #F5F5F4;
+  --md-surface:         #FFFFFF;
+  --md-surface-alt:     #FAFAF9;
+
+  /* Borders */
+  --md-border:          #E5E7EB;
+  --md-border-subtle:   #F0F0EE;
+  --md-border-focus:    #4F46E5;
+
+  /* Text */
+  --md-text:            #1C1917;
+  --md-text-muted:      #6B7280;
+  --md-text-faint:      #9CA3AF;
+
+  /* Primary — Indigo */
+  --md-primary:         #4F46E5;
+  --md-primary-hover:   #4338CA;
+  --md-primary-soft:    #E0E7FF;
+  --md-primary-text:    #3730A3;
+
+  /* Success — Green */
+  --md-success:         #22C55E;
+  --md-success-soft:    #DCFCE7;
+  --md-success-border:  #86EFAC;
+  --md-success-text:    #15803D;
+
+  /* Warning — Amber (sparingly) */
+  --md-warning:         #F97316;
+  --md-warning-soft:    #FFEDD5;
+  --md-warning-border:  #FDBA74;
+  --md-warning-text:    #9A3412;
+
+  /* Danger — Red */
+  --md-danger:          #DC2626;
+  --md-danger-soft:     #FEF2F2;
+  --md-danger-border:   #FCA5A5;
+
+  /* Focus */
+  --md-focus-bg:        #EEF2FF;
+  --md-focus-ring:      #A5B4FC;
+  --md-focus-now:       #3730A3;
+
+  /* Controls */
+  --md-ctrl-bg:         #F3F4F6;
+  --md-ctrl-hover:      #E5E7EB;
+
+  /* Radius */
+  --md-radius-sm:       .35rem;
+  --md-radius:          .55rem;
+  --md-radius-lg:       .85rem;
+  --md-radius-xl:       1.1rem;
+}
+
+/* ── Dark mode ── */
+html.dark, .dark {
+  /* Surfaces */
+  --md-bg:              #161616;
+  --md-surface:         #1E1E1E;
+  --md-surface-alt:     #252525;
+
+  /* Borders */
+  --md-border:          #333333;
+  --md-border-subtle:   #2A2A2A;
+  --md-border-focus:    #818CF8;
+
+  /* Text */
+  --md-text:            #F5F5F0;
+  --md-text-muted:      #A3A3A3;
+  --md-text-faint:      #6B7280;
+
+  /* Primary — Indigo (lighter for dark bg) */
+  --md-primary:         #818CF8;
+  --md-primary-hover:   #A5B4FC;
+  --md-primary-soft:    #1E1B4B;
+  --md-primary-text:    #C7D2FE;
+
+  /* Success */
+  --md-success:         #4ADE80;
+  --md-success-soft:    #052E16;
+  --md-success-border:  #22C55E;
+  --md-success-text:    #86EFAC;
+
+  /* Warning */
+  --md-warning:         #FB923C;
+  --md-warning-soft:    #431407;
+  --md-warning-border:  #F97316;
+  --md-warning-text:    #FDBA74;
+
+  /* Danger */
+  --md-danger:          #F87171;
+  --md-danger-soft:     #450A0A;
+  --md-danger-border:   #EF4444;
+
+  /* Focus */
+  --md-focus-bg:        #1E1B4B;
+  --md-focus-ring:      #818CF8;
+  --md-focus-now:       #C7D2FE;
+
+  /* Controls */
+  --md-ctrl-bg:         #2A2A2A;
+  --md-ctrl-hover:      #3A3A3A;
+}
