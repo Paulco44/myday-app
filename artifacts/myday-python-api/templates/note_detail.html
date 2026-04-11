@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ note.title }} — Notes — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=13" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=16" />
   <style>
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
     .back-link { display: inline-flex; align-items: center; gap: .3rem; color: var(--text-muted); text-decoration: none; font-size: .85rem; font-weight: 600; margin-bottom: 1.25rem; transition: color .15s; }
@@ -266,6 +266,6 @@
     const toast = document.getElementById('export-toast');
     if (toast) setTimeout(() => { toast.style.transition = 'opacity .5s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 6000);
   </script>
-  <script src="{{ base }}/static/app.js?v=13"></script>
+  <script src="{{ base }}/static/app.js?v=16"></script>
 </body>
 </html>
