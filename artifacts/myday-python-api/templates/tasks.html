@@ -231,13 +231,13 @@
                style="display:inline-flex;align-items:center;gap:.2rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:.35rem;padding:.28rem .65rem;font-size:.82rem;font-weight:600;color:#475569;text-decoration:none;margin-right:.3rem;">
               ✎ Edit
             </a>
-            {% if not task.card_id %}
+            {% if task.card_id %}
+            <a href="/" class="kanban-linked" title="Card #{{ task.card_id }} on Kanban board">📋 #{{ task.card_id }}</a>
+            {% elif bridge_available %}
             <form method="post" action="{{ base }}/tasks/{{ task.id }}/push-to-kanban" style="display:inline" onsubmit="return pushToKanban(this)">
               <input type="hidden" name="redirect_to" value="{{ base }}/tasks-page" />
               <button type="submit" class="btn-push-kanban" title="Create a card on the Kanban board linked to this task">📋 Board</button>
             </form>
-            {% else %}
-            <a href="/" class="kanban-linked" title="Card #{{ task.card_id }} on Kanban board">📋 #{{ task.card_id }}</a>
             {% endif %}
             <form method="post" action="{{ base }}/tasks-page/{{ task.id }}/delete" style="display:inline">
               <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this task?')">✕</button>
@@ -366,33 +366,60 @@ function pushToKanban(form) {
     body: fd,
     headers: { 'X-Requested-With': 'fetch' },
   })
-    .then(r => r.json())
+    .then(r => {
+      // Handle 503 (bridge not available) before trying to parse JSON
+      if (r.status === 503) {
+        if (btn) { btn.disabled = false; btn.textContent = '📋 Board'; }
+        _showBridgeError(btn || form, 'Kanban bridge not available — shared PostgreSQL required.');
+        return null;
+      }
+      return r.json();
+    })
     .then(data => {
-      if (data.ok) {
-        // Replace the form with a linked badge
-        const cardId = data.card_id;
-        const link = document.createElement('a');
-        link.href = '/';
-        link.className = 'kanban-linked';
-        link.title = `Card #${cardId} on Kanban board`;
-        link.innerHTML = `📋 #${cardId}`;
-        form.replaceWith(link);
-        // Also add the "Kanban" badge to the title cell in same row
-        const row = link.closest('tr');
-        if (row) {
-          const titleEl = row.querySelector('td:first-child strong');
-          if (titleEl && !row.querySelector('.badge-kanban')) {
-            const badge = document.createElement('span');
-            badge.className = 'badge badge-kanban';
-            badge.style.marginLeft = '.4rem';
-            badge.textContent = '📋 Kanban';
-            titleEl.after(badge);
-          }
+      if (!data) return;
+      if (!data.ok) {
+        if (btn) { btn.disabled = false; btn.textContent = '📋 Board'; }
+        _showBridgeError(btn || form, data.error || 'Could not push to Kanban board.');
+        return;
+      }
+      // Success: replace button with linked badge
+      const cardId = data.card_id;
+      const link = document.createElement('a');
+      link.href = '/';
+      link.className = 'kanban-linked';
+      link.title = `Card #${cardId} on Kanban board`;
+      link.innerHTML = `📋 #${cardId}`;
+      form.replaceWith(link);
+      // Add "Kanban" badge to the title cell in the same row
+      const row = link.closest('tr');
+      if (row) {
+        const titleEl = row.querySelector('td:first-child strong');
+        if (titleEl && !row.querySelector('.badge-kanban')) {
+          const badge = document.createElement('span');
+          badge.className = 'badge badge-kanban';
+          badge.style.marginLeft = '.4rem';
+          badge.textContent = '📋 Kanban';
+          titleEl.after(badge);
         }
       }
     })
     .catch(() => { form.submit(); });
   return false;
+}
+
+function _showBridgeError(anchor, msg) {
+  // Show a small tooltip-style error near the button for 2.5s
+  let tip = document.getElementById('bridge-error-tip');
+  if (!tip) {
+    tip = document.createElement('span');
+    tip.id = 'bridge-error-tip';
+    tip.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1e293b;color:#f1f5f9;font-size:.82rem;padding:.5rem 1rem;border-radius:.5rem;z-index:9999;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.3);';
+    document.body.appendChild(tip);
+  }
+  tip.textContent = msg;
+  tip.style.opacity = '1';
+  clearTimeout(tip._t);
+  tip._t = setTimeout(() => { tip.style.opacity = '0'; }, 2500);
 }
 </script>
 <script src="{{ base }}/static/app.js?v=15"></script>

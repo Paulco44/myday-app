@@ -44,8 +44,9 @@ router.patch("/cards/:id", async (req, res) => {
       const colTitle: string = (colRows.rows[0] as { title: string })?.title ?? "";
       const isDoneCol = /done/i.test(colTitle);
       if (isDoneCol) {
+        // AND status != 'done' prevents double-write if task was already marked done
         await db.execute(
-          sql`UPDATE tasks SET status = 'done', updated_at = now(), completed_at = COALESCE(completed_at, now()) WHERE id = ${card.taskId}`
+          sql`UPDATE tasks SET status = 'done', updated_at = now(), completed_at = COALESCE(completed_at, now()) WHERE id = ${card.taskId} AND status != 'done'`
         );
       }
     } catch {

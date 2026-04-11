@@ -59,6 +59,7 @@ def run_migrations():
         ("time_estimate_minutes", "INTEGER"),
         ("today_flag", "BOOLEAN DEFAULT 0"),
         ("today_category", "VARCHAR(10)"),
+        ("card_id", "INTEGER"),             # bridge: linked Kanban card
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
@@ -97,6 +98,20 @@ def run_migrations():
                     conn.commit()
                 except Exception:
                     pass
+
+
+# ─── Bridge helpers ───────────────────────────────────────────────────────────
+
+def _bridge_available(db: Session) -> bool:
+    """Return True if the shared Kanban 'cards' table is accessible.
+    Only possible when both services share a PostgreSQL instance."""
+    if engine.dialect.name != "postgresql":
+        return False
+    try:
+        db.execute(sa_text("SELECT 1 FROM cards LIMIT 0"))
+        return True
+    except Exception:
+        return False
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -837,6 +852,17 @@ async def push_to_kanban(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # Guard: bridge requires shared PostgreSQL
+    if not _bridge_available(db):
+        is_fetch = (request and request.headers.get("X-Requested-With") == "fetch")
+        if is_fetch:
+            return JSONResponse(
+                {"ok": False, "error": "Bridge requires shared PostgreSQL. Enable DATABASE_URL to use this feature."},
+                status_code=503,
+            )
+        dest = redirect_to or f"{BASE}/tasks-page"
+        return RedirectResponse(url=dest, status_code=303)
+
     # If already on Kanban, just redirect/return
     if task.card_id:
         is_fetch = (request and request.headers.get("X-Requested-With") == "fetch")
@@ -994,6 +1020,7 @@ async def tasks_page(
             "base": BASE,
             "current_status": status,
             "current_project_id": project_id,
+            "bridge_available": _bridge_available(db),
         },
     )
 
@@ -1031,6 +1058,12 @@ async def create_task_form(
 async def delete_task_form(task_id: int, db: Session = Depends(get_db)):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if db_task:
+        # Bridge cleanup: clear task_id on the linked Kanban card before deleting
+        if db_task.card_id:
+            try:
+                db.execute(sa_text("UPDATE cards SET task_id = NULL WHERE id = :cid"), {"cid": db_task.card_id})
+            except Exception:
+                pass  # best-effort, non-fatal
         db.delete(db_task)
         db.commit()
     return RedirectResponse(url=f"{BASE}/tasks-page", status_code=303)
@@ -1248,6 +1281,12 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
+    # Bridge cleanup: clear task_id on the linked Kanban card before deleting
+    if db_task.card_id:
+        try:
+            db.execute(sa_text("UPDATE cards SET task_id = NULL WHERE id = :cid"), {"cid": db_task.card_id})
+        except Exception:
+            pass  # best-effort, non-fatal
     db.delete(db_task)
     db.commit()
     return {"success": True}
