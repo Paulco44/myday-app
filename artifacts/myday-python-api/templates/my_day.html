@@ -8,7 +8,7 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=14" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=15" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -466,12 +466,13 @@
       <div class="now-actions">
         <a href="{{ base }}/focus" class="btn-focus-now">⏱ Focus 20 min</a>
         <form method="post" action="{{ base }}/tasks/{{ now_task.id }}/status" style="display:inline"
-              onsubmit="fireConfettiAt(this.querySelector('button'))">
+              onsubmit="return progressiveSubmit(this, pDone)">
           <input type="hidden" name="status" value="done" />
           <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
           <button class="btn-done-now" type="submit">✓ Done</button>
         </form>
-        <form method="post" action="{{ base }}/tasks/{{ now_task.id }}/focus-state" style="display:inline">
+        <form method="post" action="{{ base }}/tasks/{{ now_task.id }}/focus-state" style="display:inline"
+              onsubmit="return progressiveSubmit(this, pSoftReload)">
           <input type="hidden" name="focus_state" value="later_today" />
           <button class="btn-later-now" type="submit">Move to Later</button>
         </form>
@@ -510,7 +511,7 @@
               <button class="btn-start-focus" type="submit">▶ Start Focus</button>
             </form>
             <form method="post" action="{{ base }}/tasks/{{ task.id }}/status"
-                  onsubmit="fireConfettiAt(this.querySelector('button'))">
+                  onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
               <button class="btn-check" type="submit">✓ Done</button>
@@ -559,7 +560,7 @@
               <button class="btn-start-focus" type="submit">▶ Start Focus</button>
             </form>
             <form method="post" action="{{ base }}/tasks/{{ task.id }}/status"
-                  onsubmit="fireConfettiAt(this.querySelector('button'))">
+                  onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
               <button class="btn-check" type="submit">✓ Done</button>
@@ -602,12 +603,13 @@
             </div>
           </div>
           <div class="task-row-actions">
-            <form method="post" action="{{ base }}/tasks/{{ next_task.id }}/focus-state">
+            <form method="post" action="{{ base }}/tasks/{{ next_task.id }}/focus-state"
+                  onsubmit="return progressiveSubmit(this, pSoftReload)">
               <input type="hidden" name="focus_state" value="now" />
               <button class="btn-state primary" type="submit">Set as Now</button>
             </form>
             <form method="post" action="{{ base }}/tasks/{{ next_task.id }}/status"
-                  onsubmit="fireConfettiAt(this.querySelector('button'))">
+                  onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
               <button class="btn-check" type="submit">✓</button>
@@ -629,21 +631,24 @@
             </div>
           </div>
           <div class="task-row-actions">
-            <form method="post" action="{{ base }}/tasks/{{ task.id }}/focus-state">
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/focus-state"
+                  onsubmit="return progressiveSubmit(this, pSoftReload)">
               <input type="hidden" name="focus_state" value="now" />
               <button class="btn-state primary" type="submit">Now</button>
             </form>
-            <form method="post" action="{{ base }}/tasks/{{ task.id }}/focus-state">
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/focus-state"
+                  onsubmit="return progressiveSubmit(this, pSoftReload)">
               <input type="hidden" name="focus_state" value="next" />
               <button class="btn-state warn" type="submit">Next</button>
             </form>
             <form method="post" action="{{ base }}/tasks/{{ task.id }}/status"
-                  onsubmit="fireConfettiAt(this.querySelector('button'))">
+                  onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
               <button class="btn-check" type="submit">✓</button>
             </form>
-            <form method="post" action="{{ base }}/tasks/{{ task.id }}/unset-today">
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/unset-today"
+                  onsubmit="return progressiveSubmit(this, pDismiss)">
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
               <button class="btn-park" type="submit">Move to Later</button>
             </form>
@@ -930,6 +935,6 @@
     }
 
   </script>
-  <script src="{{ base }}/static/app.js?v=14"></script>
+  <script src="{{ base }}/static/app.js?v=15"></script>
 </body>
 </html>

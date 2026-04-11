@@ -586,6 +586,80 @@ function _updateSubtaskProgress(taskId) {
   if (count) count.textContent = `${done}/${total} steps`;
 }
 
+// ─── Progressive form submission (3.6) ────────────────────────────────────────
+// Usage: onsubmit="return progressiveSubmit(this, pDone|pDismiss|pSoftReload)"
+// All backend routes work as-is — fetch() follows their 303 redirect to My Day.
+
+function progressiveSubmit(form, onSuccess) {
+  const fd = new FormData(form);
+  fetch(form.action, {
+    method: 'POST',
+    body: fd,
+    headers: { 'X-Requested-With': 'fetch' },
+  })
+    .then(r => { if (r.ok || r.redirected) onSuccess(form); })
+    .catch(() => form.submit());
+  return false;
+}
+
+// "✓ Done" — confetti flash then slide out
+function pDone(form) {
+  const btn = form.querySelector('button');
+  if (btn && typeof fireConfettiAt === 'function') fireConfettiAt(btn);
+  const row = form.closest('.win-row, .nice-row, .task-row');
+  if (!row) { setTimeout(() => window.location.reload(), 300); return; }
+  // Brief strikethrough before removing
+  const titleEl = row.querySelector('.win-title, .task-row-title');
+  if (titleEl) { titleEl.style.textDecoration = 'line-through'; titleEl.style.color = 'var(--text-faint)'; }
+  setTimeout(() => _pSlideOut(row, _pUpdateCounters), 550);
+}
+
+// "Move to Later / Park" — silent slide out
+function pDismiss(form) {
+  const row = form.closest('.win-row, .nice-row, .task-row');
+  _pSlideOut(row, _pUpdateCounters);
+}
+
+// "Set as Now / focus-state change" — needs NOW strip refresh so soft-reload
+function pSoftReload(_form) {
+  setTimeout(() => window.location.reload(), 260);
+}
+
+function _pSlideOut(el, cb) {
+  if (!el) { setTimeout(() => window.location.reload(), 300); return; }
+  el.style.overflow = 'hidden';
+  el.style.maxHeight = el.scrollHeight + 'px';
+  el.style.transition = 'opacity .32s ease, max-height .38s ease, margin .38s ease, padding .38s ease';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.style.opacity = '0';
+      el.style.maxHeight = '0';
+      el.style.marginTop = '0';
+      el.style.marginBottom = '0';
+      el.style.paddingTop = '0';
+      el.style.paddingBottom = '0';
+      setTimeout(() => { el.remove(); if (cb) cb(); }, 400);
+    });
+  });
+}
+
+function _pUpdateCounters() {
+  // Wins counter
+  const winsSection = document.querySelector('.wins-section');
+  if (winsSection) {
+    const left = winsSection.querySelectorAll('.win-row:not(.is-done)').length;
+    const done = winsSection.querySelectorAll('.win-row.is-done').length;
+    const wcEl = winsSection.querySelector('.wcount');
+    if (wcEl) wcEl.textContent = `${left} left · ${done} done`;
+  }
+  // Plan count
+  const planCount = document.querySelector('.section .count');
+  if (planCount) {
+    const rows = document.querySelectorAll('.focus-panel .task-row');
+    planCount.textContent = rows.length;
+  }
+}
+
 // ─── Inline Quick-Capture (iqSubmit) ─────────────────────────────────────────
 function iqSubmit(form) {
   const input = form.querySelector('.iqa-input');
