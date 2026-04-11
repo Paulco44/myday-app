@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, cardsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   CreateCardBody,
   UpdateCardParams,
@@ -33,6 +34,25 @@ router.patch("/cards/:id", async (req, res) => {
     res.status(404).json({ error: "Card not found" });
     return;
   }
+
+  // Bridge sync: if card moved to a "Done" column and has a linked task, mark it done
+  if (body.columnId && card.taskId) {
+    try {
+      const colRows = await db.execute(
+        sql`SELECT title FROM columns WHERE id = ${body.columnId} LIMIT 1`
+      );
+      const colTitle: string = (colRows.rows[0] as { title: string })?.title ?? "";
+      const isDoneCol = /done/i.test(colTitle);
+      if (isDoneCol) {
+        await db.execute(
+          sql`UPDATE tasks SET status = 'done', updated_at = now(), completed_at = COALESCE(completed_at, now()) WHERE id = ${card.taskId}`
+        );
+      }
+    } catch {
+      // Non-fatal: bridge sync is best-effort
+    }
+  }
+
   res.json(card);
 });
 
@@ -46,6 +66,18 @@ router.delete("/cards/:id", async (req, res) => {
     res.status(404).json({ error: "Card not found" });
     return;
   }
+
+  // Bridge cleanup: if card had a linked task, clear its card_id
+  if (card.taskId) {
+    try {
+      await db.execute(
+        sql`UPDATE tasks SET card_id = NULL WHERE id = ${card.taskId}`
+      );
+    } catch {
+      // Non-fatal
+    }
+  }
+
   res.json({ success: true });
 });
 

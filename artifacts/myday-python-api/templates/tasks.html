@@ -6,7 +6,7 @@
   <title>Tasks — MyDay</title>
     <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=13" />
+<link rel="stylesheet" href="{{ base }}/static/style.css?v=15" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -73,10 +73,17 @@
     .badge-backlog  { background: #f1f5f9; color: #64748b; }
     .badge-waiting  { background: #fce7f3; color: #9d174d; }
     .badge-today    { background: #fef3c7; color: #92400e; font-size:.82rem; }
+    .badge-kanban   { background: #fefce8; color: #a16207; border: 1px solid #fde047; font-size:.78rem; }
 
     .pri-high   { color: #dc2626; font-weight: 700; }
     .pri-medium { color: #d97706; }
     .pri-low    { color: #6b7280; }
+
+    .btn-push-kanban { background: #1A1A1A; color: #FFCC00; border: 1px solid #FFCC00; border-radius: .35rem; padding: .28rem .65rem; font-size: .78rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity .15s; }
+    .btn-push-kanban:hover { opacity: .8; }
+    .btn-push-kanban:disabled { opacity: .5; cursor: not-allowed; }
+    .kanban-linked { display: inline-flex; align-items: center; gap: .2rem; font-size: .78rem; font-weight: 600; color: #a16207; background: #fefce8; border: 1px solid #fde047; border-radius: .35rem; padding: .28rem .55rem; text-decoration: none; }
+    .kanban-linked:hover { background: #fef08a; }
 
     .empty { text-align: center; padding: 3rem; color: #94a3b8; }
     #no-results { display: none; text-align: center; padding: 2.5rem; color: #94a3b8; }
@@ -211,6 +218,7 @@
           <td data-val="{{ task.title | lower }}">
             <strong>{{ task.title }}</strong>
             {% if task.is_today %}<span class="badge badge-today" style="margin-left:.4rem;">Today</span>{% endif %}
+            {% if task.card_id %}<span class="badge badge-kanban" style="margin-left:.4rem;">📋 Kanban</span>{% endif %}
             {% if task.description %}<br><span style="color:#94a3b8;font-size:.8rem;">{{ task.description }}</span>{% endif %}
           </td>
           <td data-val="{{ s_order.get(task.status, 9) }}"><span class="badge badge-{{ task.status }}">{{ task.status }}</span></td>
@@ -223,6 +231,14 @@
                style="display:inline-flex;align-items:center;gap:.2rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:.35rem;padding:.28rem .65rem;font-size:.82rem;font-weight:600;color:#475569;text-decoration:none;margin-right:.3rem;">
               ✎ Edit
             </a>
+            {% if not task.card_id %}
+            <form method="post" action="{{ base }}/tasks/{{ task.id }}/push-to-kanban" style="display:inline" onsubmit="return pushToKanban(this)">
+              <input type="hidden" name="redirect_to" value="{{ base }}/tasks-page" />
+              <button type="submit" class="btn-push-kanban" title="Create a card on the Kanban board linked to this task">📋 Board</button>
+            </form>
+            {% else %}
+            <a href="/" class="kanban-linked" title="Card #{{ task.card_id }} on Kanban board">📋 #{{ task.card_id }}</a>
+            {% endif %}
             <form method="post" action="{{ base }}/tasks-page/{{ task.id }}/delete" style="display:inline">
               <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this task?')">✕</button>
             </form>
@@ -339,6 +355,46 @@
 
   } // end if tasks-body
 </script>
-<script src="{{ base }}/static/app.js?v=13"></script>
+<script>
+// Push a task to the Kanban board via fetch (progressive enhancement)
+function pushToKanban(form) {
+  const btn = form.querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const fd = new FormData(form);
+  fetch(form.action, {
+    method: 'POST',
+    body: fd,
+    headers: { 'X-Requested-With': 'fetch' },
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        // Replace the form with a linked badge
+        const cardId = data.card_id;
+        const link = document.createElement('a');
+        link.href = '/';
+        link.className = 'kanban-linked';
+        link.title = `Card #${cardId} on Kanban board`;
+        link.innerHTML = `📋 #${cardId}`;
+        form.replaceWith(link);
+        // Also add the "Kanban" badge to the title cell in same row
+        const row = link.closest('tr');
+        if (row) {
+          const titleEl = row.querySelector('td:first-child strong');
+          if (titleEl && !row.querySelector('.badge-kanban')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge badge-kanban';
+            badge.style.marginLeft = '.4rem';
+            badge.textContent = '📋 Kanban';
+            titleEl.after(badge);
+          }
+        }
+      }
+    })
+    .catch(() => { form.submit(); });
+  return false;
+}
+</script>
+<script src="{{ base }}/static/app.js?v=15"></script>
 </body>
 </html>

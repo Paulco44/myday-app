@@ -816,6 +816,89 @@ async def update_status(
     return RedirectResponse(url=dest, status_code=303)
 
 
+# ─── Bridge: push task → Kanban card ─────────────────────────────────────────
+
+STATUS_TO_COLUMN_TITLE = {
+    "backlog":  "Back log",
+    "todo":     "To Do",
+    "doing":    "In Progress",
+    "waiting":  "In Progress",
+    "done":     "Done",
+}
+
+@app.post(f"{BASE}/tasks/{{task_id}}/push-to-kanban")
+async def push_to_kanban(
+    task_id: int,
+    redirect_to: str = Form(default=""),
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # If already on Kanban, just redirect/return
+    if task.card_id:
+        is_fetch = (request and request.headers.get("X-Requested-With") == "fetch")
+        if is_fetch:
+            return JSONResponse({"ok": True, "card_id": task.card_id, "already_linked": True})
+        dest = redirect_to or f"{BASE}/tasks-page"
+        return RedirectResponse(url=dest, status_code=303)
+
+    # Determine target column
+    col_title = STATUS_TO_COLUMN_TITLE.get(task.status or "todo", "To Do")
+    col_row = db.execute(
+        sa_text("SELECT id FROM columns WHERE title = :t LIMIT 1"), {"t": col_title}
+    ).fetchone()
+    if not col_row:
+        col_row = db.execute(sa_text("SELECT id FROM columns ORDER BY position LIMIT 1")).fetchone()
+    column_id = col_row[0] if col_row else 1
+
+    # Get current max position in that column
+    max_pos = db.execute(
+        sa_text("SELECT COALESCE(MAX(position),0) FROM cards WHERE column_id = :cid"), {"cid": column_id}
+    ).scalar() or 0
+
+    # Build description: energy + time estimate
+    desc_parts = []
+    if task.energy_tag:
+        desc_parts.append(task.energy_tag.replace("_", " "))
+    if task.time_estimate_minutes:
+        desc_parts.append(f"{task.time_estimate_minutes} min")
+    if task.project:
+        desc_parts.append(f"Project: {task.project.name}")
+    description = " · ".join(desc_parts) if desc_parts else None
+
+    # Insert the card
+    row = db.execute(
+        sa_text("""
+            INSERT INTO cards (column_id, title, description, position, priority, due_date, task_id, created_at)
+            VALUES (:col, :title, :desc, :pos, :pri, :due, :tid, now())
+            RETURNING id
+        """),
+        {
+            "col": column_id,
+            "title": task.title,
+            "desc": description,
+            "pos": max_pos + 1,
+            "pri": task.priority,
+            "due": str(task.due_date) if task.due_date else None,
+            "tid": task_id,
+        },
+    ).fetchone()
+    card_id = row[0]
+
+    # Link the task back
+    task.card_id = card_id
+    db.commit()
+
+    is_fetch = (request and request.headers.get("X-Requested-With") == "fetch")
+    if is_fetch:
+        return JSONResponse({"ok": True, "card_id": card_id, "column": col_title})
+    dest = redirect_to or f"{BASE}/tasks-page"
+    return RedirectResponse(url=dest, status_code=303)
+
+
 @app.post(f"{BASE}/tasks/{{task_id}}/set-now")
 async def set_now(task_id: int, db: Session = Depends(get_db)):
     db.query(models.Task).update({models.Task.is_now: False})

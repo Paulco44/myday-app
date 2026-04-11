@@ -55,6 +55,9 @@ class Task(Base):
     time_block = Column(String, nullable=True)    # morning | afternoon | evening | None
     energy_tag = Column(String, nullable=True)    # creative | admin | social | low_energy | None
 
+    # Bridge: linked Kanban card
+    card_id = Column(Integer, nullable=True)      # cards.id (React Kanban)
+
     project = relationship("Project", back_populates="tasks")
     subtasks = relationship("Subtask", back_populates="task", cascade="all, delete-orphan")
     task_tags = relationship("TaskTag", back_populates="task", cascade="all, delete-orphan")

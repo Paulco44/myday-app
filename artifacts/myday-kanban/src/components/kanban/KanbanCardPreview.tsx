@@ -1,4 +1,4 @@
-import { CalendarIcon, AlignLeft, Flag, Maximize2 } from "lucide-react";
+import { CalendarIcon, AlignLeft, Flag, Maximize2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import clsx from "clsx";
 import type { Card } from "@workspace/api-client-react/src/generated/api.schemas";
@@ -38,8 +38,14 @@ export function KanbanCardPreview({ card, onFullEdit }: KanbanCardPreviewProps) 
         </h4>
       </div>
 
-      {(card.description || card.priority || card.dueDate) && (
+      {(card.description || card.priority || card.dueDate || card.taskId) && (
         <div className="flex items-center flex-wrap gap-2 mt-3 pt-3 border-t border-border/40">
+          {card.taskId && (
+            <div className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border bg-yellow-50 text-yellow-700 border-yellow-200">
+              <Link2 className="w-3 h-3" />
+              Task #{card.taskId}
+            </div>
+          )}
           {card.priority && (
             <div
               className={clsx(

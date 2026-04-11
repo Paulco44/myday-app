@@ -11,6 +11,7 @@ export const cardsTable = pgTable("cards", {
   position: integer("position").notNull().default(0),
   priority: text("priority"),
   dueDate: text("due_date"),
+  taskId: integer("task_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

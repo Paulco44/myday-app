@@ -17,5 +17,7 @@ export interface Card {
   priority?: string | null;
   /** @nullable */
   dueDate?: string | null;
+  /** @nullable */
+  taskId?: number | null;
   createdAt: Date;
 }

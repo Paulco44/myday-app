@@ -16,4 +16,6 @@ export interface UpdateCardInput {
   priority?: string | null;
   /** @nullable */
   dueDate?: string | null;
+  /** @nullable */
+  taskId?: number | null;
 }
