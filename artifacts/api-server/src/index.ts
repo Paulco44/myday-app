@@ -9,7 +9,13 @@ async function runStartupMigrations() {
     await db.execute(
       sql`ALTER TABLE cards ADD COLUMN IF NOT EXISTS task_id INTEGER`
     );
-    logger.info("Bridge migration: cards.task_id ensured");
+    await db.execute(
+      sql`ALTER TABLE cards ADD COLUMN IF NOT EXISTS project_id INTEGER`
+    );
+    await db.execute(
+      sql`UPDATE cards c SET project_id = t.project_id FROM tasks t WHERE c.task_id = t.id AND t.project_id IS NOT NULL AND c.project_id IS NULL`
+    );
+    logger.info("Bridge migration: cards.task_id and project_id ensured");
   } catch (err) {
     logger.warn({ err }, "Bridge migration skipped (non-fatal)");
   }

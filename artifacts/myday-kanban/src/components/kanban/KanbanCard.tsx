@@ -8,6 +8,7 @@ import { Check, X } from "lucide-react";
 import { useUpdateCard, getGetCardsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Project } from "@/lib/projects";
 import { KanbanCardPreview } from "./KanbanCardPreview";
 
 export const toCardDndId = (id: number) => `card-${id}`;
@@ -25,10 +26,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface KanbanCardProps {
   card: Card;
+  projects?: Project[];
   onClick: (card: Card) => void;
 }
 
-export function KanbanCard({ card, onClick }: KanbanCardProps) {
+export function KanbanCard({ card, projects, onClick }: KanbanCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const queryClient = useQueryClient();
 
@@ -212,7 +214,7 @@ export function KanbanCard({ card, onClick }: KanbanCardProps) {
       onClick={() => setIsEditing(true)}
       className="cursor-grab active:cursor-grabbing touch-none group"
     >
-      <KanbanCardPreview card={card} onFullEdit={handleOpenFull} />
+      <KanbanCardPreview card={card} projects={projects} onFullEdit={handleOpenFull} />
     </div>
   );
 }

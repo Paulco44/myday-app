@@ -2,9 +2,12 @@ import { CalendarIcon, AlignLeft, Flag, Maximize2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import clsx from "clsx";
 import type { Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Project } from "@/lib/projects";
+import { projectColor, projectInitials } from "@/lib/projects";
 
 interface KanbanCardPreviewProps {
   card: Card;
+  projects?: Project[];
   onFullEdit?: (e: React.MouseEvent) => void;
 }
 
@@ -14,13 +17,13 @@ const priorityColors = {
   low: "bg-blue-50 text-blue-700 border-blue-200",
 };
 
-export function KanbanCardPreview({ card, onFullEdit }: KanbanCardPreviewProps) {
+export function KanbanCardPreview({ card, projects, onFullEdit }: KanbanCardPreviewProps) {
   const isOverdue = card.dueDate && new Date(card.dueDate) < new Date();
+  const project = card.projectId ? projects?.find((p) => p.id === card.projectId) : null;
 
   return (
     <div className="mb-3 bg-card border border-border/60 rounded-xl p-4 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-150 relative">
 
-      {/* Expand to full-edit button — visible only on hover */}
       {onFullEdit && (
         <button
           type="button"
@@ -30,6 +33,13 @@ export function KanbanCardPreview({ card, onFullEdit }: KanbanCardPreviewProps) 
         >
           <Maximize2 className="w-3.5 h-3.5" />
         </button>
+      )}
+
+      {project && (
+        <div className={clsx("inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded mb-2", projectColor(project.id))}>
+          {projectInitials(project.name)}
+          <span className="font-medium max-w-[120px] truncate">{project.name}</span>
+        </div>
       )}
 
       <div className="flex items-start gap-2 mb-2 pr-6">
