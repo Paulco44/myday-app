@@ -8,7 +8,7 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=19" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=20" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -194,6 +194,34 @@
     .wins-head .wcount { background: var(--accent-soft); color: var(--accent-text); font-size: .82rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px; }
     .wins-head .wcount.nice-count { background: #f3e8ff; color: #7c3aed; }
     html.dark .wins-head .wcount.nice-count { background: #2D1A5E; color: #C4B5FD; }
+
+    /* ── E2: Collapsible section headers ── */
+    .collapsible { cursor: pointer; user-select: none; }
+    .collapsible:hover { opacity: .85; }
+    .collapse-chevron { font-size: .75rem; color: var(--text-faint); transition: transform 200ms ease; margin-left: .3rem; display: inline-block; }
+    .collapsible.collapsed .collapse-chevron { transform: rotate(-90deg); }
+    .section-body { transition: max-height 280ms ease, opacity 220ms ease; overflow: hidden; }
+    .section-body.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; }
+    .section-count { font-size: .78rem; font-weight: 500; color: var(--text-muted); margin-left: .25rem; }
+
+    /* ── E1: Inline section add input ── */
+    .section-inline-add { padding: .4rem .1rem; margin-top: .35rem; }
+    .section-inline-add input { width: 100%; border: none; border-bottom: 1px solid var(--border); background: transparent; padding: .4rem 0; font-size: .84rem; font-family: inherit; color: var(--text); outline: none; transition: border-color 150ms; box-sizing: border-box; }
+    .section-inline-add input:focus { border-color: var(--accent); }
+    .section-inline-add input::placeholder { color: var(--text-faint); }
+    .section-inline-add .iqa-success { font-size: .8rem; color: var(--success); margin-left: .5rem; }
+
+    /* ── E3: Suggestion reason tags ── */
+    .suggestion-reason { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .25rem; }
+    .reason-tag { font-size: .68rem; padding: .1rem .35rem; border-radius: .25rem; font-weight: 600; }
+    .reason-overdue { background: #fee2e2; color: #991b1b; }
+    html.dark .reason-overdue { background: #3B0D0D; color: #FCA5A5; }
+    .reason-due { background: var(--accent-soft); color: var(--accent-text); }
+    .reason-soon { background: #fef3c7; color: #92400e; }
+    html.dark .reason-soon { background: #2D1800; color: #FDE68A; }
+    .reason-energy { background: #dcfce7; color: #15803d; }
+    html.dark .reason-energy { background: #052E16; color: #6EE7B7; }
+    .reason-time { background: var(--surface-alt, var(--surface)); color: var(--text-muted); border: 1px solid var(--border); }
 
     .win-row { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: .5rem; padding: .4rem .75rem; display: flex; align-items: center; gap: .5rem; transition: box-shadow .15s; }
     .win-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
@@ -447,10 +475,19 @@
             <div class="suggestion-body">
               <div class="suggestion-title">{{ task.title }}</div>
               <div class="suggestion-meta">
-                {% if is_overdue %}<span class="tag-overdue">Since {{ task.due_date.strftime('%b %-d') }}</span>
-                {% elif is_due_today %}<span class="tag-today">Due today</span>
-                {% elif task.priority == 'high' %}<span class="tag-high">High</span>{% endif %}
                 {% if task.energy_tag %}<span class="etag etag-{{ task.energy_tag }}">{{ task.energy_tag.replace('_',' ') }}</span>{% endif %}
+                {% if task.priority == 'high' %}<span class="tag-high">High</span>{% endif %}
+              </div>
+              <div class="suggestion-reason">
+                {% if is_overdue %}
+                  <span class="reason-tag reason-overdue">{{ (today - task.due_date).days }}d overdue</span>
+                {% elif is_due_today %}
+                  <span class="reason-tag reason-due">Due today</span>
+                {% elif task.due_date and task.due_date == tomorrow %}
+                  <span class="reason-tag reason-soon">Due tomorrow</span>
+                {% endif %}
+                {% if task._energy_match %}<span class="reason-tag reason-energy">Energy match</span>{% endif %}
+                {% if task._time_match %}<span class="reason-tag reason-time">Good timing</span>{% endif %}
               </div>
             </div>
             <div class="suggestion-actions">
@@ -563,11 +600,11 @@
     <!-- ── Today's Wins ── -->
     {% if wins_tasks or done_wins %}
     <div class="wins-section">
-      <div class="wins-head">
-        <h2>🎯 Today's Wins</h2>
-        <span class="wcount">{{ wins_tasks | length }} left · {{ done_wins | length }} done</span>
+      <div class="wins-head collapsible" data-section="wins" onclick="toggleSection(this, 'wins')">
+        <h2>🎯 Today's Wins <span class="section-count">{{ wins_tasks | length }} left · {{ done_wins | length }} done</span></h2>
+        <span class="collapse-chevron">▾</span>
       </div>
-      <div class="focus-panel">
+      <div class="section-body focus-panel" id="sb-wins">
         {% for task in wins_tasks %}
         <div class="win-row">
           <div class="win-body">
@@ -605,6 +642,10 @@
         {% if not wins_tasks and not done_wins %}
         <div class="wins-empty">No wins picked yet — do the morning check-in to set your top 3.</div>
         {% endif %}
+        <div class="section-inline-add">
+          <input type="text" placeholder="Add a win…" maxlength="200" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')inlineAdd(this,{today_category:'win',today_flag:true})" />
+        </div>
       </div>
     </div>
     {% endif %}
@@ -612,11 +653,11 @@
     <!-- ── Nice-to-haves ── -->
     {% if nice_tasks %}
     <div class="wins-section">
-      <div class="wins-head">
-        <h2>✨ Nice-to-haves</h2>
-        <span class="wcount nice-count">{{ nice_tasks | length }}</span>
+      <div class="wins-head collapsible" data-section="nice" onclick="toggleSection(this, 'nice')" data-default-closed="{{ 'true' if nice_tasks | length >= 4 else 'false' }}">
+        <h2>✨ Nice-to-haves <span class="section-count">{{ nice_tasks | length }}</span></h2>
+        <span class="collapse-chevron">▾</span>
       </div>
-      <div class="focus-panel">
+      <div class="section-body focus-panel" id="sb-nice">
         {% for task in nice_tasks %}
         <div class="nice-row">
           <div class="win-body">
@@ -641,6 +682,10 @@
           </div>
         </div>
         {% endfor %}
+        <div class="section-inline-add">
+          <input type="text" placeholder="Add a nice-to-have…" maxlength="200" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')inlineAdd(this,{today_category:'nice',today_flag:true})" />
+        </div>
       </div>
     </div>
     {% endif %}
@@ -655,11 +700,12 @@
 
     <!-- ── Today's Plan ── -->
     <div class="section">
-      <div class="section-head">
-        <h2>Today's Plan</h2>
-        <span class="count">{{ active_today | length }}</span>
+      <div class="section-head collapsible" data-section="plan" onclick="toggleSection(this, 'plan')">
+        <h2>Today's Plan <span class="section-count">{{ active_today | length }}</span></h2>
+        <span class="collapse-chevron">▾</span>
       </div>
 
+      <div class="section-body" id="sb-plan">
       {% if next_task or later_today_tasks or now_task %}
       <div class="focus-panel">
 
@@ -744,12 +790,21 @@
         <div style="margin-top:.3rem;font-size:.82rem;">Add tasks from the Suggestions below, or do a <a href="{{ base }}/morning-checkin" style="color:var(--accent);">brain dump</a> to capture everything first.</div>
       </div>
       {% endif %}
+      <div class="section-inline-add" style="margin-top:.5rem;">
+        <input type="text" placeholder="Add to today…" maxlength="200" autocomplete="off"
+               onkeydown="if(event.key==='Enter')inlineAdd(this,{is_today:true,focus_state:'later_today'})" />
+      </div>
+      </div><!-- /sb-plan -->
     </div>
 
     <!-- ── Time Blocks ── -->
     {% if morning_tasks or afternoon_tasks or evening_tasks %}
     <div class="section">
-      <div class="section-head"><h2>Time Blocks</h2></div>
+      <div class="section-head collapsible" data-section="timeblocks" onclick="toggleSection(this, 'timeblocks')">
+        <h2>Time Blocks</h2>
+        <span class="collapse-chevron">▾</span>
+      </div>
+      <div class="section-body" id="sb-timeblocks">
       <div class="time-grid">
         <div class="time-col">
           <div class="time-col-head morning">🌅 Morning</div>
@@ -785,6 +840,7 @@
           </div>
         </div>
       </div>
+      </div><!-- /sb-timeblocks -->
     </div>
     {% endif %}
 
@@ -1043,6 +1099,6 @@
       }
     });
   </script>
-  <script src="{{ base }}/static/app.js?v=19"></script>
+  <script src="{{ base }}/static/app.js?v=20"></script>
 </body>
 </html>

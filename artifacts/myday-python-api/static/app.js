@@ -811,3 +811,82 @@ function setQuickEnergy(btn) {
   document.getElementById('quick-energy-val').value = alreadyActive ? '' : btn.dataset.energy;
   if (!alreadyActive) btn.classList.add('active');
 }
+
+// ─── E2: Collapsible sections ─────────────────────────────────────────────────
+function toggleSection(headerEl, name) {
+  const body = document.getElementById('sb-' + name);
+  if (!body) return;
+  const isCollapsed = headerEl.classList.toggle('collapsed');
+  if (isCollapsed) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    requestAnimationFrame(() => body.classList.add('collapsed'));
+  } else {
+    body.classList.remove('collapsed');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    setTimeout(() => { body.style.maxHeight = ''; }, 300);
+  }
+  try { localStorage.setItem('myday_section_' + name, isCollapsed ? 'closed' : 'open'); } catch(e) {}
+}
+
+function _initSections() {
+  const defaults = { wins: 'open', nice: null, plan: 'open', timeblocks: 'closed' };
+  document.querySelectorAll('[data-section]').forEach(header => {
+    const name = header.dataset.section;
+    const body = document.getElementById('sb-' + name);
+    if (!body) return;
+    let saved;
+    try { saved = localStorage.getItem('myday_section_' + name); } catch(e) {}
+    let shouldClose;
+    if (saved === 'open') shouldClose = false;
+    else if (saved === 'closed') shouldClose = true;
+    else {
+      // default logic
+      if (name === 'nice') {
+        const defClosed = header.dataset.defaultClosed === 'true';
+        shouldClose = defClosed;
+      } else {
+        shouldClose = defaults[name] === 'closed';
+      }
+    }
+    if (shouldClose) {
+      header.classList.add('collapsed');
+      body.classList.add('collapsed');
+      body.style.maxHeight = '0';
+    } else {
+      body.style.maxHeight = '';
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', _initSections);
+
+// ─── E1: Inline section add ──────────────────────────────────────────────────
+function inlineAdd(inputEl, opts) {
+  const title = inputEl.value.trim();
+  if (!title) return;
+  const _base = (typeof BASE !== 'undefined') ? BASE : '';
+  fetch(_base + '/tasks/inline-add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, ...opts }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      // Insert a new row above the input container
+      const container = inputEl.closest('.section-inline-add');
+      const row = document.createElement('div');
+      row.className = 'win-row';
+      row.style.cssText = 'opacity:0;transition:opacity .25s;';
+      row.innerHTML = `<div class="win-body"><div class="win-title">${data.title}</div></div>`;
+      container.parentNode.insertBefore(row, container);
+      requestAnimationFrame(() => { row.style.opacity = '1'; });
+      inputEl.value = '';
+      inputEl.focus();
+      // Show brief confirmation
+      let msg = container.querySelector('.iqa-success');
+      if (!msg) { msg = document.createElement('span'); msg.className = 'iqa-success'; container.appendChild(msg); }
+      msg.textContent = '✓ Added';
+      setTimeout(() => { msg.textContent = ''; }, 1800);
+    })
+    .catch(() => {});
+}

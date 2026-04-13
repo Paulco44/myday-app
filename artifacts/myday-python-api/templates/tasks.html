@@ -6,7 +6,7 @@
   <title>Tasks — MyDay</title>
     <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+<link rel="stylesheet" href="{{ base }}/static/style.css?v=20" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -51,6 +51,11 @@
     #task-search:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
     .sort-reset { font-size:.82rem; color: #94a3b8; background: none; border: 1px solid #e2e8f0; border-radius: .35rem; padding: .35rem .7rem; cursor: pointer; white-space: nowrap; }
     .sort-reset:hover { color: var(--text); border-color: #cbd5e1; }
+    .active-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .filter-chip { display: inline-flex; align-items: center; gap: .3rem; background: rgba(99,102,241,.1); color: #4f46e5; font-size: .78rem; font-weight: 600; padding: .25rem .55rem; border-radius: .35rem; }
+    html.dark .filter-chip { background: rgba(99,102,241,.2); color: #a5b4fc; }
+    .chip-remove { color: inherit; text-decoration: none; font-weight: 700; opacity: .6; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; font-size: inherit; line-height: 1; }
+    .chip-remove:hover { opacity: 1; }
 
     table { width: 100%; border-collapse: collapse; background: #fff; border-radius: .75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); border: 1px solid #e2e8f0; }
     th { text-align: left; padding: .75rem 1rem; background: #f8fafc; font-size:.82rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
@@ -187,6 +192,16 @@
     </div>
 
     {% if tasks %}
+    <!-- Active filter / sort indicators -->
+    <div class="active-filters" id="active-filters">
+      {% if current_status %}
+      {% set status_labels = {'todo':'To Do','doing':'Doing','backlog':'Backlog','waiting':'Waiting','done':'Done'} %}
+      <span class="filter-chip">
+        Status: {{ status_labels.get(current_status, current_status | capitalize) }}
+        <a href="{{ base }}/tasks-page" class="chip-remove" title="Clear filter">×</a>
+      </span>
+      {% endif %}
+    </div>
     <!-- Toolbar: search + sort reset -->
     <div class="table-toolbar">
       <div class="search-wrap">
@@ -268,6 +283,21 @@
   const noRes   = document.getElementById('no-results');
   const cntEl   = document.getElementById('visible-count');
   const resetBtn = document.getElementById('reset-btn');
+  const filtersEl = document.getElementById('active-filters');
+
+  const COL_NAMES = ['Title','Status','Priority','Project','Due Date','Created'];
+
+  function updateSortChip() {
+    if (!filtersEl) return;
+    // Remove existing sort chip (keep any status chips rendered server-side)
+    filtersEl.querySelectorAll('.sort-chip').forEach(el => el.remove());
+    if (sortCol >= 0) {
+      const chip = document.createElement('span');
+      chip.className = 'filter-chip sort-chip';
+      chip.innerHTML = `Sorted by: ${COL_NAMES[sortCol]} ${sortAsc ? '↑' : '↓'} <button class="chip-remove" onclick="resetSort()" title="Clear sort">×</button>`;
+      filtersEl.appendChild(chip);
+    }
+  }
 
   // ── Column header click ───────────────────────────────────────────────────
   document.querySelectorAll('th[data-col]').forEach(th => {
@@ -281,6 +311,7 @@
       }
       applySort();
       updateHeaders();
+      updateSortChip();
       resetBtn.style.display = 'inline-block';
     });
   });
@@ -320,6 +351,7 @@
   function resetSort() {
     sortCol = -1; sortAsc = true;
     updateHeaders();
+    updateSortChip();
     resetBtn.style.display = 'none';
     // Restore original server order (rows have data-original-index)
     const rows = Array.from(tbody.querySelectorAll('tr'));
@@ -423,6 +455,6 @@ function _showBridgeError(anchor, msg) {
   tip._t = setTimeout(() => { tip.style.opacity = '0'; }, 2500);
 }
 </script>
-<script src="{{ base }}/static/app.js?v=17"></script>
+<script src="{{ base }}/static/app.js?v=20"></script>
 </body>
 </html>

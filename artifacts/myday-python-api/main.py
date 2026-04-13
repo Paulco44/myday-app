@@ -203,43 +203,82 @@ ENERGY_TO_TAG = {
     "scattered": "low_energy",
 }
 
+def score_task(task, today: date, energy_today: Optional[str], current_hour: int):
+    """Return (score, reasons, energy_match, time_match) for a candidate task."""
+    score = 0
+    reasons = []
+    energy_match = False
+    time_match = False
+
+    if task.due_date:
+        if task.due_date < today:
+            days_overdue = (today - task.due_date).days
+            score += min(days_overdue * 2, 10)
+            reasons.append("overdue")
+        elif task.due_date == today:
+            score += 5
+            reasons.append("due_today")
+        elif task.due_date == today + timedelta(days=1):
+            score += 2
+            reasons.append("due_soon")
+
+    if task.priority == "high":
+        score += 3
+    elif task.priority == "medium":
+        score += 1
+
+    if energy_today and energy_today in ENERGY_TO_TAG:
+        if task.energy_tag == ENERGY_TO_TAG[energy_today]:
+            score += 3
+            energy_match = True
+            reasons.append("energy_match")
+
+    if task.time_block:
+        if current_hour < 12 and task.time_block == "morning":
+            score += 2
+            time_match = True
+            reasons.append("time_match")
+        elif 12 <= current_hour < 17 and task.time_block == "afternoon":
+            score += 2
+            time_match = True
+            reasons.append("time_match")
+        elif current_hour >= 17 and task.time_block == "evening":
+            score += 2
+            time_match = True
+            reasons.append("time_match")
+
+    if hasattr(task, "subtasks") and task.subtasks:
+        score += 1
+
+    return score, reasons, energy_match, time_match
+
+
 def build_suggestions(db: Session, today: date, exclude_ids: set, energy_today: Optional[str] = None) -> list:
+    from datetime import datetime as _dt
+    current_hour = _dt.now().hour
+
     base_filter = [
         models.Task.is_today == False,
         models.Task.status != "done",
         models.Task.focus_state != "later",
     ]
-    overdue = (
-        db.query(models.Task)
-        .filter(*base_filter, models.Task.due_date < today)
-        .order_by(models.Task.due_date.asc())
-        .all()
-    )
-    due_today = (
-        db.query(models.Task)
-        .filter(*base_filter, models.Task.due_date == today)
-        .all()
-    )
-    high_no_date = (
-        db.query(models.Task)
-        .filter(*base_filter, models.Task.priority == "high", models.Task.due_date == None)
-        .all()
-    )
+    candidates = db.query(models.Task).filter(*base_filter).all()
+
     seen: set = set(exclude_ids)
-    all_tasks = []
-    for task in overdue + due_today + high_no_date:
-        if task.id not in seen:
-            seen.add(task.id)
-            all_tasks.append(task)
+    scored = []
+    for task in candidates:
+        if task.id in seen:
+            continue
+        seen.add(task.id)
+        score, reasons, energy_match, time_match = score_task(task, today, energy_today, current_hour)
+        task._score = score
+        task._reasons = reasons
+        task._energy_match = energy_match
+        task._time_match = time_match
+        scored.append((score, task))
 
-    # Boost energy-matching tasks to the top when energy_today is known
-    if energy_today and energy_today in ENERGY_TO_TAG:
-        matched_tag = ENERGY_TO_TAG[energy_today]
-        matched = [t for t in all_tasks if t.energy_tag == matched_tag]
-        rest    = [t for t in all_tasks if t.energy_tag != matched_tag]
-        all_tasks = matched + rest
-
-    return all_tasks[:SUGGESTIONS_CAP]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [t for _, t in scored[:SUGGESTIONS_CAP]]
 
 
 def clear_focus_state(db: Session, state: str, exclude_id: Optional[int] = None):
@@ -537,6 +576,7 @@ async def my_day(
             "inbox_today": inbox_today,
             "recent_captures": recent_captures,
             "energy_today": energy_today,
+            "tomorrow": today + timedelta(days=1),
         },
     )
 
@@ -1466,6 +1506,36 @@ async def quick_add_task(
     db.commit()
     db.refresh(task)
     return JSONResponse({"status": "ok", "task_id": task.id, "title": task.title})
+
+
+@app.post(f"{BASE}/tasks/inline-add")
+async def inline_add_task(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    body = await request.json()
+    title = (body.get("title") or "").strip()
+    if not title:
+        return JSONResponse({"ok": False, "error": "title required"}, status_code=422)
+
+    today_category = body.get("today_category")
+    focus_state    = body.get("focus_state")
+    is_today       = bool(body.get("is_today", False))
+    today_flag     = bool(today_category)
+
+    task = models.Task(
+        title=title,
+        priority="medium",
+        status="todo",
+        is_today=is_today,
+        focus_state=focus_state or None,
+        today_flag=today_flag,
+        today_category=today_category or None,
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return JSONResponse({"ok": True, "task_id": task.id, "title": task.title})
 
 
 # ─── Focus Mode ──────────────────────────────────────────────────────────────

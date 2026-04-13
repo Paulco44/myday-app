@@ -1,0 +1,340 @@
+# Sprint E — Flujo de Captura y Organización
+
+## Contexto general
+
+MyDay es una app de productividad ADHD con FastAPI + Jinja2 + SQLite. Este sprint mejora cómo se crean, organizan, y priorizan los tasks en la vista My Day.
+
+---
+
+## Reglas de diseño (NO NEGOCIABLES)
+
+1. **Usar variables CSS `--md-*`** de `static/tokens.css` y los vars locales de `my_day.html`. No hardcodear colores hex.
+2. **Font: Lexend** — usar `var(--md-font-family)` para todo texto.
+3. **Dark mode** — usar variables que ya tienen light/dark variants. Respetar `html.dark`.
+4. **HTMX/fetch** — Interacciones sin full page reload. Usar `fetch()` con JSON responses siguiendo el pattern de `progressiveSubmit` en `app.js`.
+5. **Bump cache** — Cada archivo CSS/JS modificado debe pasar a `?v=20`.
+6. **Mobile responsive** — Funcionar en single column en mobile, expandir en 900px+.
+7. **No shame language** — Nunca "failed", "missed". Usar "carried forward", "showing up counts".
+
+---
+
+## E1: Inline Task Creation
+
+### Qué existe hoy
+Hay un inline quick-add en My Day (clase `inline-quickadd`) que es un input + botón "＋ Add" al inicio de la página. Funciona vía `iqSubmit()` en el script block.
+
+### Qué cambiar
+
+Agregar un input inline al final de CADA sección donde tiene sentido crear tasks:
+
+1. **Después de la sección "Today's Wins"** (al final del `.focus-panel` de wins):
+   - Input con placeholder "Add a win..."
+   - Al presionar Enter: crear task con `today_flag = True`, `today_category = "win"`, defaults normales
+   
+2. **Después de "Nice-to-haves"**:
+   - Input con placeholder "Add a nice-to-have..."
+   - Enter crea task con `today_flag = True`, `today_category = "nice"`
+
+3. **Después de "Today's Plan"** (al final del focus-panel de later today):
+   - Input con placeholder "Add to today..."
+   - Enter crea task con `is_today = True`, `focus_state = "later_today"`
+
+### Implementación
+
+Crear un nuevo endpoint para inline creation con category:
+
+```
+POST /task-manager/tasks/inline-add
+Body: { title, today_category?, focus_state?, is_today? }
+Response: { ok: true, task_id, title } or { ok: false, error }
+```
+
+El input inline usa JavaScript (no form submit) — `fetch()` POST al nuevo endpoint. Después de crear:
+- El task aparece justo arriba del input (DOM insert con animación fade-in)
+- El input se limpia y queda focused para encadenar más tasks
+- Si el título está vacío, no hacer nada
+
+### Estilo del input
+
+```css
+.section-inline-add {
+  padding: .4rem .6rem;
+  margin-top: .35rem;
+}
+.section-inline-add input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--md-border, var(--border));
+  background: transparent;
+  padding: .4rem 0;
+  font-size: .84rem;
+  font-family: inherit;
+  color: var(--md-text, var(--text));
+  outline: none;
+  transition: border-color 150ms;
+}
+.section-inline-add input:focus {
+  border-color: var(--md-primary, var(--accent));
+}
+.section-inline-add input::placeholder {
+  color: var(--md-text-faint, var(--text-faint));
+}
+```
+
+El input existente de `inline-quickadd` al inicio de la página se puede mantener — sirve para captura rápida general. Los nuevos inputs son contextualmente ubicados en cada sección.
+
+---
+
+## E2: Secciones Colapsables
+
+### Qué cambiar
+
+Hacer que las secciones principales de My Day se puedan colapsar/expandir:
+
+1. **"Today's Wins"** — colapsable
+2. **"Nice-to-haves"** — colapsable, default cerrado si hay 4+ items
+3. **"Today's Plan"** — colapsable
+4. **"Time Blocks"** — colapsable, default cerrado
+5. **"Suggestions"** — colapsable
+
+El **NOW strip NO se colapsa** — es el task activo, siempre visible.
+
+### Implementación
+
+Cada sección header (los `<h2>` dentro de `.section-head` o `.wins-head`) se vuelve clickable:
+
+```html
+<div class="section-head collapsible" data-section="wins" onclick="toggleSection(this)">
+  <h2>🎯 Today's Wins <span class="section-count">3</span></h2>
+  <span class="collapse-chevron">▾</span>
+</div>
+<div class="section-body" id="section-wins">
+  <!-- contenido actual -->
+</div>
+```
+
+JavaScript `toggleSection(el)`:
+- Toggle clase `collapsed` en el header
+- El `.section-body` correspondiente se colapsa (height: 0, overflow: hidden) o expande
+- Rotar chevron (▾ → ▸)
+- Guardar estado en `localStorage` con key `myday_section_{name}` (valor: "open" o "closed")
+- Al cargar la página, leer localStorage y aplicar estado guardado
+
+### Defaults en localStorage (si no hay valor guardado):
+- Wins: open
+- Nice-to-haves: closed si tiene 4+ items, open si menos
+- Today's Plan: open
+- Time Blocks: closed
+- Suggestions: open
+
+### CSS:
+
+```css
+.collapsible { cursor: pointer; user-select: none; }
+.collapsible:hover { opacity: .85; }
+.collapse-chevron { font-size: .75rem; color: var(--md-text-faint, var(--text-faint)); transition: transform 200ms ease; margin-left: .4rem; }
+.collapsible.collapsed .collapse-chevron { transform: rotate(-90deg); }
+.section-body { transition: max-height 250ms ease, opacity 200ms ease; overflow: hidden; }
+.section-body.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; }
+.section-count { font-size: .78rem; font-weight: 500; color: var(--md-text-muted, var(--text-muted)); margin-left: .3rem; }
+```
+
+### Conteo en el header
+Cada sección muestra su conteo cuando está colapsada (y siempre):
+- "🎯 Today's Wins · 3 left"
+- "✨ Nice-to-haves · 2"
+- "Today's Plan · 4"
+- "Suggestions · 7"
+
+Usar los counts que ya se pasan al template (ej: `wins_tasks | length`).
+
+---
+
+## E3: Smart Suggestions Scoring
+
+### Qué existe hoy
+La función `build_suggestions()` en `main.py` (línea ~206) busca tasks overdue, due_today, y high_no_date, los concatena, y opcionalmente mueve al frente los que matchean el energy_today. Es una priorización básica por categoría.
+
+### Qué cambiar
+
+Reemplazar la lógica de concatenación simple con un scoring system que asigne puntos a cada task candidato:
+
+```python
+def score_task(task, today, energy_today, current_hour):
+    score = 0
+    
+    # Overdue: 2 points per day overdue (max 10)
+    if task.due_date and task.due_date < today:
+        days_overdue = (today - task.due_date).days
+        score += min(days_overdue * 2, 10)
+    
+    # Due today: 5 points
+    if task.due_date and task.due_date == today:
+        score += 5
+    
+    # Due tomorrow: 2 points
+    if task.due_date and task.due_date == today + timedelta(days=1):
+        score += 2
+    
+    # High priority: 3 points
+    if task.priority == "high":
+        score += 3
+    elif task.priority == "medium":
+        score += 1
+    
+    # Energy match: 3 points
+    if energy_today and energy_today in ENERGY_TO_TAG:
+        if task.energy_tag == ENERGY_TO_TAG[energy_today]:
+            score += 3
+    
+    # Time block match: 2 points
+    if task.time_block:
+        if current_hour < 12 and task.time_block == "morning":
+            score += 2
+        elif 12 <= current_hour < 17 and task.time_block == "afternoon":
+            score += 2
+        elif current_hour >= 17 and task.time_block == "evening":
+            score += 2
+    
+    # Has subtasks (user invested planning): 1 point
+    if hasattr(task, 'subtasks') and task.subtasks:
+        score += 1
+    
+    return score
+```
+
+Modificar `build_suggestions()`:
+1. Traer TODOS los tasks no-done, no-today, no-parked (no solo overdue+due_today+high)
+2. Scorear cada uno
+3. Ordenar por score descending
+4. Devolver los top SUGGESTIONS_CAP (actualmente 7)
+5. Agregar el score al task (como atributo temporal) para mostrarlo en el UI
+
+### Mostrar score en el UI
+
+En cada suggestion row, agregar un indicador sutil de por qué aparece:
+
+```html
+<div class="suggestion-reason">
+  {% if task.due_date and task.due_date < today %}
+  <span class="reason-tag reason-overdue">{{ (today - task.due_date).days }}d overdue</span>
+  {% elif task.due_date and task.due_date == today %}
+  <span class="reason-tag reason-due">Due today</span>
+  {% elif task.due_date and task.due_date == tomorrow %}
+  <span class="reason-tag reason-soon">Due tomorrow</span>
+  {% endif %}
+  {% if energy_match %}<span class="reason-tag reason-energy">Energy match</span>{% endif %}
+  {% if time_match %}<span class="reason-tag reason-time">Good timing</span>{% endif %}
+</div>
+```
+
+CSS para reason tags:
+```css
+.reason-tag { font-size: .68rem; padding: .1rem .35rem; border-radius: .25rem; font-weight: 600; }
+.reason-overdue { background: var(--md-danger-soft, #fee2e2); color: var(--md-danger-text, #991b1b); }
+.reason-due { background: var(--md-primary-soft, rgba(99,102,241,.12)); color: var(--md-primary, var(--accent)); }
+.reason-soon { background: var(--md-warning-bg, #fef3c7); color: var(--md-warning-text, #92400e); }
+.reason-energy { background: var(--md-success-bg, #dcfce7); color: var(--md-success-text, #15803d); }
+.reason-time { background: var(--md-surface-alt); color: var(--md-text-muted); }
+```
+
+Para pasar la info de scoring al template, agregar atributos temporales al task object:
+```python
+for task in scored_tasks:
+    task._score = score
+    task._reasons = []  # list of strings like "overdue", "due_today", "energy_match", "time_match"
+```
+
+O alternativamente, crear una lista de dicts `suggestions_with_meta` que incluya el task + metadata.
+
+---
+
+## E4: Sort/Filter Indicators en Tasks Page
+
+### Ruta: `/task-manager/tasks-page`
+
+### Qué cambiar
+
+En la tabla de Tasks (`tasks.html`), cuando el usuario clickea un header de columna para sort:
+
+1. El header activo cambia de color a `var(--md-primary)` con flecha direccional (↑ o ↓)
+2. Encima de la tabla, aparece un chip: "Sorted by: Priority ↓" con un "×" para remover el sort
+3. Si hay un filtro de status activo: mostrar chip similar "Status: Doing" con "×"
+
+### Implementación
+
+Actualmente el sort probablemente se maneja via query parameters. Agregar:
+
+```html
+{% if sort_by %}
+<div class="active-filters">
+  <span class="filter-chip">
+    Sorted by: {{ sort_by | capitalize }} {{ '↑' if sort_dir == 'asc' else '↓' }}
+    <a href="{{ base }}/tasks-page{% if status_filter %}?status={{ status_filter }}{% endif %}" class="chip-remove">×</a>
+  </span>
+  {% if status_filter %}
+  <span class="filter-chip">
+    Status: {{ status_labels[status_filter] }}
+    <a href="{{ base }}/tasks-page{% if sort_by %}?sort={{ sort_by }}&dir={{ sort_dir }}{% endif %}" class="chip-remove">×</a>
+  </span>
+  {% endif %}
+</div>
+{% endif %}
+```
+
+CSS:
+```css
+.active-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.filter-chip { display: inline-flex; align-items: center; gap: .3rem; background: var(--md-primary-soft, rgba(99,102,241,.1)); color: var(--md-primary, var(--accent)); font-size: .78rem; font-weight: 600; padding: .25rem .55rem; border-radius: .35rem; }
+.chip-remove { color: var(--md-primary, var(--accent)); text-decoration: none; font-weight: 700; opacity: .6; }
+.chip-remove:hover { opacity: 1; }
+```
+
+El header de columna activa recibe un color override:
+```css
+th.sorted { color: var(--md-primary, var(--accent)); }
+th.sorted::after { content: ' ↓'; } /* or ↑ based on direction */
+```
+
+Asegurarse de pasar `sort_by`, `sort_dir`, y `status_filter` al template context desde el route handler.
+
+---
+
+## Archivos que se modifican
+
+### Modificar:
+- `main.py` — Nuevo endpoint `inline-add`, refactorizar `build_suggestions()` con scoring, pasar sort/filter params a tasks template
+- `templates/my_day.html` — Inline inputs por sección, secciones colapsables, reason tags en suggestions
+- `templates/tasks.html` — Sort/filter indicators, active column highlighting
+- `static/app.js` — `toggleSection()` function, inline-add fetch handler
+- `static/style.css` — Nuevos estilos si se necesita (o inline en templates)
+
+### NO modificar:
+- `static/tokens.css`
+- `models.py` (no se necesitan cambios de modelo)
+- `templates/my_day.html` completion circles, ghost affordances, hover highlights (Sprint D ya hecho, no tocar)
+
+---
+
+## Orden de implementación sugerido
+
+1. **E3: Smart scoring** — Cambio backend puro, sin riesgo de romper UI
+2. **E1: Inline creation** — Nuevo endpoint + inputs en template
+3. **E2: Secciones colapsables** — Refactor de HTML + JS
+4. **E4: Sort/filter indicators** — Tasks page independiente
+
+---
+
+## Testing checklist
+
+- [ ] Inline add: Enter crea task, aparece en la sección correcta, input se limpia
+- [ ] Inline add: título vacío no crea nada
+- [ ] Secciones colapsan/expanden con animación
+- [ ] Estado de secciones persiste en localStorage
+- [ ] Default: Nice-to-haves cerrado si 4+ items
+- [ ] Suggestions ordenados por score (overdue primero, energy match visible)
+- [ ] Reason tags aparecen correctamente (overdue rojo, due today indigo, energy match verde)
+- [ ] Tasks page: header activo en indigo, chip removible encima de tabla
+- [ ] Dark mode: todo se ve correcto
+- [ ] Mobile: inline inputs funcionan, secciones colapsables funcionan con touch
+- [ ] Cache bumped a v=20
