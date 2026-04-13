@@ -9,6 +9,7 @@ const navLinks = [
   { label: "Kanban", href: "/", internal: true },
   { label: "My Day", href: `${TM_BASE}/my-day`, internal: false },
   { label: "Tasks", href: `${TM_BASE}/tasks-page`, internal: false },
+  { label: "Review", href: `${TM_BASE}/weekly-review`, internal: false },
   { label: "CoP Admin", href: `${TM_BASE}/cop-admin`, internal: false },
 ];
 
