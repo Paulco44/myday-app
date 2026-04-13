@@ -494,6 +494,15 @@ async def my_day(
     }
     inbox_today["unreviewed"] = inbox_today["new"] + inbox_today["reviewing"]
 
+    # ── Recent captures for widget (last 5, any date, non-archived) ──
+    recent_captures = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.status != "archived")
+        .order_by(models.InboxItem.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
     return templates.TemplateResponse(
         request, "my_day.html",
         {
@@ -526,6 +535,7 @@ async def my_day(
             "time_blocks": TIME_BLOCKS,
             "energy_tags": ENERGY_TAGS,
             "inbox_today": inbox_today,
+            "recent_captures": recent_captures,
             "energy_today": energy_today,
         },
     )

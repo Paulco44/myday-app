@@ -8,7 +8,7 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=18" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -242,6 +242,23 @@
     .btn-nudge-review:hover { opacity: .85; }
     .btn-nudge-meetings { background: transparent; border: 1px solid var(--border); border-radius: .4rem; padding: .35rem .75rem; font-size:.82rem; font-weight: 600; color: var(--text-muted); text-decoration: none; white-space: nowrap; transition: color .15s, border-color .15s; }
     .btn-nudge-meetings:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* ── Recent Captures widget ── */
+    .captures-list { display: flex; flex-direction: column; gap: .35rem; }
+    .capture-row { display: flex; align-items: center; gap: .6rem; padding: .45rem .55rem; border-radius: var(--md-radius-md, .45rem); text-decoration: none; color: inherit; transition: background 80ms ease; }
+    .capture-row:hover { background: var(--md-surface-alt, var(--surface-alt, #f3f3f1)); }
+    .capture-source { display: flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font-size: .65rem; font-weight: 800; flex-shrink: 0; color: #fff; }
+    .capture-whisper { background: var(--md-primary, #6366f1); }
+    .capture-notion { background: #2d2d2d; }
+    .capture-other { background: var(--md-text-muted, #888); }
+    .capture-info { flex: 1; min-width: 0; }
+    .capture-title { font-size: .82rem; font-weight: 600; color: var(--md-text, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .capture-meta { display: flex; align-items: center; gap: .4rem; margin-top: .1rem; }
+    .capture-time { font-size: .72rem; color: var(--md-text-muted, var(--text-muted)); }
+    .capture-status { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: .1rem .35rem; border-radius: .25rem; }
+    .capture-status-new { background: var(--md-primary, #6366f1); color: #fff; }
+    .capture-status-reviewing { background: var(--md-warning-bg, #fef3c7); color: var(--md-warning-text, #92400e); }
+    .capture-status-promoted { background: var(--md-success-bg, #dcfce7); color: var(--md-success-text, #15803d); }
 
     /* ── Morning check-in CTA ── */
     /* checkin-cta removed — Brain Dump is now a subtle link in the date line */
@@ -737,17 +754,29 @@
     </div>
     {% endif %}
 
-    <!-- ── Inbox nudge ── -->
-    {% if inbox_today.total > 0 %}
+    <!-- ── Recent Captures ── -->
+    {% if recent_captures %}
     <div class="md-right-card">
-      <h3>📥 Today's inbox · {{ inbox_today.total }}</h3>
-      <div class="inbox-pills" style="margin-bottom:.5rem;">
-        {% if inbox_today.new %}<span class="ipill ipill-new">● {{ inbox_today.new }} new</span>{% endif %}
-        {% if inbox_today.reviewing %}<span class="ipill ipill-reviewing">◎ {{ inbox_today.reviewing }} reviewing</span>{% endif %}
-        {% if inbox_today.promoted %}<span class="ipill ipill-promoted">✓ {{ inbox_today.promoted }} promoted</span>{% endif %}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;">
+        <h3 style="margin:0;">📡 Recent Captures</h3>
+        <a href="{{ base }}/inbox" style="font-size:.75rem;color:var(--md-text-muted);text-decoration:none;">All →</a>
+      </div>
+      <div class="captures-list">
+        {% for item in recent_captures %}
+        <a href="{{ base }}/inbox/{{ item.id }}" class="capture-row" title="{{ item.title }}">
+          <span class="capture-source {% if item.source == 'whisper' %}capture-whisper{% elif item.source == 'notion' %}capture-notion{% else %}capture-other{% endif %}">{{ item.source[:1] | upper }}</span>
+          <div class="capture-info">
+            <div class="capture-title">{{ item.title | truncate(42) }}</div>
+            <div class="capture-meta">
+              <span class="capture-time">{{ item.created_at.strftime('%-d %b · %-I:%M%p') | lower }}</span>
+              <span class="capture-status capture-status-{{ item.status }}">{{ item.status }}</span>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
       </div>
       {% if inbox_today.unreviewed > 0 %}
-      <a class="btn-nudge-review" href="{{ base }}/inbox" style="font-size:.82rem;">Review {{ inbox_today.unreviewed }} →</a>
+      <a class="btn-nudge-review" href="{{ base }}/inbox" style="font-size:.82rem;margin-top:.5rem;display:inline-block;">Review {{ inbox_today.unreviewed }} new →</a>
       {% endif %}
     </div>
     {% endif %}
@@ -936,6 +965,6 @@
     }
 
   </script>
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <script src="{{ base }}/static/app.js?v=18"></script>
 </body>
 </html>
