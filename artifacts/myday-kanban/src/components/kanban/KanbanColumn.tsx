@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Column, Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Project } from "@/lib/projects";
 import { KanbanCard, toCardDndId } from "./KanbanCard";
 import { CreateCardDialog } from "./CreateCardDialog";
 import { EditColumnDialog } from "./EditColumnDialog";
@@ -13,10 +14,11 @@ export const fromColDndId = (dndId: string | number) =>
 interface KanbanColumnProps {
   column: Column;
   cards: Card[];
+  projects?: Project[];
   onCardClick: (card: Card) => void;
 }
 
-export function KanbanColumn({ column, cards, onCardClick }: KanbanColumnProps) {
+export function KanbanColumn({ column, cards, projects, onCardClick }: KanbanColumnProps) {
   const {
     setNodeRef,
     attributes,
@@ -85,7 +87,7 @@ export function KanbanColumn({ column, cards, onCardClick }: KanbanColumnProps) 
         <SortableContext items={cardDndIds} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col min-h-[50px]">
             {cards.map((card) => (
-              <KanbanCard key={card.id} card={card} onClick={onCardClick} />
+              <KanbanCard key={card.id} card={card} projects={projects} onClick={onCardClick} />
             ))}
           </div>
         </SortableContext>

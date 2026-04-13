@@ -18,8 +18,8 @@ export function BoardPage() {
       
       <main className="flex-1 relative z-10 overflow-hidden flex flex-col">
         <div className="px-6 pt-8 pb-4 shrink-0">
-          <h2 className="text-3xl font-display font-bold tracking-tight text-foreground">Project Alpha</h2>
-          <p className="text-muted-foreground mt-1">Manage your team's workflow and tasks efficiently.</p>
+          <h2 className="text-3xl font-display font-bold tracking-tight text-foreground">Kanban Board</h2>
+          <p className="text-muted-foreground mt-1">Drag cards between columns — your external brain at a glance.</p>
         </div>
         
         <KanbanBoard />

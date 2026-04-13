@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchProjects, type Project } from "@/lib/projects";
 import {
   DndContext,
   DragOverlay,
@@ -39,6 +41,11 @@ export function KanbanBoard() {
   const queryClient = useQueryClient();
   const { data: serverColumns, isLoading: isLoadingColumns } = useGetColumns();
   const { data: serverCards, isLoading: isLoadingCards } = useGetCards();
+  const { data: projects = [] } = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: fetchProjects,
+    staleTime: 1000 * 60 * 10,
+  });
 
   const { mutate: updateCard } = useUpdateCard();
   const { mutate: updateColumn } = useUpdateColumn();
@@ -243,6 +250,7 @@ export function KanbanBoard() {
                 key={col.id}
                 column={col}
                 cards={cards.filter((c) => c.columnId === col.id)}
+                projects={projects}
                 onCardClick={handleCardClick}
               />
             ))}
@@ -270,6 +278,7 @@ export function KanbanBoard() {
       <EditCardSheet
         key={editingCard?.id ?? "none"}
         card={editingCard}
+        projects={projects}
         open={!!editingCard}
         onOpenChange={handleEditClose}
       />

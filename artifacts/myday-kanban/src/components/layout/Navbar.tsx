@@ -1,80 +1,109 @@
-import { Headphones, KanbanSquare } from "lucide-react";
-import { Link } from "wouter";
 import { useBrownNoise } from "@/hooks/useBrownNoise";
-import { Button } from "@/components/ui/button";
 
 const TM_BASE = "/task-manager";
 
-const navLinks = [
-  { label: "Kanban", href: "/", internal: true },
-  { label: "My Day", href: `${TM_BASE}/my-day`, internal: false },
-  { label: "Tasks", href: `${TM_BASE}/tasks-page`, internal: false },
-  { label: "CoP Admin", href: `${TM_BASE}/cop-admin`, internal: false },
+interface NavItem {
+  label: string;
+  href?: string;
+  internal?: boolean;
+  sep?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { label: "My Day",     href: `${TM_BASE}/my-day` },
+  { label: "✦ Check In", href: `${TM_BASE}/morning-checkin` },
+  { label: "Focus",      href: `${TM_BASE}/focus` },
+  { sep: true, label: "" },
+  { label: "Inbox",     href: `${TM_BASE}/inbox` },
+  { label: "Meetings",  href: `${TM_BASE}/meetings` },
+  { sep: true, label: "" },
+  { label: "Kanban",    href: "/", internal: true },
+  { label: "Tasks",     href: `${TM_BASE}/tasks-page` },
+  { label: "Projects",  href: `${TM_BASE}/projects-list` },
+  { label: "Notes",     href: `${TM_BASE}/notes` },
+  { label: "Review",    href: `${TM_BASE}/weekly-review` },
+  { label: "CoP Admin", href: `${TM_BASE}/cop-admin` },
 ];
 
 export function Navbar() {
   const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
-  const isKanban = currentPath === "/" || currentPath === import.meta.env.BASE_URL?.replace(/\/$/, "");
+  const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+  const isKanban =
+    currentPath === "/" ||
+    currentPath === base ||
+    currentPath === `${base}/`;
+
   const { active: noiseActive, toggle: toggleNoise } = useBrownNoise();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-white/80 backdrop-blur-md shadow-sm shadow-black/5">
-      <div className="container mx-auto px-4 h-14 flex items-center gap-6">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0 transition-transform hover:scale-[1.02] active:scale-95">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20">
-            <KanbanSquare className="w-4 h-4" />
-          </div>
-          <span className="text-lg font-bold font-display leading-none text-foreground">MyDay</span>
-        </Link>
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white">
+      <div className="flex items-stretch h-[3.25rem] px-4 overflow-x-auto">
+        <a
+          href="/"
+          className="flex items-center font-extrabold text-[1.1rem] tracking-tight text-indigo-600 shrink-0 mr-3 no-underline"
+        >
+          MyDay
+        </a>
 
-        <nav className="flex items-center gap-1">
-          {navLinks.map(({ label, href, internal }) =>
-            internal ? (
-              <Link
-                key={label}
-                href={href}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  isKanban
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+        <nav className="flex items-stretch flex-1 min-w-0">
+          {navItems.map((item, i) => {
+            if (item.sep) {
+              return (
+                <span
+                  key={`sep-${i}`}
+                  className="w-px bg-gray-200 mx-1 self-center h-4 shrink-0"
+                />
+              );
+            }
+
+            const isActive = item.internal
+              ? isKanban
+              : currentPath.startsWith(item.href ?? "__never__");
+
+            if (item.internal) {
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`h-full px-3 text-[.82rem] font-medium flex items-center border-b-2 whitespace-nowrap transition-colors shrink-0 ${
+                    isActive
+                      ? "text-indigo-600 border-indigo-600"
+                      : "text-slate-500 border-transparent hover:text-slate-800"
+                  }`}
+                >
+                  {item.label}
+                </a>
+              );
+            }
+
+            return (
+              <a
+                key={item.label}
+                href={item.href}
+                className={`h-full px-3 text-[.82rem] font-medium flex items-center border-b-2 whitespace-nowrap transition-colors shrink-0 ${
+                  isActive
+                    ? "text-indigo-600 border-indigo-600"
+                    : "text-slate-500 border-transparent hover:text-slate-800"
                 }`}
               >
-                {label}
-              </Link>
-            ) : (
-              <a
-                key={label}
-                href={href}
-                className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                {label}
+                {item.label}
               </a>
-            )
-          )}
+            );
+          })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
-          {/* Brown noise toggle */}
-          <Button
-            variant={noiseActive ? "default" : "outline"}
-            size="sm"
+        <div className="ml-auto flex items-center gap-2 shrink-0 pl-3">
+          <button
             onClick={toggleNoise}
-            className={`h-8 gap-1.5 text-xs font-semibold transition-all ${
+            className={`h-8 px-3 rounded text-xs font-semibold border transition-all ${
               noiseActive
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                : "text-muted-foreground"
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white text-slate-500 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
             }`}
             title="Toggle brown noise (focus sound)"
           >
-            <Headphones className="w-3.5 h-3.5" />
-            {noiseActive ? "Noise On" : "Noise"}
-          </Button>
-
-          {/* Bridge badge — honest about the link type */}
-          <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/25" title="Kanban cards can be linked to Task Manager tasks via the bridge">
-            <span>↔</span>
-            <span>Linked via Bridge</span>
-          </div>
+            🎧 Noise
+          </button>
         </div>
       </div>
     </header>

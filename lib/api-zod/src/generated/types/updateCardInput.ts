@@ -18,4 +18,6 @@ export interface UpdateCardInput {
   dueDate?: string | null;
   /** @nullable */
   taskId?: number | null;
+  /** @nullable */
+  projectId?: number | null;
 }

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Trash2 } from "lucide-react";
 import { useUpdateCard, useDeleteCard, getGetCardsQueryKey } from "@workspace/api-client-react";
 import type { Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Project } from "@/lib/projects";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -43,11 +44,12 @@ const formSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "none"]).optional().transform(val => val === "none" ? undefined : val),
   dueDate: z.string().optional().transform(val => val || undefined),
+  projectId: z.string().optional().transform(val => (val && val !== "none" ? Number(val) : undefined)),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function EditCardSheet({ card, open, onOpenChange }: { card: Card | null, open: boolean, onOpenChange: (open: boolean) => void }) {
+export function EditCardSheet({ card, projects, open, onOpenChange }: { card: Card | null, projects?: Project[], open: boolean, onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -61,6 +63,7 @@ export function EditCardSheet({ card, open, onOpenChange }: { card: Card | null,
       description: card?.description || "",
       priority: (card?.priority as any) || "none",
       dueDate: defaultDate,
+      projectId: card?.projectId ? String(card.projectId) : "none",
     },
   });
 
@@ -93,6 +96,7 @@ export function EditCardSheet({ card, open, onOpenChange }: { card: Card | null,
         description: values.description || null,
         priority: values.priority || null,
         dueDate: values.dueDate ? new Date(values.dueDate).toISOString() : null,
+        projectId: values.projectId ?? null,
       }
     });
   }
@@ -145,6 +149,32 @@ export function EditCardSheet({ card, open, onOpenChange }: { card: Card | null,
                     </FormItem>
                   )}
                 />
+
+                {projects && projects.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="projectId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Project</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value ?? "none"}>
+                          <FormControl>
+                            <SelectTrigger className="h-12 rounded-xl bg-secondary/30">
+                              <SelectValue placeholder="Select project" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No project</SelectItem>
+                            {projects.map((p) => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField

@@ -76,6 +76,7 @@ export const GetCardsResponseItem = zod.object({
   priority: zod.string().nullish(),
   dueDate: zod.string().nullish(),
   taskId: zod.number().nullish(),
+  projectId: zod.number().nullish(),
   createdAt: zod.date(),
 });
 export const GetCardsResponse = zod.array(GetCardsResponseItem);
@@ -91,6 +92,7 @@ export const CreateCardBody = zod.object({
   priority: zod.string().nullish(),
   dueDate: zod.string().nullish(),
   taskId: zod.number().nullish(),
+  projectId: zod.number().nullish(),
 });
 
 /**
@@ -108,6 +110,7 @@ export const UpdateCardBody = zod.object({
   priority: zod.string().nullish(),
   dueDate: zod.string().nullish(),
   taskId: zod.number().nullish(),
+  projectId: zod.number().nullish(),
 });
 
 export const UpdateCardResponse = zod.object({
@@ -119,6 +122,7 @@ export const UpdateCardResponse = zod.object({
   priority: zod.string().nullish(),
   dueDate: zod.string().nullish(),
   taskId: zod.number().nullish(),
+  projectId: zod.number().nullish(),
   createdAt: zod.date(),
 });
 

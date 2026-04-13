@@ -19,5 +19,7 @@ export interface Card {
   dueDate?: string | null;
   /** @nullable */
   taskId?: number | null;
+  /** @nullable */
+  projectId?: number | null;
   createdAt: Date;
 }
