@@ -6,53 +6,54 @@
   <title>Edit Task — MyDay</title>
     <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+<link rel="stylesheet" href="{{ base }}/static/style.css?v=19" />
+  <link rel="stylesheet" href="{{ base }}/static/tokens.css?v=19" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--md-font-family, 'Lexend', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); background: var(--md-bg, var(--bg)); color: var(--md-text, var(--text)); min-height: 100vh; }
 
     nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
     .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
     .nav-links { display: flex; }
-    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; }
+    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: var(--md-text-muted, var(--text-muted)); text-decoration: none; border-bottom: 2px solid transparent; }
     .nav-links a:hover { color: var(--text); }
-    .nav-links a.checkin { color: #D97706; font-weight: 600; }
-    .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
-    .nav-links a.nav-focus:hover { color: #64748b; }
+    .nav-links a.checkin { color: var(--md-warning-text, #D97706); font-weight: 600; }
+    .nav-links a.nav-focus { font-size: .82rem; color: var(--md-text-faint, var(--text-faint)); }
+    .nav-links a.nav-focus:hover { color: var(--md-text-muted, var(--text-muted)); }
 
     main { max-width: 580px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 
     /* ── Header ── */
-    .page-back { display: inline-flex; align-items: center; gap: .35rem; color: #64748b; text-decoration: none; font-size: .84rem; font-weight: 500; margin-bottom: 1.25rem; }
+    .page-back { display: inline-flex; align-items: center; gap: .35rem; color: var(--md-text-muted, var(--text-muted)); text-decoration: none; font-size: .84rem; font-weight: 500; margin-bottom: 1.25rem; }
     .page-back:hover { color: var(--text); }
     h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 1.75rem; }
 
     /* ── Form card ── */
-    .form-card { background: #fff; border: 1px solid #e2e8f0; border-radius: .85rem; padding: 1.5rem 1.6rem; }
+    .form-card { background: var(--md-surface, var(--surface)); border: 1px solid var(--md-border, var(--border)); border-radius: .85rem; padding: 1.5rem 1.6rem; }
 
     /* ── Field groups ── */
     .field { margin-bottom: 1.2rem; }
     .field:last-child { margin-bottom: 0; }
-    label { display: block; font-size:.82rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #64748b; margin-bottom: .4rem; }
+    label { display: block; font-size:.82rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--md-text-muted, var(--text-muted)); margin-bottom: .4rem; }
     input[type="text"],
     input[type="date"],
     textarea,
     select {
       width: 100%;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--md-border, var(--border));
       border-radius: .45rem;
       padding: .55rem .8rem;
       font-size: .92rem;
       font-family: inherit;
-      color: #1a202c;
-      background: #f8fafc;
+      color: var(--md-text, var(--text));
+      background: var(--md-surface-alt, var(--surface-alt));
       outline: none;
       transition: border-color .15s, box-shadow .15s;
     }
     input:focus, textarea:focus, select:focus {
       border-color: var(--accent);
-      background: #fff;
-      box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+      background: var(--md-surface, var(--surface));
+      box-shadow: 0 0 0 3px var(--md-primary-soft, rgba(99,102,241,.1));
     }
     textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
 
@@ -66,18 +67,18 @@
     .chip-label {
       display: inline-block;
       padding: .35rem .8rem;
-      border: 1.5px solid #e2e8f0;
+      border: 1.5px solid var(--md-border, var(--border));
       border-radius: 999px;
       font-size: .8rem;
       font-weight: 600;
-      color: #64748b;
+      color: var(--md-text-muted, var(--text-muted));
       cursor: pointer;
       transition: all .12s;
       user-select: none;
     }
     .chip-option:checked + .chip-label {
       border-color: var(--accent);
-      background: #4f46e5;
+      background: var(--md-primary, var(--accent));
       color: #fff;
     }
 
@@ -91,17 +92,17 @@
     .chip-option.block:checked + .chip-label.evening { background: #5b21b6; border-color: #5b21b6; }
 
     /* ── Divider ── */
-    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 1.4rem 0; }
+    .divider { border: none; border-top: 1px solid var(--md-border, var(--border)); margin: 1.4rem 0; }
 
     /* ── Actions ── */
     .form-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; padding-top: .25rem; }
-    .btn-save { background: #4f46e5; color: #fff; border: none; border-radius: .5rem; padding: .65rem 1.6rem; font-size: .95rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn-save { background: var(--md-primary, var(--accent)); color: #fff; border: none; border-radius: .5rem; padding: .65rem 1.6rem; font-size: .95rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
     .btn-save:hover { opacity: .88; }
-    .btn-cancel { color: #64748b; text-decoration: none; font-size: .88rem; font-weight: 500; padding: .5rem; }
+    .btn-cancel { color: var(--md-text-muted, var(--text-muted)); text-decoration: none; font-size: .88rem; font-weight: 500; padding: .5rem; }
     .btn-cancel:hover { color: var(--text); }
 
     /* ── Hint text ── */
-    .field-hint { font-size:.82rem; color: #94a3b8; margin-top: .3rem; }
+    .field-hint { font-size:.82rem; color: var(--md-text-faint, var(--text-faint)); margin-top: .3rem; }
 
     /* ── Section label ── */
     .section-label {
@@ -109,7 +110,7 @@
       font-weight: 700;
       letter-spacing: .06em;
       text-transform: uppercase;
-      color: #94a3b8;
+      color: var(--md-text-faint, var(--text-faint));
       margin-bottom: .85rem;
       margin-top: .25rem;
     }
@@ -301,6 +302,6 @@
       </form>
     </div>
   </main>
-<script src="{{ base }}/static/app.js?v=17"></script>
+<script src="{{ base }}/static/app.js?v=19"></script>
 </body>
 </html>

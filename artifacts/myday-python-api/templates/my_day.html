@@ -8,7 +8,7 @@
   <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=18" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=19" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -270,6 +270,60 @@
 
     .empty-box { text-align: center; padding: 2rem 1.5rem; color: var(--text-faint); background: var(--surface); border: 1px dashed var(--border); border-radius: .75rem; font-size: .85rem; }
     .empty-box .icon { font-size: 1.75rem; margin-bottom: .4rem; }
+
+    /* ── Completion circles ── */
+    .completion-circle { position: relative; width: 1.4rem; height: 1.4rem; flex-shrink: 0; cursor: pointer; background: none; border: none; padding: 0; }
+    .completion-circle svg { width: 100%; height: 100%; }
+    .completion-circle .circle-bg { fill: none; stroke: var(--md-border, var(--border)); stroke-width: 2; transition: stroke 150ms ease; }
+    .completion-circle .circle-check { fill: none; stroke: var(--md-success, var(--success)); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16; opacity: 0; transition: opacity 150ms ease; }
+    .completion-circle:hover .circle-bg { stroke: var(--md-success, var(--success)); }
+    .completion-circle:hover .circle-check { opacity: 0.35; stroke-dashoffset: 0; }
+    .completion-circle.completing .circle-bg { stroke: var(--md-success, var(--success)); fill: var(--md-success, var(--success)); }
+    .completion-circle.completing .circle-check { opacity: 1; stroke: #fff; stroke-dashoffset: 0; }
+    @keyframes circle-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    .completion-circle.completing { animation: circle-pulse 300ms ease; }
+    /* NOW strip uses larger circle */
+    .now-actions .completion-circle { width: 1.7rem; height: 1.7rem; }
+
+    /* ── Row hover highlights ── */
+    .win-row, .nice-row, .task-row, .suggestion-row { transition: background 80ms ease; border-radius: var(--md-radius-md, .45rem); }
+    .win-row:hover, .nice-row:hover, .task-row:hover, .suggestion-row:hover { background: var(--md-surface-alt, var(--surface-alt, rgba(0,0,0,.03))); }
+    html.dark .win-row:hover, html.dark .nice-row:hover, html.dark .task-row:hover, html.dark .suggestion-row:hover { background: var(--md-surface-alt, rgba(255,255,255,.04)); }
+
+    /* ── Ghost affordances — hide text buttons, keep circles ── */
+    .win-actions .btn-start-focus,
+    .win-actions .btn-edit-task,
+    .task-row-actions .btn-state,
+    .task-row-actions .btn-park,
+    .task-row-actions .btn-edit-task {
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+    .win-row:hover .win-actions .btn-start-focus,
+    .win-row:hover .win-actions .btn-edit-task,
+    .nice-row:hover .win-actions .btn-start-focus,
+    .nice-row:hover .win-actions .btn-edit-task,
+    .task-row:hover .task-row-actions .btn-state,
+    .task-row:hover .task-row-actions .btn-park,
+    .task-row:hover .task-row-actions .btn-edit-task {
+      opacity: 1;
+    }
+    /* NOW strip always visible */
+    .now-actions .btn-focus-now,
+    .now-actions .btn-later-now,
+    .now-actions .btn-state {
+      opacity: 1 !important;
+    }
+    /* Touch devices: always show */
+    @media (hover: none) {
+      .win-actions .btn-start-focus,
+      .win-actions .btn-edit-task,
+      .task-row-actions .btn-state,
+      .task-row-actions .btn-park,
+      .task-row-actions .btn-edit-task {
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 <body class="myday-page">
@@ -487,7 +541,7 @@
               onsubmit="return progressiveSubmit(this, pDone)">
           <input type="hidden" name="status" value="done" />
           <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
-          <button class="btn-done-now" type="submit">✓ Done</button>
+          <button class="completion-circle" type="submit" title="Mark done"><svg viewBox="0 0 24 24"><circle class="circle-bg" cx="12" cy="12" r="10"/><path class="circle-check" d="M7 12.5l3 3 7-7"/></svg></button>
         </form>
         <form method="post" action="{{ base }}/tasks/{{ now_task.id }}/focus-state" style="display:inline"
               onsubmit="return progressiveSubmit(this, pSoftReload)">
@@ -532,7 +586,7 @@
                   onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
-              <button class="btn-check" type="submit">✓ Done</button>
+              <button class="completion-circle" type="submit" title="Mark done"><svg viewBox="0 0 24 24"><circle class="circle-bg" cx="12" cy="12" r="10"/><path class="circle-check" d="M7 12.5l3 3 7-7"/></svg></button>
             </form>
             <a class="btn-edit-task" href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
           </div>
@@ -581,7 +635,7 @@
                   onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
-              <button class="btn-check" type="submit">✓ Done</button>
+              <button class="completion-circle" type="submit" title="Mark done"><svg viewBox="0 0 24 24"><circle class="circle-bg" cx="12" cy="12" r="10"/><path class="circle-check" d="M7 12.5l3 3 7-7"/></svg></button>
             </form>
             <a class="btn-edit-task" href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
           </div>
@@ -630,7 +684,7 @@
                   onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
-              <button class="btn-check" type="submit">✓</button>
+              <button class="completion-circle" type="submit" title="Mark done"><svg viewBox="0 0 24 24"><circle class="circle-bg" cx="12" cy="12" r="10"/><path class="circle-check" d="M7 12.5l3 3 7-7"/></svg></button>
             </form>
             <a class="btn-edit-task" href="{{ base }}/tasks/{{ next_task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
           </div>
@@ -663,7 +717,7 @@
                   onsubmit="return progressiveSubmit(this, pDone)">
               <input type="hidden" name="status" value="done" />
               <input type="hidden" name="redirect_to" value="{{ base }}/my-day" />
-              <button class="btn-check" type="submit">✓</button>
+              <button class="completion-circle" type="submit" title="Mark done"><svg viewBox="0 0 24 24"><circle class="circle-bg" cx="12" cy="12" r="10"/><path class="circle-check" d="M7 12.5l3 3 7-7"/></svg></button>
             </form>
             <form method="post" action="{{ base }}/tasks/{{ task.id }}/unset-today"
                   onsubmit="return progressiveSubmit(this, pDismiss)">
@@ -746,7 +800,7 @@
       <div class="done-list done-list-compact">
         {% for task in done_today %}
         <div class="done-row">
-          <span class="done-check">✓</span>
+          <span class="completion-circle completing" style="pointer-events:none;"><svg viewBox="0 0 24 24"><circle class="circle-bg" cx="12" cy="12" r="10"/><path class="circle-check" d="M7 12.5l3 3 7-7"/></svg></span>
           <span class="done-title">{{ task.title }}</span>
         </div>
         {% endfor %}
@@ -964,7 +1018,31 @@
       }, 2600);
     }
 
+
+    // ─── Completion circle animation on submit ─────────────────────────────────────
+    function celebrateDone() {
+      const streakEl = document.querySelector('.hs-item');
+      if (streakEl) {
+        streakEl.style.transition = 'transform 200ms ease';
+        streakEl.style.transform = 'scale(1.15)';
+        streakEl.style.color = 'var(--md-success, var(--success))';
+        setTimeout(() => {
+          streakEl.style.transform = 'scale(1)';
+          setTimeout(() => { streakEl.style.color = ''; }, 300);
+        }, 250);
+      }
+    }
+
+    document.querySelectorAll('form').forEach(form => {
+      if (form.querySelector('input[name="status"][value="done"]')) {
+        form.addEventListener('submit', function() {
+          const circle = form.querySelector('.completion-circle');
+          if (circle) circle.classList.add('completing');
+          celebrateDone();
+        });
+      }
+    });
   </script>
-  <script src="{{ base }}/static/app.js?v=18"></script>
+  <script src="{{ base }}/static/app.js?v=19"></script>
 </body>
 </html>
