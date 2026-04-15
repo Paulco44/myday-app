@@ -339,15 +339,11 @@ def health():
 @app.get(f"{BASE}", response_class=HTMLResponse)
 @app.get(f"{BASE}/", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
-    projects = db.query(models.Project).all()
-    total_tasks = db.query(models.Task).count()
-    today_count = db.query(models.Task).filter(models.Task.is_today == True).count()
-    doing_count = db.query(models.Task).filter(models.Task.status == "doing").count()
-    return templates.TemplateResponse(
-        request, "index.html",
-        {"projects": projects, "base": BASE, "total_tasks": total_tasks,
-         "today_count": today_count, "doing_count": doing_count},
-    )
+    today = date.today()
+    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    if not log or not log.has_morning_checkin:
+        return RedirectResponse(url=f"{BASE}/morning-checkin", status_code=302)
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=302)
 
 
 # ─── Morning Check-In ────────────────────────────────────────────────────────
