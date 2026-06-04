@@ -5,10 +5,18 @@ from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 from typing import Optional, List
 
+# Load local .env (repo root) so ANTHROPIC_API_KEY / NOTION_API_TOKEN are available.
+# Must run before reading env-dependent config below.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+except Exception:
+    pass
+
 import notion_client as notion
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import or_, text as sa_text
 from fastapi.templating import Jinja2Templates
@@ -16,6 +24,8 @@ from sqlalchemy.orm import Session, joinedload
 
 import models
 import schemas
+import agent
+import ms_graph
 from database import engine, get_db, Base, SessionLocal
 
 BASE = "/task-manager"
@@ -351,10 +361,7 @@ app.mount(f"{BASE}/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 async def root_redirect(db: Session = Depends(get_db)):
-    today = date.today()
-    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
-    if not log or not log.has_morning_checkin:
-        return RedirectResponse(url=f"{BASE}/morning-checkin", status_code=302)
+    # Morning check-in retired (folded into My Day's briefing card).
     return RedirectResponse(url=f"{BASE}/my-day", status_code=302)
 
 
@@ -370,10 +377,6 @@ def health():
 @app.get(f"{BASE}", response_class=HTMLResponse)
 @app.get(f"{BASE}/", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
-    today = date.today()
-    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
-    if not log or not log.has_morning_checkin:
-        return RedirectResponse(url=f"{BASE}/morning-checkin", status_code=302)
     return RedirectResponse(url=f"{BASE}/my-day", status_code=302)
 
 
@@ -381,16 +384,8 @@ async def home(request: Request, db: Session = Depends(get_db)):
 
 @app.get(f"{BASE}/morning-checkin", response_class=HTMLResponse)
 async def morning_checkin_get(request: Request, db: Session = Depends(get_db)):
-    tasks = (
-        db.query(models.Task)
-        .filter(models.Task.status.in_(["todo", "backlog"]))
-        .order_by(models.Task.priority.desc(), models.Task.due_date.asc())
-        .all()
-    )
-    return templates.TemplateResponse(
-        request, "morning_checkin.html",
-        {"base": BASE, "tasks": tasks},
-    )
+    # Retired: the morning ritual now lives in My Day's briefing card.
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=302)
 
 
 @app.post(f"{BASE}/morning-checkin")
@@ -995,9 +990,57 @@ async def quick_edit_task(
 
 
 @app.get(f"{BASE}/kanban", response_class=HTMLResponse)
-async def kanban(request: Request):
-    """Deprecated — the React Kanban at / is the canonical board view."""
-    return RedirectResponse(url="/", status_code=301)
+async def kanban(request: Request, db: Session = Depends(get_db)):
+    today = date.today()
+    today_start = datetime(today.year, today.month, today.day)
+
+    # All tasks except dropped, grouped by status
+    all_tasks = (
+        db.query(models.Task)
+        .filter(models.Task.status != "dropped")
+        .options(joinedload(models.Task.project))
+        .order_by(models.Task.priority.desc(), models.Task.created_at.asc())
+        .all()
+    )
+
+    board_statuses = ["backlog", "todo", "doing", "waiting", "done"]
+    columns = {s: [] for s in board_statuses}
+    for t in all_tasks:
+        if t.status in columns:
+            columns[t.status].append(t)
+
+    # NOW task
+    now_task = db.query(models.Task).filter(
+        models.Task.is_now == True, models.Task.status != "done"
+    ).first()
+
+    # Done today count
+    done_today_count = (
+        db.query(models.Task)
+        .filter(
+            models.Task.completed_at >= today_start,
+            models.Task.status == "done",
+        )
+        .count()
+    )
+
+    wip_limit = 3
+
+    response = templates.TemplateResponse(
+        request, "kanban.html",
+        {
+            "base": BASE,
+            "statuses": board_statuses,
+            "status_labels": STATUS_LABELS,
+            "columns": columns,
+            "wip_limit": wip_limit,
+            "now_task_id": now_task.id if now_task else None,
+            "done_today_count": done_today_count,
+            "today": today,
+        },
+    )
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return response
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/status")
@@ -1805,10 +1848,30 @@ def inbox_list(request: Request, db: Session = Depends(get_db)):
         .filter(models.InboxItem.status == "archived")
         .count()
     )
+    unreviewed_count = sum(1 for i in items if i.status in ("new", "reviewing"))
     return templates.TemplateResponse(
         request, "inbox.html",
-        {"base": BASE, "items": items, "archived_count": archived_count},
+        {"base": BASE, "items": items, "archived_count": archived_count,
+         "unreviewed_count": unreviewed_count},
     )
+
+
+@app.post(f"{BASE}/inbox/quick-capture")
+def inbox_quick_capture(
+    title: str = Form(...),
+    raw_content: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    item = models.InboxItem(
+        source="manual",
+        source_type="brain_dump",
+        title=title.strip(),
+        raw_content=raw_content.strip() if raw_content else None,
+        status="new",
+    )
+    db.add(item)
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/inbox", status_code=303)
 
 
 @app.get(f"{BASE}/inbox/archived", response_class=HTMLResponse)
@@ -1819,9 +1882,15 @@ def inbox_archived(request: Request, db: Session = Depends(get_db)):
         .order_by(models.InboxItem.created_at.desc())
         .all()
     )
+    unreviewed_count = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.status.in_(["new", "reviewing"]))
+        .count()
+    )
     return templates.TemplateResponse(
         request, "inbox.html",
-        {"base": BASE, "items": items, "archived_count": len(items), "show_archived": True},
+        {"base": BASE, "items": items, "archived_count": len(items),
+         "show_archived": True, "unreviewed_count": unreviewed_count},
     )
 
 
@@ -2061,6 +2130,16 @@ def inbox_archive(item_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Inbox item not found")
     item.status = "archived"
     item.reviewed_at = item.reviewed_at or datetime.utcnow()
+    db.commit()
+    return RedirectResponse(url=f"{BASE}/inbox", status_code=303)
+
+
+@app.post(f"{BASE}/inbox/{{item_id}}/delete")
+def inbox_delete(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(models.InboxItem).filter(models.InboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inbox item not found")
+    db.delete(item)
     db.commit()
     return RedirectResponse(url=f"{BASE}/inbox", status_code=303)
 
@@ -2385,6 +2464,219 @@ def notion_import(
         import urllib.parse
         params += f"&error_msg={urllib.parse.quote(first_error)}"
     return RedirectResponse(url=f"{BASE}/integrations/notion?{params}", status_code=303)
+
+
+# ─── Assistant chat (Phase 0: local conversational brain) ─────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+
+class ChatSendBody(_BaseModel):
+    message: str
+    conversation_id: Optional[int] = None
+
+
+@app.get(f"{BASE}/chat/status")
+def chat_status():
+    """Tell the frontend whether the assistant is usable."""
+    return {"configured": agent.is_configured(), "model": agent.MODEL}
+
+
+@app.get(f"{BASE}/chat/conversations")
+def chat_conversations(db: Session = Depends(get_db)):
+    convos = (
+        db.query(models.Conversation)
+        .order_by(models.Conversation.updated_at.desc())
+        .limit(30)
+        .all()
+    )
+    return {
+        "conversations": [
+            {"id": c.id, "title": c.title or "Sin título", "updated_at": c.updated_at.isoformat() if c.updated_at else None}
+            for c in convos
+        ]
+    }
+
+
+@app.get(f"{BASE}/chat/history")
+def chat_history(conversation_id: int = Query(...), db: Session = Depends(get_db)):
+    convo = db.query(models.Conversation).filter(models.Conversation.id == conversation_id).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {
+        "conversation_id": convo.id,
+        "title": convo.title,
+        "messages": [
+            {
+                "role": m.role,
+                "content": m.content,
+                "tool_trace": json.loads(m.tool_trace) if m.tool_trace else [],
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in convo.messages
+        ],
+    }
+
+
+@app.post(f"{BASE}/chat/send")
+def chat_send(body: ChatSendBody, db: Session = Depends(get_db)):
+    text = (body.message or "").strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="message required")
+
+    convo = None
+    if body.conversation_id:
+        convo = db.query(models.Conversation).filter(
+            models.Conversation.id == body.conversation_id
+        ).first()
+    if not convo:
+        convo = models.Conversation()
+        db.add(convo)
+        db.commit()
+        db.refresh(convo)
+
+    def event_stream():
+        # Announce the conversation id first so the client can track it.
+        yield f"data: {json.dumps({'type': 'meta', 'conversation_id': convo.id})}\n\n"
+        yield from agent.run_agent_stream(db, convo, text)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ─── Phase 1: AI day planner ──────────────────────────────────────────────────
+
+class ApplyPlanBody(_BaseModel):
+    assignments: List[dict]
+
+
+@app.post(f"{BASE}/my-day/plan")
+def my_day_plan(db: Session = Depends(get_db)):
+    """Compute an AI day plan (does not apply it)."""
+    plan = agent.compute_day_plan(db)
+    if "error" in plan:
+        raise HTTPException(status_code=503, detail=plan["error"])
+    return plan
+
+
+@app.post(f"{BASE}/my-day/plan/apply")
+def my_day_plan_apply(body: ApplyPlanBody, db: Session = Depends(get_db)):
+    """Apply a previously computed plan's assignments."""
+    return agent.apply_day_plan(db, body.assignments)
+
+
+# ─── Phase 3: Proactive briefing ──────────────────────────────────────────────
+
+@app.get(f"{BASE}/my-day/briefing")
+def my_day_briefing(db: Session = Depends(get_db)):
+    """Today's cached briefing (generated on first call of the day)."""
+    result = agent.get_or_create_briefing(db)
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return result
+
+
+@app.post(f"{BASE}/my-day/briefing/refresh")
+def my_day_briefing_refresh(db: Session = Depends(get_db)):
+    result = agent.get_or_create_briefing(db, force=True)
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return result
+
+
+# ─── Morning ritual folded into My Day (energy + brain dump) ───────────────────
+
+class EnergyBody(_BaseModel):
+    energy: str  # high | flow | low | scattered
+
+
+class BrainDumpBody(_BaseModel):
+    text: str
+
+
+@app.post(f"{BASE}/my-day/energy")
+def my_day_set_energy(body: EnergyBody, db: Session = Depends(get_db)):
+    energy = (body.energy or "").strip()
+    if energy not in ("high", "flow", "low", "scattered"):
+        raise HTTPException(status_code=422, detail="invalid energy")
+    today = date.today()
+    log = get_or_create_daily_log(db, today)
+    log.energy_today = energy
+    db.commit()
+    mark_morning_checkin(db, today)  # marks started + checkin (streak + ritual)
+    return {"ok": True, "energy": energy}
+
+
+@app.post(f"{BASE}/my-day/brain-dump")
+def my_day_brain_dump(body: BrainDumpBody, db: Session = Depends(get_db)):
+    lines = [l.strip() for l in (body.text or "").splitlines() if l.strip()]
+    for line in lines:
+        db.add(models.InboxItem(
+            title=line, source="self", source_type="brain_dump",
+            status="new", suggested_actions_json="[]",
+        ))
+    db.commit()
+    if lines:
+        mark_morning_checkin(db, date.today())
+    return {"ok": True, "added": len(lines)}
+
+
+# ─── Phase 2: Microsoft 365 integration ───────────────────────────────────────
+
+@app.get(f"{BASE}/integrations/microsoft", response_class=HTMLResponse)
+def microsoft_settings(
+    request: Request,
+    imported: Optional[int] = Query(default=None),
+    skipped: Optional[int] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    email_count = db.query(models.InboxItem).filter(models.InboxItem.source == "ms_email").count()
+    last_result = None
+    if imported is not None or skipped is not None:
+        last_result = {"imported": imported or 0, "skipped": skipped or 0}
+    return templates.TemplateResponse(
+        request, "integrations_microsoft.html",
+        {
+            "base": BASE,
+            "status": ms_graph.flow_status(),
+            "tenant": ms_graph.tenant(),
+            "email_count": email_count,
+            "last_result": last_result,
+            "scopes": " ".join(ms_graph.SCOPES),
+            "mail_enabled": ms_graph.mail_enabled(),
+        },
+    )
+
+
+@app.post(f"{BASE}/integrations/microsoft/connect")
+def microsoft_connect():
+    """Start the device-code flow; returns the code + link for the user."""
+    return ms_graph.start_device_flow()
+
+
+@app.get(f"{BASE}/integrations/microsoft/status")
+def microsoft_status():
+    return ms_graph.flow_status()
+
+
+@app.post(f"{BASE}/integrations/microsoft/sync-email")
+def microsoft_sync_email(db: Session = Depends(get_db)):
+    result = agent.sync_ms_email(db, limit=40)
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return RedirectResponse(
+        url=f"{BASE}/integrations/microsoft?imported={result['imported']}&skipped={result['skipped']}",
+        status_code=303,
+    )
+
+
+@app.post(f"{BASE}/integrations/microsoft/disconnect")
+def microsoft_disconnect():
+    ms_graph.disconnect()
+    return RedirectResponse(url=f"{BASE}/integrations/microsoft", status_code=303)
 
 
 if __name__ == "__main__":

@@ -4,76 +4,74 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tasks — MyDay</title>
-    <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=20" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    /* ── Nav ── */
-    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
-    .nav-links { display: flex; gap: 0; }
-    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
-    .nav-links a:hover { color: var(--text); }
-    .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
-    .nav-links a.nav-focus:hover { color: #64748b; }
+    main { max-width: 1040px; margin: 0 auto; padding: 1.5rem 1.5rem 5rem; }
 
-    main { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
-    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
+    /* ── Header row ── */
+    .tasks-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
+    h1 { font-size: 1.3rem; font-weight: 600; letter-spacing: -.01em; }
 
-    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #475569; }
-    .form-grid { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr auto; gap: .75rem; align-items: end; }
+    /* ── Collapsible add-task ── */
+    .add-card { margin-bottom: 1.25rem; }
+    .add-summary { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--btn-fg, #fff); background: var(--btn-bg, #36322C); border-radius: 8px; padding: .45rem .9rem; list-style: none; width: max-content; }
+    .add-summary::-webkit-details-marker { display: none; }
+    .add-summary:hover { background: var(--btn-bg-hover, #47423A); }
+    .add-card[open] .add-summary { margin-bottom: .85rem; }
+    .add-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.2rem; }
+    .form-grid { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr auto; gap: .7rem; align-items: end; }
     @media(max-width: 800px) { .form-grid { grid-template-columns: 1fr 1fr; } }
     @media(max-width: 480px) { .form-grid { grid-template-columns: 1fr; } }
-    .field { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
-    label { font-size: .8rem; font-weight: 500; color: #64748b; }
-    input, select { padding: .5rem .75rem; border: 1px solid #cbd5e1; border-radius: .4rem; font-size: .9rem; background: #fff; color: var(--text); width: 100%; min-width: 0; }
-    input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
-    .btn { padding: .55rem 1.25rem; border-radius: .4rem; font-size: .9rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
-    .btn:hover { opacity: .85; }
-    .btn-primary { background: #4f46e5; color: #fff; }
-    .btn-sm { padding: .3rem .7rem; font-size:.82rem; }
-    .btn-danger { background: #ef4444; color: #fff; }
+    .field { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+    label { font-size: .76rem; font-weight: 500; color: var(--text-muted); }
+    input, select { padding: .45rem .65rem; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: .86rem; background: var(--bg); color: var(--text); width: 100%; min-width: 0; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
 
-    .filters { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .filters a { padding: .35rem .9rem; border-radius: 999px; font-size: .82rem; font-weight: 500; text-decoration: none; background: #e2e8f0; color: #475569; transition: background .15s; }
-    .filters a.active, .filters a:hover { background: #4f46e5; color: #fff; }
+    .btn { padding: .5rem 1.1rem; border-radius: 8px; font: inherit; font-size: .86rem; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: var(--btn-bg, #36322C); color: var(--btn-fg, #fff); }
+    .btn-primary:hover { background: var(--btn-bg-hover, #47423A); }
+    .btn-sm { padding: .25rem .6rem; font-size: .8rem; }
+    .btn-danger { background: var(--btn-bg, #36322C); color: var(--btn-fg, #fff); }
 
-    /* ── Table ── */
-    .table-toolbar { display: flex; align-items: center; gap: .75rem; margin-bottom: .85rem; flex-wrap: wrap; }
+    /* ── Status filters ── */
+    .filters { display: flex; gap: .35rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
+    .filters a { padding: .3rem .8rem; border-radius: 999px; font-size: .8rem; font-weight: 500; text-decoration: none; background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); transition: background .12s, color .12s; }
+    .filters a:hover { background: var(--surface-alt); color: var(--text); }
+    .filters a.active { background: var(--btn-bg, #36322C); color: var(--btn-fg, #fff); border-color: var(--btn-bg, #36322C); }
+
+    /* ── Toolbar ── */
+    .table-toolbar { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; flex-wrap: wrap; }
     .search-wrap { flex: 1; min-width: 180px; position: relative; }
-    .search-wrap svg { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
-    #task-search { padding: .45rem .75rem .45rem 2.1rem; border: 1px solid #cbd5e1; border-radius: .4rem; font-size: .88rem; width: 100%; background: #fff; color: var(--text); }
-    #task-search:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
-    .sort-reset { font-size:.82rem; color: #94a3b8; background: none; border: 1px solid #e2e8f0; border-radius: .35rem; padding: .35rem .7rem; cursor: pointer; white-space: nowrap; }
-    .sort-reset:hover { color: var(--text); border-color: #cbd5e1; }
-    .active-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
-    .filter-chip { display: inline-flex; align-items: center; gap: .3rem; background: rgba(99,102,241,.1); color: #4f46e5; font-size: .78rem; font-weight: 600; padding: .25rem .55rem; border-radius: .35rem; }
-    html.dark .filter-chip { background: rgba(99,102,241,.2); color: #a5b4fc; }
+    .search-wrap svg { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
+    #task-search { padding: .45rem .75rem .45rem 2.1rem; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: .86rem; width: 100%; background: var(--surface); color: var(--text); }
+    #task-search:focus { outline: none; border-color: var(--accent); }
+    .sort-reset { font-size: .8rem; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .35rem .7rem; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .sort-reset:hover { color: var(--text); }
+    .active-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .6rem; }
+    .filter-chip { display: inline-flex; align-items: center; gap: .3rem; background: var(--surface-alt); color: var(--text-muted); font-size: .76rem; font-weight: 500; padding: .2rem .55rem; border-radius: 6px; border: 1px solid var(--border); }
     .chip-remove { color: inherit; text-decoration: none; font-weight: 700; opacity: .6; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; font-size: inherit; line-height: 1; }
     .chip-remove:hover { opacity: 1; }
 
-    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: .75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); border: 1px solid #e2e8f0; }
-    th { text-align: left; padding: .75rem 1rem; background: #f8fafc; font-size:.82rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    th { text-align: left; padding: .6rem .9rem; background: var(--surface-alt); font-size: .73rem; font-weight: 600; letter-spacing: .02em; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
     th[data-col] { cursor: pointer; user-select: none; }
-    th[data-col]:hover { color: #334155; background: #f1f5f9; }
-    th[data-col].sort-asc  { color: #4f46e5; }
-    th[data-col].sort-desc { color: #4f46e5; }
+    th[data-col]:hover { color: var(--text); }
+    th[data-col].sort-asc, th[data-col].sort-desc { color: var(--accent); }
     th[data-col] .sort-arrow { display: inline-block; margin-left: .3rem; opacity: .3; font-style: normal; }
-    th[data-col].sort-asc  .sort-arrow,
-    th[data-col].sort-desc .sort-arrow { opacity: 1; }
-    td { padding: .7rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: .9rem; vertical-align: middle; transition: background 80ms ease; }
+    th[data-col].sort-asc .sort-arrow, th[data-col].sort-desc .sort-arrow { opacity: 1; }
+    td { padding: .6rem .9rem; border-bottom: 1px solid var(--border-subtle, var(--border)); font-size: .87rem; vertical-align: middle; transition: background 80ms ease; }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--md-surface-alt, #FAFAF9); }
-    html.dark tr:hover td { background: var(--md-surface-alt, #252525); }
+    tr:hover td { background: var(--surface-alt); }
     tr.hidden-row { display: none; }
+    td .muted, .cell-empty { color: var(--text-faint); }
 
-    /* ── Completion circle (tasks list) ── */
-    .completion-circle { position: relative; width: 1.4rem; height: 1.4rem; flex-shrink: 0; cursor: pointer; background: none; border: none; padding: 0; vertical-align: middle; }
+    /* ── Completion circle ── */
+    .completion-circle { position: relative; width: 1.35rem; height: 1.35rem; flex-shrink: 0; cursor: pointer; background: none; border: none; padding: 0; vertical-align: middle; }
     .completion-circle svg { width: 100%; height: 100%; }
     .completion-circle .circle-bg { fill: none; stroke: var(--md-border, #E5E7EB); stroke-width: 2; transition: stroke 150ms ease; }
     .completion-circle .circle-check { fill: none; stroke: var(--md-success, #22C55E); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16; opacity: 0; transition: opacity 150ms ease; }
@@ -84,163 +82,152 @@
     @keyframes circle-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
     .completion-circle.completing { animation: circle-pulse 300ms ease; }
 
-    /* ── Ghost affordances for action buttons ── */
+    /* ── Row actions (hover-reveal) ── */
     .task-actions { display: flex; align-items: center; gap: .3rem; white-space: nowrap; }
-    .task-actions .btn-ghost {
-      opacity: 0;
-      transition: opacity 120ms ease;
-    }
+    .task-actions .btn-ghost { opacity: 0; transition: opacity 120ms ease; }
     tr:hover .task-actions .btn-ghost { opacity: 1; }
     @media (hover: none) { .task-actions .btn-ghost { opacity: 1; } }
 
-    .badge { display: inline-block; padding: .2rem .55rem; border-radius: 999px; font-size:.82rem; font-weight: 600; }
-    .badge-todo     { background: #e0e7ff; color: #3730a3; }
-    .badge-doing    { background: #fef3c7; color: #92400e; }
-    .badge-done     { background: #d1fae5; color: #065f46; }
-    .badge-backlog  { background: #f1f5f9; color: #64748b; }
-    .badge-waiting  { background: #fce7f3; color: #9d174d; }
-    .badge-today    { background: #fef3c7; color: #92400e; font-size:.82rem; }
-    .badge-kanban   { background: var(--accent-soft, #E0E7FF); color: var(--accent-text, #3730A3); border: 1px solid var(--accent, #4F46E5); font-size:.78rem; }
+    /* ── Status as quiet dot + label; Today/Kanban as small chips ── */
+    .badge { display: inline-flex; align-items: center; gap: .35rem; padding: .12rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 500; text-transform: capitalize; }
+    .badge-todo, .badge-doing, .badge-done, .badge-backlog, .badge-waiting { background: none; padding: 0; color: var(--text-muted); }
+    .badge-todo::before, .badge-doing::before, .badge-done::before, .badge-backlog::before, .badge-waiting::before { content: ''; width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--text-faint); }
+    .badge-todo::before    { background: #6b8fd0; }
+    .badge-doing::before   { background: #d8a13a; }
+    .badge-done::before    { background: var(--success, #4f9d69); }
+    .badge-waiting::before { background: #b08bd0; }
+    .badge-backlog::before { background: var(--text-faint); }
+    .badge-today  { background: var(--accent-soft); color: var(--accent-text); }
+    .badge-kanban { background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); }
 
-    .pri-high   { color: #dc2626; font-weight: 700; }
-    .pri-medium { color: #d97706; }
-    .pri-low    { color: #6b7280; }
+    .pri-high   { color: var(--text); font-weight: 600; }
+    .pri-medium { color: var(--text-muted); }
+    .pri-low    { color: var(--text-faint); }
 
-    .btn-push-kanban { background: var(--accent, #4F46E5); color: #fff; border: 1px solid var(--accent, #4F46E5); border-radius: .35rem; padding: .28rem .65rem; font-size: .78rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity .15s; }
-    .btn-push-kanban:hover { opacity: .8; }
+    .btn-push-kanban { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; padding: .25rem .6rem; font-size: .76rem; font-weight: 500; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .btn-push-kanban:hover { background: var(--surface-alt); color: var(--text); }
     .btn-push-kanban:disabled { opacity: .5; cursor: not-allowed; }
-    .kanban-linked { display: inline-flex; align-items: center; gap: .2rem; font-size: .78rem; font-weight: 600; color: var(--accent-text, #3730A3); background: var(--accent-soft, #E0E7FF); border: 1px solid var(--accent, #4F46E5); border-radius: .35rem; padding: .28rem .55rem; text-decoration: none; }
-    .kanban-linked:hover { opacity: .85; }
+    .kanban-linked { display: inline-flex; align-items: center; gap: .2rem; font-size: .76rem; font-weight: 500; color: var(--text-muted); background: var(--surface-alt); border: 1px solid var(--border); border-radius: 6px; padding: .25rem .5rem; text-decoration: none; }
+    .kanban-linked:hover { color: var(--text); }
+    .ghost-edit { display: inline-flex; align-items: center; gap: .2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: .25rem .6rem; font-size: .78rem; font-weight: 500; color: var(--text-muted); text-decoration: none; }
+    .ghost-edit:hover { background: var(--surface-alt); color: var(--text); }
+    .ghost-del { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: .25rem .55rem; font-size: .8rem; color: var(--text-muted); cursor: pointer; font-family: inherit; }
+    .ghost-del:hover { background: #f6e9e8; color: #b5524e; border-color: #e6c9c7; }
+    html.dark .ghost-del:hover { background: #2a1716; color: #d08682; border-color: #5a3a38; }
 
-    .empty { text-align: center; padding: 3rem; color: #94a3b8; }
-    #no-results { display: none; text-align: center; padding: 2.5rem; color: #94a3b8; }
+    .assignee-chip { display: inline-flex; align-items: center; gap: .3rem; background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; padding: .1rem .45rem; font-weight: 500; font-size: .78rem; }
+
+    .empty { text-align: center; padding: 3rem; color: var(--text-faint); }
+    #no-results { display: none; text-align: center; padding: 2.5rem; color: var(--text-faint); }
 
     /* ── Checkbox column ── */
-    .col-check { width: 2rem; padding: .7rem .5rem .7rem .9rem !important; }
-    .task-checkbox { width: 1rem; height: 1rem; cursor: pointer; accent-color: #4f46e5; }
+    .col-check { width: 2rem; padding: .6rem .5rem .6rem .8rem !important; }
+    .task-checkbox { width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--accent); }
 
-    /* ── Bulk action bar ── */
-    .bulk-bar { display: none; position: sticky; top: 0; z-index: 50; background: #4f46e5; color: #fff; border-radius: .5rem; padding: .55rem 1rem; margin-bottom: .75rem; align-items: center; gap: .75rem; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(79,70,229,.35); }
+    /* ── Bulk action bar (graphite) ── */
+    .bulk-bar { display: none; position: sticky; top: 0; z-index: 50; background: var(--btn-bg, #36322C); color: var(--btn-fg, #fff); border-radius: 10px; padding: .5rem 1rem; margin-bottom: .75rem; align-items: center; gap: .6rem; flex-wrap: wrap; }
     .bulk-bar.visible { display: flex; }
-    .bulk-count { font-size: .88rem; font-weight: 700; flex: 1; }
-    .bulk-btn { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: .35rem; padding: .3rem .75rem; font-size: .82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .1s; font-family: inherit; }
-    .bulk-btn:hover { background: rgba(255,255,255,.25); }
-    .bulk-btn.danger { background: rgba(239,68,68,.5); border-color: rgba(239,68,68,.6); }
-    .bulk-btn.danger:hover { background: rgba(239,68,68,.7); }
-    .bulk-btn-cancel { background: none; border: none; color: rgba(255,255,255,.7); cursor: pointer; font-size: .82rem; font-family: inherit; }
+    .bulk-count { font-size: .85rem; font-weight: 600; flex: 1; }
+    .bulk-btn { background: rgba(255,255,255,.12); color: inherit; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; padding: .28rem .7rem; font-size: .8rem; font-weight: 500; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .bulk-btn:hover { background: rgba(255,255,255,.2); }
+    .bulk-btn.danger:hover { background: rgba(181,82,78,.55); border-color: rgba(181,82,78,.6); }
+    .bulk-btn-cancel { background: none; border: none; color: rgba(255,255,255,.7); cursor: pointer; font-size: .8rem; font-family: inherit; }
     .bulk-btn-cancel:hover { color: #fff; }
 
-    /* ── Recurring tasks section ── */
+    /* ── Recurring ── */
     .recurring-section { margin-top: 2rem; }
-    .recurring-section h2 { font-size: 1rem; font-weight: 600; color: #475569; margin-bottom: .75rem; }
-    .recurring-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: .75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); border: 1px solid #e2e8f0; }
-    .recurring-table th { text-align: left; padding: .6rem 1rem; background: #f8fafc; font-size:.82rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-    .recurring-table td { padding: .6rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: .88rem; }
+    .recurring-section h2 { font-size: .9rem; font-weight: 600; color: var(--text-muted); margin-bottom: .6rem; }
+    .recurring-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    .recurring-table th { text-align: left; padding: .55rem .9rem; background: var(--surface-alt); font-size: .73rem; font-weight: 600; letter-spacing: .02em; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    .recurring-table td { padding: .55rem .9rem; border-bottom: 1px solid var(--border-subtle, var(--border)); font-size: .85rem; }
     .recurring-table tr:last-child td { border-bottom: none; }
-    .recur-badge { display: inline-block; padding: .15rem .45rem; border-radius: .3rem; font-size: .75rem; font-weight: 700; background: #ede9fe; color: #5b21b6; }
-    html.dark .recur-badge { background: #2D1A5E; color: #C4B5FD; }
+    .recur-badge { display: inline-block; padding: .15rem .45rem; border-radius: 6px; font-size: .72rem; font-weight: 500; background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); }
 
-    /* ── Custom confirm dialog ── */
-    #confirm-dialog { border: none; border-radius: .75rem; padding: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,.18); max-width: 360px; width: 90vw; background: var(--surface, #fff); color: var(--text, #111); }
-    #confirm-dialog::backdrop { background: rgba(0,0,0,.45); }
-    .confirm-msg { font-size: .95rem; font-weight: 500; margin-bottom: 1.25rem; line-height: 1.5; }
+    /* ── Confirm dialog ── */
+    #confirm-dialog { border: none; border-radius: 12px; padding: 1.4rem; box-shadow: 0 16px 40px rgba(0,0,0,.22); max-width: 360px; width: 90vw; background: var(--surface); color: var(--text); }
+    #confirm-dialog::backdrop { background: rgba(15,23,42,.45); }
+    .confirm-msg { font-size: .92rem; font-weight: 500; margin-bottom: 1.25rem; line-height: 1.5; }
     .confirm-actions { display: flex; gap: .6rem; justify-content: flex-end; }
-    .confirm-yes { background: #ef4444; color: #fff; border: none; border-radius: .4rem; padding: .45rem 1.1rem; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit; }
-    .confirm-no  { background: var(--ctrl-bg, #f3f4f6); color: var(--text, #111); border: 1px solid #e2e8f0; border-radius: .4rem; padding: .45rem 1.1rem; font-size: .88rem; font-weight: 600; cursor: pointer; font-family: inherit; }
-    .confirm-yes:hover { background: #dc2626; }
-    .confirm-no:hover  { background: #e2e8f0; }
+    .confirm-yes { background: #b5524e; color: #fff; border: none; border-radius: 8px; padding: .45rem 1.1rem; font-size: .86rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .confirm-no  { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: .45rem 1.1rem; font-size: .86rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .confirm-yes:hover { background: #9f4743; }
+    .confirm-no:hover  { background: var(--bg); }
   </style>
 </head>
-<body>
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" style="color:#f59e0b;font-weight:600;">✦ Check In</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/task-manager/kanban">Kanban</a>
-      <a href="{{ base }}/tasks-page" class="active">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review">Review</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-      <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
-    </div>
-  </nav>
+<body class="theme-quiet">
+  {% include "_nav.html" %}
 
   <main>
-    <h1>All Tasks</h1>
-
-    <!-- New Task Form -->
-    <div class="card">
-      <h2>Add New Task</h2>
-      <form method="post" action="{{ base }}/tasks-page">
-        <div class="form-grid">
-          <div class="field">
-            <label for="title">Title *</label>
-            <input id="title" name="title" type="text" placeholder="What needs to be done?" required />
-          </div>
-          <div class="field">
-            <label for="project_id">Project</label>
-            <select id="project_id" name="project_id">
-              <option value="">— none —</option>
-              {% for p in projects %}
-              <option value="{{ p.id }}">{{ p.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="field">
-            <label for="priority">Priority</label>
-            <select id="priority" name="priority">
-              <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="due_date">Due Date</label>
-            <input id="due_date" name="due_date" type="date" />
-          </div>
-          <div class="field">
-            <label for="status">Status</label>
-            <select id="status" name="status">
-              <option value="backlog">Backlog</option>
-              <option value="todo" selected>To Do</option>
-              <option value="doing">Doing</option>
-              <option value="waiting">Waiting</option>
-              <option value="done">Done</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="energy_type">Energy type</label>
-            <select id="energy_type" name="energy_type">
-              <option value="">— none —</option>
-              <option value="creative">✨ Creative</option>
-              <option value="admin">📋 Admin</option>
-              <option value="social">💬 Social</option>
-              <option value="low_energy">🌿 Low Energy</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="time_estimate_minutes">Est. minutes</label>
-            <input id="time_estimate_minutes" name="time_estimate_minutes" type="number" min="1" max="240" placeholder="e.g. 25" />
-          </div>
-          <div>
-            <button type="submit" class="btn btn-primary">Add</button>
-          </div>
-        </div>
-      </form>
+    <div class="tasks-head">
+      <h1>Tasks</h1>
     </div>
+
+    <!-- New Task (collapsed by default) -->
+    <details class="add-card">
+      <summary class="add-summary">+ Nueva tarea</summary>
+      <div class="add-panel">
+        <form method="post" action="{{ base }}/tasks-page">
+          <div class="form-grid">
+            <div class="field">
+              <label for="title">Título *</label>
+              <input id="title" name="title" type="text" placeholder="¿Qué hay que hacer?" required />
+            </div>
+            <div class="field">
+              <label for="project_id">Proyecto</label>
+              <select id="project_id" name="project_id">
+                <option value="">— ninguno —</option>
+                {% for p in projects %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="priority">Prioridad</label>
+              <select id="priority" name="priority">
+                <option value="low">Baja</option>
+                <option value="medium" selected>Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="due_date">Vence</label>
+              <input id="due_date" name="due_date" type="date" />
+            </div>
+            <div class="field">
+              <label for="status">Estado</label>
+              <select id="status" name="status">
+                <option value="backlog">Backlog</option>
+                <option value="todo" selected>To Do</option>
+                <option value="doing">Doing</option>
+                <option value="waiting">Waiting</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="energy_type">Energía</label>
+              <select id="energy_type" name="energy_type">
+                <option value="">— ninguna —</option>
+                <option value="creative">Creative</option>
+                <option value="admin">Admin</option>
+                <option value="social">Social</option>
+                <option value="low_energy">Low Energy</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="time_estimate_minutes">Min est.</label>
+              <input id="time_estimate_minutes" name="time_estimate_minutes" type="number" min="1" max="240" placeholder="25" />
+            </div>
+            <div>
+              <button type="submit" class="btn btn-primary">Añadir</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </details>
 
     <!-- Filters -->
     <div class="filters">
-      <a href="{{ base }}/tasks-page" class="{% if not current_status %}active{% endif %}">All</a>
+      <a href="{{ base }}/tasks-page" class="{% if not current_status %}active{% endif %}">Todas</a>
       <a href="{{ base }}/tasks-page?status=todo"    class="{% if current_status == 'todo'    %}active{% endif %}">To Do</a>
       <a href="{{ base }}/tasks-page?status=doing"   class="{% if current_status == 'doing'   %}active{% endif %}">Doing</a>
       <a href="{{ base }}/tasks-page?status=backlog" class="{% if current_status == 'backlog' %}active{% endif %}">Backlog</a>
@@ -250,107 +237,99 @@
 
     <!-- Custom confirm dialog -->
     <dialog id="confirm-dialog">
-      <p class="confirm-msg" id="confirm-msg">Are you sure?</p>
+      <p class="confirm-msg" id="confirm-msg">¿Seguro?</p>
       <div class="confirm-actions">
-        <button class="confirm-no"  id="confirm-no">Cancel</button>
-        <button class="confirm-yes" id="confirm-yes">Delete</button>
+        <button class="confirm-no"  id="confirm-no">Cancelar</button>
+        <button class="confirm-yes" id="confirm-yes">Borrar</button>
       </div>
     </dialog>
 
     {% if tasks %}
-    <!-- Active filter / sort indicators -->
     <div class="active-filters" id="active-filters">
       {% if current_status %}
       {% set status_labels = {'todo':'To Do','doing':'Doing','backlog':'Backlog','waiting':'Waiting','done':'Done'} %}
       <span class="filter-chip">
-        Status: {{ status_labels.get(current_status, current_status | capitalize) }}
-        <a href="{{ base }}/tasks-page" class="chip-remove" title="Clear filter">×</a>
+        Estado: {{ status_labels.get(current_status, current_status | capitalize) }}
+        <a href="{{ base }}/tasks-page" class="chip-remove" title="Quitar filtro">×</a>
       </span>
       {% endif %}
     </div>
-    <!-- Toolbar: search + sort reset -->
+
     <div class="table-toolbar">
       <div class="search-wrap">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="task-search" type="search" placeholder="Search tasks…" oninput="filterSearch(this.value)" autocomplete="off" />
+        <input id="task-search" type="search" placeholder="Buscar tareas…" oninput="filterSearch(this.value)" autocomplete="off" />
       </div>
-      <button class="sort-reset" onclick="resetSort()" id="reset-btn" style="display:none;">↺ Reset sort</button>
-      <span id="visible-count" style="font-size:.8rem;color:#94a3b8;white-space:nowrap;"></span>
+      <button class="sort-reset" onclick="resetSort()" id="reset-btn" style="display:none;">↺ Reset orden</button>
+      <span id="visible-count" style="font-size:.8rem;color:var(--text-faint);white-space:nowrap;"></span>
     </div>
 
-    <!-- Bulk action bar -->
     <div class="bulk-bar" id="bulk-bar">
-      <span class="bulk-count" id="bulk-count">0 selected</span>
+      <span class="bulk-count" id="bulk-count">0 seleccionadas</span>
       <button class="bulk-btn" onclick="bulkStatus('todo')">→ To Do</button>
       <button class="bulk-btn" onclick="bulkStatus('doing')">→ Doing</button>
       <button class="bulk-btn" onclick="bulkStatus('done')">→ Done</button>
       <button class="bulk-btn" onclick="bulkStatus('backlog')">→ Backlog</button>
-      <button class="bulk-btn danger" onclick="bulkDelete()">✕ Delete</button>
-      <button class="bulk-btn-cancel" onclick="clearSelection()">✕ Cancel</button>
+      <button class="bulk-btn danger" onclick="bulkDelete()">Borrar</button>
+      <button class="bulk-btn-cancel" onclick="clearSelection()">Cancelar</button>
     </div>
 
     <table id="tasks-table">
       <thead>
         <tr>
-          <th class="col-check"><input type="checkbox" id="select-all" class="task-checkbox" title="Select all" /></th>
-          <th data-col="0" data-type="str">Title <i class="sort-arrow">⇅</i></th>
-          <th data-col="1" data-type="num">Status <i class="sort-arrow">⇅</i></th>
-          <th data-col="2" data-type="num">Priority <i class="sort-arrow">⇅</i></th>
-          <th data-col="3" data-type="str">Project <i class="sort-arrow">⇅</i></th>
-          <th data-col="4" data-type="str">Due Date <i class="sort-arrow">⇅</i></th>
-          <th data-col="5" data-type="str">Created <i class="sort-arrow">⇅</i></th>
-          <th data-col="6" data-type="str">Assignee <i class="sort-arrow">⇅</i></th>
-          <!-- data-col indices shifted +1 for sort (checkbox col skipped by JS) -->
+          <th class="col-check"><input type="checkbox" id="select-all" class="task-checkbox" title="Seleccionar todo" /></th>
+          <th data-col="0" data-type="str">Título <i class="sort-arrow">⇅</i></th>
+          <th data-col="1" data-type="num">Estado <i class="sort-arrow">⇅</i></th>
+          <th data-col="2" data-type="num">Prioridad <i class="sort-arrow">⇅</i></th>
+          <th data-col="3" data-type="str">Proyecto <i class="sort-arrow">⇅</i></th>
+          <th data-col="4" data-type="str">Vence <i class="sort-arrow">⇅</i></th>
+          <th data-col="5" data-type="str">Creada <i class="sort-arrow">⇅</i></th>
+          <th data-col="6" data-type="str">Asignado <i class="sort-arrow">⇅</i></th>
           <th></th>
         </tr>
       </thead>
       <tbody id="tasks-body">
         {% for task in tasks %}
-        {# sort keys: status order doing=1 todo=2 waiting=3 backlog=4 done=5 #}
-        {# priority order: high=1 medium=2 low=3 #}
         {% set s_order = {'doing':1,'todo':2,'waiting':3,'backlog':4,'done':5} %}
         {% set p_order = {'high':1,'medium':2,'low':3} %}
         <tr data-title="{{ task.title | lower }}" data-task-id="{{ task.id }}">
           <td class="col-check"><input type="checkbox" class="task-checkbox row-check" data-id="{{ task.id }}" /></td>
           <td data-val="{{ task.title | lower }}">
-            <strong class="task-panel-trigger" onclick="openTaskPanel({{ task.id }})" style="cursor:pointer;">{{ task.title }}</strong>
+            <strong class="task-panel-trigger" onclick="openTaskPanel({{ task.id }})" style="cursor:pointer;font-weight:600;">{{ task.title }}</strong>
             {% if task.is_today %}<span class="badge badge-today" style="margin-left:.4rem;">Today</span>{% endif %}
-            {% if task.card_id %}<span class="badge badge-kanban" style="margin-left:.4rem;">📋 Kanban</span>{% endif %}
-            {% if task.description %}<br><span style="color:#94a3b8;font-size:.8rem;">{{ task.description }}</span>{% endif %}
+            {% if task.card_id %}<span class="badge badge-kanban" style="margin-left:.4rem;">Kanban</span>{% endif %}
+            {% if task.description %}<br><span class="muted" style="font-size:.8rem;">{{ task.description }}</span>{% endif %}
           </td>
           <td data-val="{{ s_order.get(task.status, 9) }}"><span class="badge badge-{{ task.status }}">{{ task.status }}</span></td>
           <td data-val="{{ p_order.get(task.priority, 9) }}"><span class="pri-{{ task.priority }}">{{ task.priority | capitalize }}</span></td>
-          <td data-val="{{ (task.project.name | lower) if task.project else '~' }}">{% if task.project %}{{ task.project.name }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
-          <td data-val="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '9999-99-99' }}">{% if task.due_date %}{{ task.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
-          <td data-val="{{ task.created_at.strftime('%Y-%m-%d') }}" style="color:#94a3b8;font-size:.82rem;">{{ task.created_at.strftime('%b %d') }}</td>
-          <td data-val="{{ (task.assignee | lower) if task.assignee else '~' }}" style="font-size:.85rem;">{% if task.assignee %}<span style="display:inline-flex;align-items:center;gap:.3rem;background:var(--accent-soft);color:var(--accent-text);border-radius:.3rem;padding:.1rem .45rem;font-weight:600;font-size:.8rem;">👤 {{ task.assignee }}</span>{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
+          <td data-val="{{ (task.project.name | lower) if task.project else '~' }}">{% if task.project %}{{ task.project.name }}{% else %}<span class="cell-empty">—</span>{% endif %}</td>
+          <td data-val="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '9999-99-99' }}">{% if task.due_date %}{{ task.due_date.strftime('%b %d, %Y') }}{% else %}<span class="cell-empty">—</span>{% endif %}</td>
+          <td data-val="{{ task.created_at.strftime('%Y-%m-%d') }}" class="muted" style="font-size:.82rem;">{{ task.created_at.strftime('%b %d') }}</td>
+          <td data-val="{{ (task.assignee | lower) if task.assignee else '~' }}" style="font-size:.85rem;">{% if task.assignee %}<span class="assignee-chip">{{ task.assignee }}</span>{% else %}<span class="cell-empty">—</span>{% endif %}</td>
           <td>
             <div class="task-actions">
               {% if task.status != 'done' %}
               <form method="post" action="{{ base }}/tasks/{{ task.id }}/status" style="display:inline" onsubmit="markDone(this)">
                 <input type="hidden" name="status" value="done" />
                 <input type="hidden" name="redirect_to" value="{{ base }}/tasks-page" />
-                <button class="completion-circle" type="submit" title="Mark done">
+                <button class="completion-circle" type="submit" title="Marcar hecha">
                   <svg viewBox="0 0 24 24"><circle class="circle-bg" cx="12" cy="12" r="10"/><path class="circle-check" d="M7 12.5l3 3 7-7"/></svg>
                 </button>
               </form>
               {% else %}
-              <span style="display:inline-flex;align-items:center;justify-content:center;width:1.4rem;height:1.4rem;color:var(--md-success,#22C55E);font-size:.85rem;">✓</span>
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;color:var(--md-success,#22C55E);font-size:.85rem;">✓</span>
               {% endif %}
-              <a href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/tasks-page"
-                 class="btn-ghost" style="display:inline-flex;align-items:center;gap:.2rem;background:var(--md-ctrl-bg,#F3F4F6);border:1px solid var(--md-border,#E5E7EB);border-radius:.35rem;padding:.28rem .65rem;font-size:.82rem;font-weight:600;color:var(--md-text-muted,#6B7280);text-decoration:none;">
-                ✎ Edit
-              </a>
+              <a href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/tasks-page" class="ghost-edit btn-ghost">Editar</a>
               {% if task.card_id %}
-              <a href="/task-manager/kanban" class="kanban-linked btn-ghost" title="Card #{{ task.card_id }} on Kanban board">📋 #{{ task.card_id }}</a>
+              <a href="/task-manager/kanban" class="kanban-linked btn-ghost" title="Card #{{ task.card_id }} en el board">#{{ task.card_id }}</a>
               {% elif bridge_available %}
               <form method="post" action="{{ base }}/tasks/{{ task.id }}/push-to-kanban" style="display:inline" onsubmit="return pushToKanban(this)">
                 <input type="hidden" name="redirect_to" value="{{ base }}/tasks-page" />
-                <button type="submit" class="btn-push-kanban btn-ghost" title="Create a card on the Kanban board linked to this task">📋 Board</button>
+                <button type="submit" class="btn-push-kanban btn-ghost" title="Crear card en el Kanban ligado a esta tarea">Board</button>
               </form>
               {% endif %}
               <form method="post" action="{{ base }}/tasks-page/{{ task.id }}/delete" style="display:inline">
-                <button type="button" class="btn btn-sm btn-danger btn-ghost" onclick="showConfirm('Delete this task?', () => this.closest('form').submit())">✕</button>
+                <button type="button" class="ghost-del btn-ghost" onclick="showConfirm('¿Borrar esta tarea?', () => this.closest('form').submit())">✕</button>
               </form>
             </div>
           </td>
@@ -358,33 +337,32 @@
         {% endfor %}
       </tbody>
     </table>
-    <div id="no-results">No tasks match your search.</div>
+    <div id="no-results">Ninguna tarea coincide con la búsqueda.</div>
     {% else %}
     <div class="empty">
-      <p style="font-size:2rem;">📋</p>
-      <p style="margin-top:.5rem;">No tasks yet. Create one above!</p>
+      <p style="margin-top:.5rem;">No hay tareas todavía. ¡Crea una arriba!</p>
     </div>
     {% endif %}
 
     {% if recurring %}
     <div class="recurring-section">
-      <h2>🔁 Recurring Templates <span style="font-size:.82rem;font-weight:400;color:#94a3b8;">({{ recurring | length }} active)</span></h2>
+      <h2>Plantillas recurrentes <span style="font-size:.8rem;font-weight:400;color:var(--text-faint);">({{ recurring | length }} activas)</span></h2>
       <table class="recurring-table">
         <thead>
           <tr>
-            <th>Title</th>
-            <th>Type</th>
-            <th>Rule</th>
-            <th>Project</th>
+            <th>Título</th>
+            <th>Tipo</th>
+            <th>Regla</th>
+            <th>Proyecto</th>
           </tr>
         </thead>
         <tbody>
           {% for r in recurring %}
           <tr>
-            <td><strong>{{ r.title }}</strong></td>
+            <td><strong style="font-weight:600;">{{ r.title }}</strong></td>
             <td><span class="recur-badge">{{ r.recurrence_type }}</span></td>
-            <td style="color:#64748b;font-size:.82rem;">{{ r.recurrence_rule }}</td>
-            <td style="color:#94a3b8;">{% if r.project %}{{ r.project.name }}{% else %}—{% endif %}</td>
+            <td class="muted" style="font-size:.82rem;">{{ r.recurrence_rule }}</td>
+            <td class="muted">{% if r.project %}{{ r.project.name }}{% else %}—{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -406,21 +384,19 @@
   const resetBtn = document.getElementById('reset-btn');
   const filtersEl = document.getElementById('active-filters');
 
-  const COL_NAMES = ['Title','Status','Priority','Project','Due Date','Created'];
+  const COL_NAMES = ['Título','Estado','Prioridad','Proyecto','Vence','Creada'];
 
   function updateSortChip() {
     if (!filtersEl) return;
-    // Remove existing sort chip (keep any status chips rendered server-side)
     filtersEl.querySelectorAll('.sort-chip').forEach(el => el.remove());
     if (sortCol >= 0) {
       const chip = document.createElement('span');
       chip.className = 'filter-chip sort-chip';
-      chip.innerHTML = `Sorted by: ${COL_NAMES[sortCol]} ${sortAsc ? '↑' : '↓'} <button class="chip-remove" onclick="resetSort()" title="Clear sort">×</button>`;
+      chip.innerHTML = `Orden: ${COL_NAMES[sortCol]} ${sortAsc ? '↑' : '↓'} <button class="chip-remove" onclick="resetSort()" title="Quitar orden">×</button>`;
       filtersEl.appendChild(chip);
     }
   }
 
-  // ── Column header click ───────────────────────────────────────────────────
   document.querySelectorAll('th[data-col]').forEach(th => {
     th.addEventListener('click', () => {
       const col = parseInt(th.dataset.col, 10);
@@ -442,7 +418,6 @@
     const isNum = document.querySelector(`th[data-col="${sortCol}"]`).dataset.type === 'num';
     const rows  = Array.from(tbody.querySelectorAll('tr'));
     rows.sort((a, b) => {
-      // +1 because col 0 is the checkbox column
       const av = a.children[sortCol + 1].dataset.val;
       const bv = b.children[sortCol + 1].dataset.val;
       let cmp;
@@ -475,17 +450,14 @@
     updateHeaders();
     updateSortChip();
     resetBtn.style.display = 'none';
-    // Restore original server order (rows have data-original-index)
     const rows = Array.from(tbody.querySelectorAll('tr'));
     rows.sort((a, b) => parseInt(a.dataset.idx||0) - parseInt(b.dataset.idx||0));
     rows.forEach(r => tbody.appendChild(r));
     updateCount();
   }
 
-  // Stamp original order once
   Array.from(tbody.querySelectorAll('tr')).forEach((r, i) => r.dataset.idx = i);
 
-  // ── Search / filter ───────────────────────────────────────────────────────
   function filterSearch(q) {
     searchQuery = q.trim().toLowerCase();
     Array.from(tbody.querySelectorAll('tr')).forEach(row => {
@@ -500,7 +472,7 @@
     const total   = tbody.querySelectorAll('tr').length;
     const visible = tbody.querySelectorAll('tr:not(.hidden-row)').length;
     if (searchQuery) {
-      cntEl.textContent = `${visible} of ${total}`;
+      cntEl.textContent = `${visible} de ${total}`;
       noRes.style.display = visible === 0 ? 'block' : 'none';
     } else {
       cntEl.textContent = '';
@@ -508,13 +480,16 @@
     }
   }
 
+  window.resetSort = resetSort;
+  window.filterSearch = filterSearch;
+
   } // end if tasks-body
 </script>
 <script>
 // Push a task to the Kanban board via fetch (progressive enhancement)
 function pushToKanban(form) {
   const btn = form.querySelector('button');
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
   const fd = new FormData(form);
   fetch(form.action, {
     method: 'POST',
@@ -522,9 +497,8 @@ function pushToKanban(form) {
     headers: { 'X-Requested-With': 'fetch' },
   })
     .then(r => {
-      // Handle 503 (bridge not available) before trying to parse JSON
       if (r.status === 503) {
-        if (btn) { btn.disabled = false; btn.textContent = '📋 Board'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Board'; }
         _showBridgeError(btn || form, 'Kanban bridge not available — shared PostgreSQL required.');
         return null;
       }
@@ -533,19 +507,17 @@ function pushToKanban(form) {
     .then(data => {
       if (!data) return;
       if (!data.ok) {
-        if (btn) { btn.disabled = false; btn.textContent = '📋 Board'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Board'; }
         _showBridgeError(btn || form, data.error || 'Could not push to Kanban board.');
         return;
       }
-      // Success: replace button with linked badge
       const cardId = data.card_id;
       const link = document.createElement('a');
       link.href = '/';
       link.className = 'kanban-linked';
       link.title = `Card #${cardId} on Kanban board`;
-      link.innerHTML = `📋 #${cardId}`;
+      link.innerHTML = `#${cardId}`;
       form.replaceWith(link);
-      // Add "Kanban" badge to the title cell in the same row
       const row = link.closest('tr');
       if (row) {
         const titleEl = row.querySelector('td:first-child strong');
@@ -553,7 +525,7 @@ function pushToKanban(form) {
           const badge = document.createElement('span');
           badge.className = 'badge badge-kanban';
           badge.style.marginLeft = '.4rem';
-          badge.textContent = '📋 Kanban';
+          badge.textContent = 'Kanban';
           titleEl.after(badge);
         }
       }
@@ -566,15 +538,13 @@ function markDone(form) {
   const circle = form.querySelector('.completion-circle');
   if (circle) {
     circle.classList.add('completing');
-    // Fade out the row after the pulse
     const row = form.closest('tr');
     if (row) setTimeout(() => { row.style.transition = 'opacity 400ms ease'; row.style.opacity = '0.4'; }, 250);
   }
-  return true; // allow form submit
+  return true;
 }
 
 function _showBridgeError(anchor, msg) {
-  // Show a small tooltip-style error near the button for 2.5s
   let tip = document.getElementById('bridge-error-tip');
   if (!tip) {
     tip = document.createElement('span');
@@ -633,7 +603,7 @@ function _showBridgeError(anchor, msg) {
     const checked = getChecked();
     if (checked.length > 0) {
       bulkBar.classList.add('visible');
-      bulkCnt.textContent = checked.length + ' selected';
+      bulkCnt.textContent = checked.length + ' seleccionadas';
     } else {
       bulkBar.classList.remove('visible');
     }
@@ -682,11 +652,11 @@ function _showBridgeError(anchor, msg) {
 
   window.bulkDelete = function() {
     const n = selectedIds().length;
-    showConfirm(`Delete ${n} task${n !== 1 ? 's' : ''}?`, () => doBulk('delete', ''));
+    showConfirm(`¿Borrar ${n} tarea${n !== 1 ? 's' : ''}?`, () => doBulk('delete', ''));
   };
 })();
 </script>
-<script src="{{ base }}/static/app.js?v=20"></script>
+<script src="{{ base }}/static/app.js?v=26"></script>
 <script src="{{ base }}/static/panel.js"></script>
 {% include '_task_panel.html' %}
 </body>

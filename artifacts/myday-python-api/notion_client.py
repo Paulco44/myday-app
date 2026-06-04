@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional
 
 NOTION_VERSION = "2022-06-28"
-NOTION_BASE = "https://api.notionhq.com/v1"
+NOTION_BASE = "https://api.notion.com/v1"
 
 
 # ─── Token ───────────────────────────────────────────────────────────────────

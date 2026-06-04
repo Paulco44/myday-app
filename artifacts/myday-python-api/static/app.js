@@ -63,7 +63,7 @@ function updateThemeBtn() {
   const btn = document.getElementById('theme-btn');
   if (!btn) return;
   const isDark = document.documentElement.classList.contains('dark');
-  btn.innerHTML = isDark ? '&#9728;&#65039; Light' : '&#127769; Dark';
+  btn.innerHTML = isDark ? 'Light' : 'Dark';
   btn.classList.toggle('active', isDark);
 }
 
@@ -115,7 +115,7 @@ function toggleNoise() {
 function updateNoiseBtn() {
   const btn = document.getElementById('noise-btn');
   if (!btn) return;
-  btn.innerHTML = _noiseActive ? '&#127911; On' : '&#127911; Noise';
+  btn.innerHTML = _noiseActive ? 'On' : 'Noise';
   btn.classList.toggle('active', _noiseActive);
 }
 
@@ -575,16 +575,14 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(r => r.json())
     .then(s => {
       const steps = [
-        { key: 'checkin',  label: '✦ Check-In',  done: s.has_checkin, href: apiBase + '/morning-checkin' },
-        { key: 'my-day',   label: '☀ My Day',    done: s.started,     href: apiBase + '/my-day' },
-        { key: 'focus',    label: '⏱ Focus',     done: false,         href: apiBase + '/focus' },
-        { key: 'close',    label: '🌙 Close Day', done: s.day_closed,  href: apiBase + '/close-day' },
+        { key: 'my-day',   label: 'My Day',    done: s.started,     href: apiBase + '/my-day' },
+        { key: 'focus',    label: 'Focus',     done: false,         href: apiBase + '/focus' },
+        { key: 'close',    label: 'Close Day', done: s.day_closed,  href: apiBase + '/close-day' },
       ];
       const path = window.location.pathname;
-      let activeIdx = 1;
-      if (path.includes('/morning')) activeIdx = 0;
-      else if (path.includes('/focus'))  activeIdx = 2;
-      else if (path.includes('/close'))  activeIdx = 3;
+      let activeIdx = 0;
+      if (path.includes('/focus'))      activeIdx = 1;
+      else if (path.includes('/close')) activeIdx = 2;
 
       const bar = document.createElement('div');
       bar.className = 'day-flow-bar';
@@ -840,10 +838,9 @@ function _initSections() {
     if (saved === 'open') shouldClose = false;
     else if (saved === 'closed') shouldClose = true;
     else {
-      // default logic
-      if (name === 'nice') {
-        const defClosed = header.dataset.defaultClosed === 'true';
-        shouldClose = defClosed;
+      // default logic: data-default-closed overrides the defaults dict
+      if (header.dataset.defaultClosed !== undefined) {
+        shouldClose = header.dataset.defaultClosed === 'true';
       } else {
         shouldClose = defaults[name] === 'closed';
       }
@@ -890,3 +887,431 @@ function inlineAdd(inputEl, opts) {
     })
     .catch(() => {});
 }
+
+/* ============================================================
+   MyDay Assistant — floating chat widget (Phase 0)
+   Streams responses via fetch + SSE parsing. Adapts to dark theme.
+   ============================================================ */
+(function () {
+  if (window.__mydayChatLoaded) return;
+  window.__mydayChatLoaded = true;
+
+  // Derive base path ("/task-manager") from this script's own URL.
+  const BASE = (function () {
+    const s = Array.from(document.scripts).find(x => x.src && x.src.includes('/static/app.js'));
+    if (s) { try { return new URL(s.src).pathname.replace(/\/static\/app\.js.*$/, ''); } catch (e) {} }
+    return '/task-manager';
+  })();
+
+  let conversationId = null;
+  let busy = false;
+
+  function esc(s) {
+    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  // Minimal markdown: **bold**, `code`, and newlines (text is rendered via white-space: pre-wrap).
+  function fmt(s) {
+    return esc(s)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
+  // ── Build DOM ──
+  const fab = document.createElement('button');
+  fab.className = 'myday-chat-fab';
+  fab.title = 'Asistente MyDay';
+  fab.innerHTML = '✦';
+
+  const panel = document.createElement('div');
+  panel.className = 'myday-chat-panel';
+  panel.innerHTML = `
+    <div class="myday-chat-header">
+      <span class="mc-title">✦ Asistente</span>
+      <span class="mc-sub" id="mc-model"></span>
+      <button id="mc-new" title="Nueva conversación">＋</button>
+      <button id="mc-close" title="Cerrar">✕</button>
+    </div>
+    <div class="myday-chat-body" id="mc-body">
+      <div class="myday-chat-empty">
+        Hola Paul 👋<br>Soy tu asistente de <b>MyDay</b>.<br>
+        Pregúntame <i>"¿qué priorizo hoy?"</i>, pídeme crear tareas o documentar un avance en Notion.
+      </div>
+    </div>
+    <div class="myday-chat-input">
+      <textarea id="mc-input" rows="1" placeholder="Escribe un mensaje…"></textarea>
+      <button id="mc-send" title="Enviar">➤</button>
+    </div>`;
+
+  document.body.appendChild(fab);
+  document.body.appendChild(panel);
+
+  const body = panel.querySelector('#mc-body');
+  const input = panel.querySelector('#mc-input');
+  const sendBtn = panel.querySelector('#mc-send');
+
+  // ── Status / availability ──
+  fetch(`${BASE}/chat/status`).then(r => r.json()).then(d => {
+    panel.querySelector('#mc-model').textContent = d.model || '';
+    if (!d.configured) {
+      panel.querySelector('#mc-model').textContent = 'sin API key';
+    }
+  }).catch(() => {});
+
+  function open() { panel.classList.add('open'); fab.classList.add('hidden'); input.focus(); }
+  function close() { panel.classList.remove('open'); fab.classList.remove('hidden'); }
+  fab.addEventListener('click', open);
+  panel.querySelector('#mc-close').addEventListener('click', close);
+  panel.querySelector('#mc-new').addEventListener('click', () => {
+    conversationId = null;
+    body.innerHTML = '<div class="myday-chat-empty">Nueva conversación. ¿En qué te ayudo?</div>';
+  });
+
+  function clearEmpty() {
+    const e = body.querySelector('.myday-chat-empty');
+    if (e) e.remove();
+  }
+  function addBubble(role, text) {
+    clearEmpty();
+    const el = document.createElement('div');
+    el.className = 'mc-msg ' + role;
+    el.innerHTML = role === 'assistant' ? fmt(text) : esc(text);
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+    return el;
+  }
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  sendBtn.addEventListener('click', send);
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text || busy) return;
+    busy = true; sendBtn.disabled = true;
+    input.value = ''; input.style.height = 'auto';
+    addBubble('user', text);
+
+    const typing = document.createElement('div');
+    typing.className = 'mc-typing';
+    typing.innerHTML = '<span>●</span><span>●</span><span>●</span>';
+    body.appendChild(typing);
+    body.scrollTop = body.scrollHeight;
+
+    let assistantEl = null;
+    let acc = '';
+    let toolsEl = null;
+
+    try {
+      const resp = await fetch(`${BASE}/chat/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, conversation_id: conversationId }),
+      });
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop();
+        for (const part of parts) {
+          const line = part.split('\n').find(l => l.startsWith('data: '));
+          if (!line) continue;
+          let ev;
+          try { ev = JSON.parse(line.slice(6)); } catch (e) { continue; }
+
+          if (ev.type === 'meta') {
+            conversationId = ev.conversation_id;
+          } else if (ev.type === 'tool') {
+            if (typing.parentNode) typing.remove();
+            if (!toolsEl) { toolsEl = document.createElement('div'); toolsEl.className = 'mc-tools'; body.appendChild(toolsEl); }
+            const chip = document.createElement('span');
+            chip.className = 'mc-tool';
+            chip.textContent = '🔧 ' + ev.name;
+            toolsEl.appendChild(chip);
+            body.scrollTop = body.scrollHeight;
+          } else if (ev.type === 'delta') {
+            if (typing.parentNode) typing.remove();
+            if (!assistantEl) assistantEl = addBubble('assistant', '');
+            acc += ev.text;
+            assistantEl.innerHTML = fmt(acc);
+            body.scrollTop = body.scrollHeight;
+          } else if (ev.type === 'error') {
+            if (typing.parentNode) typing.remove();
+            addBubble('error', '⚠ ' + ev.message);
+          } else if (ev.type === 'done') {
+            if (typing.parentNode) typing.remove();
+          }
+        }
+      }
+    } catch (err) {
+      if (typing.parentNode) typing.remove();
+      addBubble('error', '⚠ Error de conexión: ' + err.message);
+    } finally {
+      busy = false; sendBtn.disabled = false; input.focus();
+      body.scrollTop = body.scrollHeight;
+    }
+  }
+})();
+
+/* ============================================================
+   MyDay Assistant — AI Day Planner (Phase 1)
+   "Planifica mi día": structured plan from the agent, preview + apply.
+   Injected only on the My Day page; no template edits.
+   ============================================================ */
+(function () {
+  if (window.__mydayPlannerLoaded) return;
+  if (!/\/my-day\/?$/.test(location.pathname)) return;
+  window.__mydayPlannerLoaded = true;
+
+  const BASE = (function () {
+    const s = Array.from(document.scripts).find(x => x.src && x.src.includes('/static/app.js'));
+    if (s) { try { return new URL(s.src).pathname.replace(/\/static\/app\.js.*$/, ''); } catch (e) {} }
+    return '/task-manager';
+  })();
+
+  const SLOTS = {
+    now:         { label: 'Ahora',         order: 0 },
+    next:        { label: 'Siguiente',     order: 1 },
+    later_today: { label: 'Hoy más tarde', order: 2 },
+    reschedule:  { label: 'Reprogramar',   order: 3 },
+    defer:       { label: 'Aplazar',       order: 4 },
+  };
+
+  function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Inject the trigger button into the page header ──
+  const header = document.querySelector('.page-header');
+  const btn = document.createElement('button');
+  btn.className = 'mdp-trigger';
+  btn.innerHTML = 'Planifica mi día';
+  if (header) header.appendChild(btn); else document.querySelector('main')?.prepend(btn);
+
+  // ── Overlay scaffold ──
+  const overlay = document.createElement('div');
+  overlay.className = 'mdp-overlay';
+  overlay.innerHTML = `
+    <div class="mdp-modal">
+      <div class="mdp-head">
+        <span class="mdp-title">Plan del día</span>
+        <button class="mdp-close" title="Cerrar">✕</button>
+      </div>
+      <div class="mdp-body" id="mdp-body"></div>
+      <div class="mdp-foot" id="mdp-foot"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const body = overlay.querySelector('#mdp-body');
+  const foot = overlay.querySelector('#mdp-foot');
+  let currentPlan = null;
+
+  function openOverlay() { overlay.classList.add('open'); }
+  function closeOverlay() { overlay.classList.remove('open'); }
+  overlay.querySelector('.mdp-close').addEventListener('click', closeOverlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+
+  btn.addEventListener('click', async () => {
+    openOverlay();
+    body.innerHTML = '<div class="mdp-loading">Pensando tu día…</div>';
+    foot.innerHTML = '';
+    try {
+      const r = await fetch(`${BASE}/my-day/plan`, { method: 'POST' });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        body.innerHTML = `<div class="mdp-error">⚠ ${esc(d.detail || ('Error ' + r.status))}</div>`;
+        return;
+      }
+      currentPlan = await r.json();
+      renderPlan(currentPlan);
+    } catch (err) {
+      body.innerHTML = `<div class="mdp-error">⚠ Error de conexión: ${esc(err.message)}</div>`;
+    }
+  });
+
+  function renderPlan(plan) {
+    if (!plan.assignments || !plan.assignments.length) {
+      body.innerHTML = `<div class="mdp-summary">${esc(plan.summary || 'Sin tareas para planificar.')}</div>`;
+      foot.innerHTML = '';
+      return;
+    }
+    const groups = {};
+    plan.assignments.forEach(a => { (groups[a.slot] = groups[a.slot] || []).push(a); });
+    const order = Object.keys(groups).sort((x, y) => (SLOTS[x]?.order ?? 9) - (SLOTS[y]?.order ?? 9));
+
+    let html = `<div class="mdp-summary">${esc(plan.summary || '')}</div>`;
+    if (plan.warnings && plan.warnings.length) {
+      html += '<div class="mdp-warnings">' + plan.warnings.map(w => `<div>⚠ ${esc(w)}</div>`).join('') + '</div>';
+    }
+    for (const slot of order) {
+      const meta = SLOTS[slot] || { label: slot };
+      html += `<div class="mdp-group"><div class="mdp-group-label">${meta.label}</div>`;
+      for (const a of groups[slot]) {
+        const due = (slot === 'reschedule' && a.new_due_date) ? ` → ${esc(a.new_due_date)}` : '';
+        html += `
+          <div class="mdp-item">
+            <div class="mdp-item-title">${esc(a.title)}${due}</div>
+            <div class="mdp-item-reason">${esc(a.reason || '')}</div>
+          </div>`;
+      }
+      html += '</div>';
+    }
+    body.innerHTML = html;
+    foot.innerHTML = `
+      <button class="mdp-btn-ghost" id="mdp-cancel">Cerrar</button>
+      <button class="mdp-btn-primary" id="mdp-apply">Aplicar plan</button>`;
+    foot.querySelector('#mdp-cancel').addEventListener('click', closeOverlay);
+    foot.querySelector('#mdp-apply').addEventListener('click', applyPlan);
+  }
+
+  async function applyPlan() {
+    const applyBtn = foot.querySelector('#mdp-apply');
+    if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Aplicando…'; }
+    try {
+      const r = await fetch(`${BASE}/my-day/plan/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignments: currentPlan.assignments }),
+      });
+      if (!r.ok) throw new Error('Error ' + r.status);
+      location.reload();
+    } catch (err) {
+      if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Aplicar plan'; }
+      body.insertAdjacentHTML('beforeend', `<div class="mdp-error">⚠ ${esc(err.message)}</div>`);
+    }
+  }
+})();
+
+/* ============================================================
+   MyDay Assistant — Proactive Briefing card (Phase 3)
+   Auto-shows today's objective + stall radar on the My Day page.
+   Cached server-side (1 generation/day). Injected; no template edits.
+   ============================================================ */
+(function () {
+  if (window.__mydayBriefingLoaded) return;
+  if (!/\/my-day\/?$/.test(location.pathname)) return;
+  window.__mydayBriefingLoaded = true;
+
+  const BASE = (function () {
+    const s = Array.from(document.scripts).find(x => x.src && x.src.includes('/static/app.js'));
+    if (s) { try { return new URL(s.src).pathname.replace(/\/static\/app\.js.*$/, ''); } catch (e) {} }
+    return '/task-manager';
+  })();
+
+  function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  const main = document.querySelector('main');
+  if (!main) return;
+  const card = document.createElement('div');
+  card.className = 'mdb-card';
+  card.innerHTML = '<div class="mdb-loading">Preparando tu briefing…</div>';
+  const header = document.querySelector('.page-header');
+  if (header && header.parentNode) header.parentNode.insertBefore(card, header.nextSibling);
+  else main.prepend(card);
+
+  fetch(`${BASE}/my-day/briefing`).then(r => r.ok ? r.json() : Promise.reject(r))
+    .then(render)
+    .catch(async (r) => {
+      let msg = 'No se pudo generar el briefing.';
+      try { const d = await r.json(); if (d.detail) msg = d.detail; } catch(e) {}
+      card.innerHTML = `<div class="mdb-head"><span class="mdb-eyebrow">Briefing</span></div><div class="mdb-err">${esc(msg)}</div>`;
+    });
+
+  const ENERGY = [
+    { key: 'high', label: 'Alta' },
+    { key: 'flow', label: 'En flujo' },
+    { key: 'low', label: 'Baja' },
+    { key: 'scattered', label: 'Disperso' },
+  ];
+
+  function render(b) {
+    const stalls = (b.stalls || []).map(s => `
+      <li class="mdb-stall">
+        <div class="mdb-stall-top"><span class="mdb-stall-title">${esc(s.title)}</span><span class="mdb-stall-issue">${esc(s.issue||'')}</span></div>
+        <div class="mdb-stall-action">→ ${esc(s.action||'')}</div>
+      </li>`).join('');
+
+    const focusBits = [];
+    if (b.now) focusBits.push(`<span class="mdb-chip">Ahora · ${esc(b.now)}</span>`);
+    if (b.next) focusBits.push(`<span class="mdb-chip">Siguiente · ${esc(b.next)}</span>`);
+    if (b.meetings) focusBits.push(`<span class="mdb-chip">${esc(b.meetings)}</span>`);
+
+    const energyBtns = ENERGY.map(e =>
+      `<button class="mdb-energy-btn${b.energy_today === e.key ? ' active' : ''}" data-energy="${e.key}">${e.label}</button>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="mdb-head">
+        <span class="mdb-eyebrow">Briefing de hoy</span>
+        <button class="mdb-refresh" title="Regenerar">↻</button>
+      </div>
+      <div class="mdb-objective">${esc(b.objective || '')}</div>
+      ${b.objective_reason ? `<div class="mdb-reason">${esc(b.objective_reason)}</div>` : ''}
+      ${focusBits.length ? `<div class="mdb-chips">${focusBits.join('')}</div>` : ''}
+      ${stalls ? `<div class="mdb-stalls-label">Llevan mucho en tu plato — ciérralas o mátalas:</div><ul class="mdb-stalls">${stalls}</ul>` : ''}
+      ${b.encouragement ? `<div class="mdb-enc">${esc(b.encouragement)}</div>` : ''}
+      <div class="mdb-ritual">
+        <div class="mdb-energy">
+          <span class="mdb-ritual-label">Energía hoy</span>
+          <div class="mdb-energy-btns">${energyBtns}</div>
+        </div>
+        <button class="mdb-dump-toggle" type="button">Vaciar la mente +</button>
+        <div class="mdb-dump" hidden>
+          <textarea class="mdb-dump-input" rows="3" placeholder="Una idea/preocupación por línea — cada una va al inbox…"></textarea>
+          <div class="mdb-dump-row">
+            <span class="mdb-dump-msg"></span>
+            <button class="mdb-dump-save" type="button">Capturar</button>
+          </div>
+        </div>
+      </div>`;
+
+    const rb = card.querySelector('.mdb-refresh');
+    if (rb) rb.addEventListener('click', regen);
+
+    // Energy: set + regenerate the briefing/plan with the new energy.
+    card.querySelectorAll('.mdb-energy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        card.querySelectorAll('.mdb-energy-btn').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        fetch(`${BASE}/my-day/energy`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ energy: btn.dataset.energy }),
+        }).then(() => regen());
+      });
+    });
+
+    // Brain dump: each line → inbox.
+    const toggle = card.querySelector('.mdb-dump-toggle');
+    const dump = card.querySelector('.mdb-dump');
+    toggle.addEventListener('click', () => {
+      dump.hidden = !dump.hidden;
+      if (!dump.hidden) card.querySelector('.mdb-dump-input').focus();
+    });
+    card.querySelector('.mdb-dump-save').addEventListener('click', () => {
+      const ta = card.querySelector('.mdb-dump-input');
+      const text = ta.value.trim();
+      if (!text) return;
+      fetch(`${BASE}/my-day/brain-dump`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      }).then(r => r.json()).then(d => {
+        ta.value = '';
+        card.querySelector('.mdb-dump-msg').textContent = `${d.added} capturado(s) al inbox`;
+      }).catch(() => {});
+    });
+  }
+
+  function regen() {
+    const obj = card.querySelector('.mdb-objective');
+    if (obj) obj.textContent = 'Regenerando…';
+    fetch(`${BASE}/my-day/briefing/refresh`, { method: 'POST' })
+      .then(r => r.json()).then(render).catch(() => {});
+  }
+})();

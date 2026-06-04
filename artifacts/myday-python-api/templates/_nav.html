@@ -1,0 +1,23 @@
+{# Canonical top navigation — single source of truth for all pages.
+   Active state is derived from request.url.path (no per-page flags).
+   Requires `base` and `request` in the template context. #}
+{% set _p = request.url.path %}
+<nav>
+  <a class="nav-logo" href="{{ base }}/">MyDay</a>
+  <div class="nav-links">
+    <span class="nav-sep"></span>
+    <a href="{{ base }}/inbox"{% if '/inbox' in _p %} class="active"{% endif %}>Inbox</a>
+    <a href="{{ base }}/meetings"{% if '/meetings' in _p %} class="active"{% endif %}>Meetings</a>
+    <span class="nav-sep"></span>
+    <a href="{{ base }}/kanban"{% if '/kanban' in _p %} class="active"{% endif %}>Kanban</a>
+    <a href="{{ base }}/tasks-page"{% if '/tasks' in _p %} class="active"{% endif %}>Tasks</a>
+    <a href="{{ base }}/projects-list"{% if '/projects' in _p %} class="active"{% endif %}>Projects</a>
+    <a href="{{ base }}/notes"{% if '/notes' in _p %} class="active"{% endif %}>Notes</a>
+    <a href="{{ base }}/weekly-review"{% if '/weekly-review' in _p %} class="active"{% endif %}>Review</a>
+    <a href="{{ base }}/cop-admin"{% if '/cop' in _p %} class="active"{% endif %}>CoP Admin</a>
+  </div>
+  <div class="nav-actions">
+    <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">Noise</button>
+    <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">Dark</button>
+  </div>
+</nav>

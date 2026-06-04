@@ -7,7 +7,8 @@
 
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
 
   <style>
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
@@ -106,36 +107,15 @@
     .step-body strong { color: var(--text); font-weight: 700; }
   </style>
 </head>
-<body>
+<body class="theme-quiet">
 
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/task-manager/kanban">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review">Review</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-    <div class="nav-actions">
-      <button class="btn-noise" id="btn-noise" onclick="toggleNoise()">🎧 Noise</button>
-      <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">🌙 Dark</button>
-    </div>
-  </nav>
+  {% include "_nav.html" %}
 
   <main>
     <a class="back-link" href="{{ base }}/inbox">← Back to Inbox</a>
 
     <div class="page-header">
-      <h1><span>◻</span> Notion Integration</h1>
+      <h1>Notion Integration</h1>
       <p class="subtitle">Import Notion pages and database entries into your Meeting Inbox for review.</p>
     </div>
 
@@ -143,7 +123,7 @@
     {% if last_result %}
       {% if last_result.error_msg and last_result.imported == 0 %}
         <div class="result-banner result-err">
-          <span>⚠ Import failed</span>
+          <span>Import failed</span>
           <div class="result-details">{{ last_result.error_msg }}</div>
         </div>
       {% elif last_result.errors > 0 %}
@@ -402,6 +382,6 @@
     bindNotionIdStrip('src-id');
     bindNotionIdStrip('exp-id');
   </script>
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>

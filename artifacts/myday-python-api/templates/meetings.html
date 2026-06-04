@@ -5,253 +5,230 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meetings — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
-    main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+    main { max-width: 820px; margin: 0 auto; padding: 1.5rem 1.25rem 6rem; }
 
-    /* ── Page header ── */
-    .page-header { margin-bottom: 1.75rem; }
-    .page-header h1 { font-size: 1.45rem; font-weight: 800; display: flex; align-items: center; gap: .5rem; }
-    .page-header .subtitle { color: var(--text-muted); font-size: .875rem; margin-top: .3rem; }
+    .page-header { margin-bottom: 1.1rem; }
+    .page-header h1 { font-size: 1.3rem; font-weight: 600; }
+    .page-header .subtitle { color: var(--text-muted); font-size: .84rem; margin-top: .2rem; }
 
-    /* ── Day group ── */
-    .day-group { margin-bottom: 1.75rem; }
+    /* ── Toolbar ── */
+    .meetings-toolbar { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+    .meetings-search { flex: 1; min-width: 180px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: .85rem; padding: .45rem .7rem; }
+    .meetings-search:focus { outline: none; border-color: var(--accent); }
+    .mfilter-bar { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+    .mfilter-btn { font-size: .78rem; font-weight: 500; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: .25rem .65rem; cursor: pointer; font-family: inherit; }
+    .mfilter-btn:hover { background: var(--surface-alt); color: var(--text); }
+    .mfilter-btn.active { background: var(--btn-bg, #36322C); color: var(--btn-fg, #fff); border-color: var(--btn-bg, #36322C); }
 
-    .day-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .85rem; }
-    .day-title { font-size: 1rem; font-weight: 800; color: var(--text); }
-    .day-title .weekday { font-weight: 400; color: var(--text-muted); font-size: .88rem; margin-left: .4rem; }
+    /* ── Inbox strip ── */
+    .inbox-strip { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .6rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .inbox-strip p { font-size: .83rem; color: var(--text-muted); }
+    .btn-inbox { display: inline-flex; align-items: center; gap: .35rem; background: var(--btn-bg, #36322C); color: var(--btn-fg, #fff); border: none; border-radius: 8px; padding: .38rem .8rem; font-size: .8rem; font-weight: 600; text-decoration: none; }
 
-    /* Day summary pills */
+    /* ── Day group (compact) ── */
+    .day-group { margin-bottom: 2rem; }
+    .day-header { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: .1rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border-subtle, var(--border)); }
+    .day-title { font-size: .82rem; font-weight: 600; color: var(--text); }
+    .day-title .weekday { font-weight: 400; color: var(--text-faint); margin-left: .35rem; }
     .day-pills { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-    .day-pill { display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .55rem; border-radius: .35rem; font-size:.82rem; font-weight: 700; letter-spacing: .01em; }
-    .pill-total   { background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); }
-    .pill-promoted { background: #d1fae5; color: #065f46; }
-    html.dark .pill-promoted { background: #022c22; color: var(--success); }
-    .pill-unreviewed { background: #fef3c7; color: #92400e; }
-    html.dark .pill-unreviewed { background: #451a03; color: var(--accent); }
+    .day-pill { font-size: .74rem; font-weight: 500; color: var(--text-muted); }
+    .day-pill.review { color: var(--warning-text, #92400e); }
 
-    /* ── Source section ── */
-    .source-section { margin-bottom: .85rem; }
-    .source-label { display: flex; align-items: center; gap: .45rem; font-size:.82rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .45rem; padding-left: .25rem; }
-    .source-icon { font-size: .9rem; }
+    /* ── Item rows (compact, flat) ── */
+    .item-list { display: flex; flex-direction: column; }
+    .item-card { display: flex; align-items: center; gap: .7rem; padding: .5rem .65rem; border-radius: 8px; border-left: 2px solid var(--text-faint); }
+    .item-card:hover { background: var(--surface-alt); }
+    .item-card.hidden { display: none; }
+    .stripe-whisper { border-left-color: #8b80c8; }
+    .stripe-notion  { border-left-color: #6b76c4; }
+    .stripe-ms_email{ border-left-color: #6b76c4; }
+    /* self / morning_checkin / unknown → neutral default (set on .item-card) */
 
-    /* ── Item cards ── */
-    .item-list { display: flex; flex-direction: column; gap: .5rem; }
-    .item-card { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; padding: .85rem 1.15rem; display: flex; align-items: flex-start; gap: .85rem; transition: border-color .15s; text-decoration: none; color: inherit; }
-    .item-card:hover { border-color: var(--accent); }
     .item-card-body { flex: 1; min-width: 0; }
-    .item-title { font-size: .92rem; font-weight: 700; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item-summary { font-size: .8rem; color: var(--text-muted); line-height: 1.5; margin-top: .2rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin-top: .45rem; font-size:.82rem; color: var(--text-faint); }
+    .item-title-row { display: flex; align-items: center; gap: .5rem; }
+    .item-title { font-size: .86rem; font-weight: 600; color: var(--text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-title:hover { color: var(--accent); }
+    .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-top: .15rem; font-size: .74rem; color: var(--text-faint); }
+    .src-tag { color: var(--text-muted); }
 
-    /* ── Status badges ── */
-    .sbadge { display: inline-flex; align-items: center; gap: .2rem; padding: .13rem .45rem; border-radius: .3rem; font-size:.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
-    .sbadge-new { background: #fef3c7; color: #92400e; }
-    html.dark .sbadge-new { background: #451a03; color: var(--accent); }
-    .sbadge-reviewing { background: #dbeafe; color: #1d4ed8; }
-    html.dark .sbadge-reviewing { background: #1e3a5f; color: #93c5fd; }
-    .sbadge-promoted { background: #d1fae5; color: #065f46; }
-    html.dark .sbadge-promoted { background: #022c22; color: var(--success); }
-    .sbadge-archived { background: var(--bg); border: 1px solid var(--border); color: var(--text-faint); }
+    /* status as a quiet dot + label */
+    .sdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .sdot-new { background: #d8a13a; }
+    .sdot-reviewing { background: #6b8fd0; }
+    .sdot-promoted { background: var(--success, #4f9d69); }
+    .sdot-archived { background: var(--text-faint); }
+    .sstatus { color: var(--text-muted); }
+    .dest-chip { color: var(--success, #4f9d69); }
 
-    /* ── Promoted destination chip ── */
-    .dest-chip { display: inline-flex; align-items: center; gap: .22rem; font-size:.82rem; font-weight: 600; color: var(--success); padding: .1rem .4rem; background: var(--success-soft); border-radius: .3rem; }
+    /* ── Row actions (hover-reveal, compact) ── */
+    .item-actions { display: flex; gap: .3rem; flex-shrink: 0; opacity: 0; transition: opacity .12s; }
+    .item-card:hover .item-actions { opacity: 1; }
+    @media (hover: none) { .item-actions { opacity: 1; } }
+    .mact { font-size: .73rem; font-weight: 500; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: .2rem .5rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .mact:hover { background: var(--surface-alt); color: var(--text); border-color: var(--text-faint); }
+    .mact-danger:hover { background: #f6e9e8; color: #b5524e; border-color: #e6c9c7; }
+    html.dark .mact-danger:hover { background: #2a1716; color: #d08682; border-color: #5a3a38; }
+    .mact:disabled { opacity: .5; cursor: default; }
 
-    /* ── Side accent stripe (source color) ── */
-    .stripe-whisper { border-left: 3px solid #7c3aed; }
-    .stripe-notion  { border-left: 3px solid #3b4fcc; }
-    .stripe-self    { border-left: 3px solid var(--text-faint); }
-
-    /* ── Empty state ── */
-    .empty-state { background: var(--surface); border: 1px dashed var(--border); border-radius: .75rem; padding: 3rem 2rem; text-align: center; }
+    .empty-state { background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; padding: 3rem 2rem; text-align: center; }
     .empty-state p { color: var(--text-muted); font-size: .9rem; line-height: 1.7; }
     .empty-state a { color: var(--accent); text-decoration: none; font-weight: 600; }
-
-    /* ── Divider between groups ── */
-    .day-divider { border: none; border-top: 1px solid var(--border); margin: 0 0 1.75rem 0; }
-
-    /* ── Inbox link strip ── */
-    .inbox-strip { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; padding: .75rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .inbox-strip p { font-size: .84rem; color: var(--text-muted); }
-    .btn-inbox { display: inline-flex; align-items: center; gap: .35rem; background: var(--accent); color: #1a1a1a; border: none; border-radius: .4rem; padding: .38rem .85rem; font-size: .8rem; font-weight: 700; text-decoration: none; transition: opacity .15s; }
-    .btn-inbox:hover { opacity: .85; }
   </style>
 </head>
-<body>
+<body class="theme-quiet">
 
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings" class="active">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/task-manager/kanban">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review">Review</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-    <div class="nav-actions">
-      <button class="btn-noise" id="btn-noise" onclick="toggleNoise()">🎧 Noise</button>
-      <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">🌙 Dark</button>
-    </div>
-  </nav>
+  {% include "_nav.html" %}
 
   <main>
     <div class="page-header">
-      <h1>🎙 Meetings</h1>
-      <p class="subtitle">All inbox items grouped by date and source. Nothing is changed here — it's just a map.</p>
+      <h1>Meetings</h1>
+      <p class="subtitle">Notas e ítems del inbox por fecha. Promueve, archiva o borra desde aquí.</p>
     </div>
 
     {% if day_summaries %}
 
-      <!-- ── Search + Filter toolbar ── -->
       <div class="meetings-toolbar">
         <input type="search" class="meetings-search" id="mtb-search"
-               placeholder="Search notes…" autocomplete="off" aria-label="Search meetings" />
-        <div class="mfilter-bar" role="group" aria-label="Filter by status">
-          <span style="font-size:.78rem;font-weight:600;color:var(--text-muted);margin-right:.15rem;">Filter:</span>
-          <button class="mfilter-btn active" data-filter="all">All</button>
-          <button class="mfilter-btn" data-filter="new">🔵 New</button>
-          <button class="mfilter-btn" data-filter="reviewing">◎ Reviewing</button>
-          <button class="mfilter-btn" data-filter="promoted">✓ Promoted</button>
-          <button class="mfilter-btn" data-filter="archived">📁 Archived</button>
+               placeholder="Buscar notas…" autocomplete="off" aria-label="Buscar" />
+        <div class="mfilter-bar" role="group" aria-label="Filtrar por estado">
+          <button class="mfilter-btn active" data-filter="all">Todas</button>
+          <button class="mfilter-btn" data-filter="new">Nuevas</button>
+          <button class="mfilter-btn" data-filter="reviewing">En revisión</button>
+          <button class="mfilter-btn" data-filter="promoted">Promovidas</button>
+          <button class="mfilter-btn" data-filter="archived">Archivadas</button>
         </div>
       </div>
 
-      <!-- Quick link to inbox if anything unreviewed -->
       {% set total_unreviewed = namespace(n=0) %}
       {% for g in day_summaries %}{% set total_unreviewed.n = total_unreviewed.n + g.unreviewed_count %}{% endfor %}
       {% if total_unreviewed.n > 0 %}
         <div class="inbox-strip">
-          <p>{{ total_unreviewed.n }} item{% if total_unreviewed.n != 1 %}s{% endif %} across all dates still need review.</p>
-          <a class="btn-inbox" href="{{ base }}/inbox">Go to Inbox →</a>
+          <p>{{ total_unreviewed.n }} ítem{% if total_unreviewed.n != 1 %}s{% endif %} sin revisar en total.</p>
+          <a class="btn-inbox" href="{{ base }}/inbox">Ir al Inbox →</a>
         </div>
       {% endif %}
 
       {% for group in day_summaries %}
-        <div class="day-group" data-date="{{ group.date }}"
-             data-statuses="{{ group.by_source.values() | sum(start=[]) | map(attribute='status') | join(',') }}">
+        <div class="day-group" data-date="{{ group.date }}">
           <div class="day-header">
-            <div>
-              <span class="day-title">
-                {{ group.date | datefmt('%B %-d, %Y') }}
-                <span class="weekday">{{ group.date | datefmt('%A') }}</span>
-              </span>
-            </div>
+            <span class="day-title">
+              {{ group.date | datefmt('%B %-d, %Y') }}
+              <span class="weekday">{{ group.date | datefmt('%A') }}</span>
+            </span>
             <div class="day-pills">
-              <span class="day-pill pill-total">{{ group.total }} item{% if group.total != 1 %}s{% endif %}</span>
-              {% if group.promoted_count %}
-                <span class="day-pill pill-promoted">✓ {{ group.promoted_count }} promoted</span>
-              {% endif %}
-              {% if group.unreviewed_count %}
-                <span class="day-pill pill-unreviewed">{{ group.unreviewed_count }} to review</span>
-              {% endif %}
+              <span class="day-pill">{{ group.total }} ítem{% if group.total != 1 %}s{% endif %}</span>
+              {% if group.unreviewed_count %}<span class="day-pill review">{{ group.unreviewed_count }} por revisar</span>{% endif %}
             </div>
           </div>
 
-          {% for source, source_items in group.by_source.items() %}
-            <div class="source-section">
-              <div class="source-label">
-                {% if source == 'whisper' %}
-                  <span class="source-icon">🎙</span> Whisper
-                {% elif source == 'notion' %}
-                  <span class="source-icon">◻</span> Notion
+          <div class="item-list">
+            {% for item in group['items'] %}
+              <div class="item-card stripe-{{ item.source }}"
+                   data-status="{{ item.status }}"
+                   data-title="{{ item.title }}"
+                   data-search="{{ (item.title ~ ' ' ~ (item.summary or '')) | lower }}">
+                <div class="item-card-body">
+                  <div class="item-title-row">
+                    <a class="item-title" href="{{ base }}/inbox/{{ item.id }}">{{ item.title }}</a>
+                  </div>
+                  <div class="item-meta">
+                    <span class="sdot sdot-{{ item.status }}"></span>
+                    <span class="sstatus">
+                      {% if item.status == 'new' %}Nueva
+                      {% elif item.status == 'reviewing' %}En revisión
+                      {% elif item.status == 'promoted' %}Promovida
+                      {% elif item.status == 'archived' %}Archivada
+                      {% else %}{{ item.status }}{% endif %}
+                    </span>
+                    {% if item.status == 'promoted' %}
+                      {% if item.linked_task_id %}<span class="dest-chip">→ Tarea</span>
+                      {% elif item.linked_project_id %}<span class="dest-chip">→ Proyecto</span>
+                      {% elif item.linked_note_id %}<span class="dest-chip">→ Nota</span>{% endif %}
+                    {% endif %}
+                    <span class="src-tag">{{ item.source | replace('_',' ') | capitalize }}</span>
+                    <span>{{ item.created_at | datefmt('%-I:%M %p') }}</span>
+                  </div>
+                </div>
+                {% if item.status != 'promoted' %}
+                <div class="item-actions">
+                  {% if item.status != 'archived' %}
+                  <button class="mact" onclick="mAction(this, {{ item.id }}, 'promote')">Promover</button>
+                  <button class="mact" onclick="mAction(this, {{ item.id }}, 'archive')">Archivar</button>
+                  {% endif %}
+                  <button class="mact mact-danger" onclick="mAction(this, {{ item.id }}, 'delete')">Borrar</button>
+                </div>
                 {% else %}
-                  <span class="source-icon">📝</span> {{ source | replace('_', ' ') | capitalize }}
+                <div class="item-actions">
+                  <button class="mact mact-danger" onclick="mAction(this, {{ item.id }}, 'delete')">Borrar</button>
+                </div>
                 {% endif %}
-                <span style="margin-left:.25rem;font-weight:400;">({{ source_items | length }})</span>
               </div>
-
-              <div class="item-list">
-                {% for item in source_items %}
-                  <a class="item-card stripe-{{ item.source }}" href="{{ base }}/inbox/{{ item.id }}"
-                     data-status="{{ item.status }}"
-                     data-search="{{ (item.title ~ ' ' ~ (item.summary or '')) | lower }}">
-                    <div class="item-card-body">
-                      <div class="item-title">{{ item.title }}</div>
-                      {% if item.summary %}
-                        <div class="item-summary">{{ item.summary }}</div>
-                      {% endif %}
-                      <div class="item-meta">
-                        <span class="sbadge sbadge-{{ item.status }}">
-                          {% if item.status == 'new' %}● New
-                          {% elif item.status == 'reviewing' %}◎ Reviewing
-                          {% elif item.status == 'promoted' %}✓ Promoted
-                          {% elif item.status == 'archived' %}📁 Archived
-                          {% else %}{{ item.status }}{% endif %}
-                        </span>
-                        {% if item.status == 'promoted' %}
-                          {% if item.linked_task_id %}
-                            <span class="dest-chip">→ Task</span>
-                          {% elif item.linked_project_id %}
-                            <span class="dest-chip">→ Project</span>
-                          {% elif item.linked_note_id %}
-                            <span class="dest-chip">→ Note</span>
-                          {% endif %}
-                        {% endif %}
-                        <span>{{ item.created_at | datefmt('%-I:%M %p') }}</span>
-                        {% if item.reviewed_at %}
-                          <span>Reviewed {{ item.reviewed_at | datefmt('%-I:%M %p') }}</span>
-                        {% endif %}
-                      </div>
-                    </div>
-                    <span style="color:var(--text-faint);font-size:.82rem;flex-shrink:0;padding-top:.1rem;">→</span>
-                  </a>
-                {% endfor %}
-              </div>
-            </div>
-          {% endfor %}
-
-          {% if not loop.last %}<hr class="day-divider" />{% endif %}
+            {% endfor %}
+          </div>
         </div>
       {% endfor %}
 
     {% else %}
       <div class="empty-state">
-        <p>No inbox items yet.</p>
-        <p>When you add meeting notes or import from Notion, they'll appear here grouped by date.</p>
-        <p style="margin-top:.75rem;"><a href="{{ base }}/inbox">Go to Inbox →</a></p>
+        <p>No hay ítems todavía.</p>
+        <p>Cuando agregues notas de reunión o importes de Notion/Outlook, aparecerán aquí por fecha.</p>
+        <p style="margin-top:.75rem;"><a href="{{ base }}/inbox">Ir al Inbox →</a></p>
       </div>
     {% endif %}
 
   </main>
 
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <script src="{{ base }}/static/app.js?v=26"></script>
   <script>
+  const BASE = "{{ base }}";
+
+  async function mAction(btn, id, action) {
+    if (action === 'delete' && !confirm('¿Borrar esta nota? No se puede deshacer.')) return;
+    const card = btn.closest('.item-card');
+    let url, opts = { method: 'POST' };
+    if (action === 'archive') url = `${BASE}/inbox/${id}/archive`;
+    else if (action === 'delete') url = `${BASE}/inbox/${id}/delete`;
+    else if (action === 'promote') {
+      url = `${BASE}/inbox/${id}/promote-task`;
+      const fd = new FormData();
+      fd.append('title', card.dataset.title || 'Untitled');
+      opts.body = fd;
+    }
+    card.querySelectorAll('.mact').forEach(b => b.disabled = true);
+    try {
+      const r = await fetch(url, opts);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      card.style.transition = 'opacity .15s'; card.style.opacity = '0';
+      setTimeout(() => card.remove(), 150);
+    } catch (e) {
+      card.querySelectorAll('.mact').forEach(b => b.disabled = false);
+      alert('No se pudo completar la acción: ' + e.message);
+    }
+  }
+
   (function() {
-    const search  = document.getElementById('mtb-search');
-    const fBtns   = document.querySelectorAll('.mfilter-btn');
-    let   activeFilter = 'all';
+    const search = document.getElementById('mtb-search');
+    const fBtns  = document.querySelectorAll('.mfilter-btn');
+    let activeFilter = 'all';
 
     function applyFilters() {
-      const q = search.value.trim().toLowerCase();
+      const q = (search.value || '').trim().toLowerCase();
       fBtns.forEach(b => b.classList.toggle('active', b.dataset.filter === activeFilter));
-
       document.querySelectorAll('.day-group').forEach(group => {
-        let groupVisible = false;
+        let visible = false;
         group.querySelectorAll('.item-card').forEach(card => {
           const matchStatus = activeFilter === 'all' || card.dataset.status === activeFilter;
-          const matchSearch = !q || card.dataset.search.includes(q) ||
-                              card.querySelector('.item-title')?.textContent.toLowerCase().includes(q);
+          const matchSearch = !q || (card.dataset.search || '').includes(q);
           const vis = matchStatus && matchSearch;
           card.classList.toggle('hidden', !vis);
-          if (vis) groupVisible = true;
+          if (vis) visible = true;
         });
-        // Hide source-sections with no visible cards
-        group.querySelectorAll('.source-section').forEach(sec => {
-          const anyVisible = [...sec.querySelectorAll('.item-card')].some(c => !c.classList.contains('hidden'));
-          sec.style.display = anyVisible ? '' : 'none';
-        });
-        group.classList.toggle('hidden', !groupVisible);
+        group.classList.toggle('hidden', !visible);
       });
     }
-
     fBtns.forEach(b => b.addEventListener('click', () => { activeFilter = b.dataset.filter; applyFilters(); }));
     search.addEventListener('input', applyFilters);
   })();

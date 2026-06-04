@@ -7,7 +7,8 @@
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -384,12 +385,11 @@
     .skip-link:hover { color: var(--text-muted); }
   </style>
 </head>
-<body>
+<body class="theme-quiet">
   <nav>
     <a class="nav-logo" href="{{ base }}/">MyDay</a>
     <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="active">✦ Check In</a>
+      <a href="{{ base }}/morning-checkin" class="active">Check In</a>
       <span class="nav-sep"></span>
       <a href="{{ base }}/inbox">Inbox</a>
       <a href="{{ base }}/meetings">Meetings</a>
@@ -402,8 +402,8 @@
       <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>
     <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
+      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">Noise</button>
+      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">Dark</button>
     </div>
   </nav>
 
@@ -411,7 +411,7 @@
 
     <!-- ══ MAIN CARD ══════════════════════════════════════════════════════ -->
     <div class="checkin-card" id="checkin-card">
-      <div class="checkin-greeting">☀️ Morning Check-In</div>
+      <div class="checkin-greeting">Morning Check-In</div>
       <h2 class="checkin-heading">How are you showing up today?</h2>
 
       <!-- Energy -->
@@ -419,22 +419,18 @@
         <div class="energy-grid">
           <div class="energy-card" id="ec-high" onclick="pickEnergy('high')">
             <input type="radio" name="energy_today" value="high" id="e_high" />
-            <span class="energy-emoji">⚡</span>
             <span class="energy-label">High energy</span>
           </div>
           <div class="energy-card" id="ec-flow" onclick="pickEnergy('flow')">
             <input type="radio" name="energy_today" value="flow" id="e_flow" />
-            <span class="energy-emoji">🌊</span>
             <span class="energy-label">In the flow</span>
           </div>
           <div class="energy-card" id="ec-low" onclick="pickEnergy('low')">
             <input type="radio" name="energy_today" value="low" id="e_low" />
-            <span class="energy-emoji">😴</span>
             <span class="energy-label">Low energy</span>
           </div>
           <div class="energy-card" id="ec-scattered" onclick="pickEnergy('scattered')">
             <input type="radio" name="energy_today" value="scattered" id="e_scattered" />
-            <span class="energy-emoji">🌪</span>
             <span class="energy-label">A bit scattered</span>
           </div>
         </div>
@@ -444,7 +440,7 @@
 
       <!-- Brain dump (always visible, compact) -->
       <div class="checkin-section">
-        <div class="checkin-section-label">💭 Brain Dump <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.8rem;color:var(--text-faint)">(optional — each line → inbox)</span></div>
+        <div class="checkin-section-label">Brain Dump <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.8rem;color:var(--text-faint)">(optional — each line → inbox)</span></div>
         <textarea class="brain-textarea" id="brain-dump-field" rows="3"
           style="min-height:80px;"
           placeholder="Random thoughts, worries, ideas…&#10;Each new line = one inbox item."></textarea>
@@ -457,7 +453,7 @@
       <div class="checkin-section">
         <button class="checkin-toggle" id="toggle-wins" aria-expanded="false" onclick="toggleSection('wins')">
           <span class="checkin-toggle-arrow">▶</span>
-          🎯 Must-Dos <span style="font-weight:400;font-size:.8rem;margin-left:.3rem;">(pick up to 3)</span>
+          Must-Dos <span style="font-weight:400;font-size:.8rem;margin-left:.3rem;">(pick up to 3)</span>
           <span class="pick-counter" style="margin:0;margin-left:auto;">Selected: <span class="cnt" id="win-count">0</span>/3</span>
         </button>
         <div class="checkin-collapsible" id="section-wins">
@@ -474,7 +470,7 @@
                     <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
                     {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date | datefmt('%b %-d') }}</span>{% endif %}
                     {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
-                    {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
+                    {% if task.time_estimate_minutes %}<span class="tpill tpill-low">{{ task.time_estimate_minutes }}m</span>{% endif %}
                   </div>
                 </div>
               </label>
@@ -488,7 +484,7 @@
       <div class="checkin-section">
         <button class="checkin-toggle" id="toggle-nice" aria-expanded="false" onclick="toggleSection('nice')">
           <span class="checkin-toggle-arrow">▶</span>
-          ✨ Nice-to-Haves <span style="font-weight:400;font-size:.8rem;margin-left:.3rem;">(pick up to 2)</span>
+          Nice-to-Haves <span style="font-weight:400;font-size:.8rem;margin-left:.3rem;">(pick up to 2)</span>
           <span class="pick-counter" style="margin:0;margin-left:auto;">Selected: <span class="cnt" id="nice-count">0</span>/2</span>
         </button>
         <div class="checkin-collapsible" id="section-nice">
@@ -505,7 +501,7 @@
                     <span class="tpill tpill-{{ task.priority }}">{{ task.priority | upper }}</span>
                     {% if task.due_date %}<span class="tpill tpill-low">{{ task.due_date | datefmt('%b %-d') }}</span>{% endif %}
                     {% if task.project %}<span class="tpill tpill-project">{{ task.project.name }}</span>{% endif %}
-                    {% if task.time_estimate_minutes %}<span class="tpill tpill-low">⏱ {{ task.time_estimate_minutes }}m</span>{% endif %}
+                    {% if task.time_estimate_minutes %}<span class="tpill tpill-low">{{ task.time_estimate_minutes }}m</span>{% endif %}
                   </div>
                 </div>
               </label>
@@ -520,7 +516,7 @@
 
       <!-- START BUTTON — always visible -->
       <button class="btn-start-day" id="submit-btn" onclick="submitCheckin(this)">
-        <span class="btn-label">Start my day ✦</span>
+        <span class="btn-label">Start my day</span>
         <span class="spinner"></span>
       </button>
       <a class="skip-link" href="{{ base }}/my-day">Skip check-in →</a>
@@ -529,7 +525,7 @@
     <!-- ══ DONE SCREEN ════════════════════════════════════════════════════ -->
     <div id="done-screen" style="display:none; width:100%; max-width:600px;">
       <div class="step-card done-screen">
-        <span class="done-icon">🎉</span>
+        <span class="done-icon"></span>
         <h2 class="done-title">Day is set up!</h2>
         <p class="done-sub" id="done-sub-text">You've got your focus. Time to make it happen.</p>
         <div class="done-stats" id="done-stats"></div>
@@ -540,7 +536,7 @@
 
   </div><!-- /checkin-shell -->
 
-<script src="{{ base }}/static/app.js?v=17"></script>
+<script src="{{ base }}/static/app.js?v=26"></script>
 <script>
   const BASE = "{{ base }}";
 

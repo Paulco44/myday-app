@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meeting Inbox — MyDay</title>
+  <title>Inbox — MyDay</title>
 
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
 
   <style>
     main { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
@@ -20,7 +21,7 @@
       .inbox-list-panel .inbox-card:hover { border-bottom-color: var(--border-subtle); background: var(--bg); }
       .inbox-list-panel .inbox-card.active-detail { background: var(--accent-soft) !important; border-left: 3px solid var(--accent) !important; }
       .inbox-detail-frame { border: none; width: 100%; min-height: 84vh; background: var(--bg); display: block; }
-      .inbox-detail-placeholder { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: .5rem; color: var(--text-faint); font-size: .9rem; min-height: 60vh; }
+      .inbox-detail-placeholder { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: .5rem; color: var(--text-faint); font-size: .9rem; min-height: 60vh; text-align: center; padding: 2rem; }
     }
     @media (max-width: 1099px) {
       .inbox-detail-frame, .inbox-detail-placeholder { display: none !important; }
@@ -30,6 +31,10 @@
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
     .page-header h1 { font-size: 1.55rem; font-weight: 800; }
     .page-header .subtitle { color: var(--text-muted); font-size: .875rem; margin-top: .25rem; }
+
+    /* ── Quick capture button ── */
+    .btn-capture { background: var(--accent); color: #1A1A1A; border: none; border-radius: .5rem; padding: .52rem 1.1rem; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: .4rem; transition: opacity .15s; white-space: nowrap; flex-shrink: 0; align-self: flex-start; }
+    .btn-capture:hover { opacity: .88; }
 
     /* ── Tab bar ── */
     .tab-bar { display: flex; gap: .5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
@@ -41,6 +46,8 @@
     .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
     .empty-state .icon { font-size: 2.5rem; margin-bottom: .75rem; }
     .empty-state p { font-size: .95rem; margin-top: .25rem; }
+    .empty-state .btn-capture-empty { display: inline-flex; align-items: center; gap: .4rem; margin-top: 1.25rem; background: var(--accent); color: #1A1A1A; border: none; border-radius: .5rem; padding: .52rem 1.25rem; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+    .empty-state .btn-capture-empty:hover { opacity: .88; }
 
     /* ── Inbox card ── */
     .inbox-list { display: flex; flex-direction: column; gap: .75rem; }
@@ -55,82 +62,86 @@
     .inbox-card.status-promoted::before { background: var(--success); }
 
     .inbox-card-body { flex: 1; min-width: 0; }
-    .inbox-card-title { font-weight: 700; font-size: .97rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: .3rem; }
+    .inbox-card-title { font-weight: 700; font-size: .97rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: .3rem; line-height: 1.4; }
     .inbox-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; font-size:.82rem; color: var(--text-muted); margin-bottom: .4rem; }
     .inbox-card-summary { font-size: .84rem; color: var(--text-muted); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-    /* badges */
-    .badge { display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .55rem; border-radius: .35rem; font-size:.82rem; font-weight: 700; letter-spacing: .01em; text-transform: uppercase; }
-    .badge-whisper { background: #ede9fe; color: #7c3aed; }
-    html.dark .badge-whisper { background: #3b0764; color: #c4b5fd; }
+    /* badges — title case, no forced uppercase */
+    .badge { display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .55rem; border-radius: .35rem; font-size:.82rem; font-weight: 700; letter-spacing: .01em; }
+    .badge-whisper, .badge-meeting { background: #ede9fe; color: #7c3aed; }
+    html.dark .badge-whisper, html.dark .badge-meeting { background: #3b0764; color: #c4b5fd; }
+    .badge-brain_dump, .badge-manual { background: #fff7ed; color: #c2410c; }
+    html.dark .badge-brain_dump, html.dark .badge-manual { background: #431407; color: #fb923c; }
     .badge-new { background: #fef3c7; color: #92400e; }
     html.dark .badge-new { background: #451a03; color: var(--accent); }
     .badge-reviewing { background: #dbeafe; color: #1d4ed8; }
     html.dark .badge-reviewing { background: #1e3a5f; color: #93c5fd; }
     .badge-promoted { background: #d1fae5; color: #065f46; }
     html.dark .badge-promoted { background: #022c22; color: var(--success); }
+    .badge-archived { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
 
     /* ── CTA button ── */
     .btn-review { background: var(--accent); color: #1A1A1A; border: none; border-radius: .45rem; padding: .4rem .85rem; font-size: .8rem; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap; flex-shrink: 0; align-self: center; font-family: inherit; transition: opacity .15s; }
     .btn-review:hover { opacity: .85; }
+    .btn-view { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: .45rem; padding: .4rem .85rem; font-size: .8rem; font-weight: 600; cursor: pointer; text-decoration: none; white-space: nowrap; flex-shrink: 0; align-self: center; font-family: inherit; transition: opacity .15s; }
 
-    /* promoted — muted + hidden by default */
-    .inbox-card.status-promoted .btn-review { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); font-weight: 600; }
-    .inbox-card.status-promoted { opacity: .45; display: none; }
+    /* promoted — visually demoted */
+    .inbox-card.status-promoted { opacity: .5; display: none; }
     .show-processed .inbox-card.status-promoted { display: flex; }
 
     /* processed toggle */
     .processed-toggle { padding: .65rem 1.1rem; font-size: .82rem; color: var(--accent); cursor: pointer; font-weight: 600; border-top: 1px solid var(--border-subtle); text-align: center; user-select: none; }
     .processed-toggle:hover { background: var(--bg); }
 
+    /* ── Section divider ── */
+    .inbox-section-label { padding: .45rem 1.1rem; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); background: var(--bg); border-bottom: 1px solid var(--border-subtle); }
+
     /* ── Action count pill ── */
     .action-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: .15rem .5rem; font-size:.82rem; color: var(--text-muted); font-weight: 600; }
 
-    /* ── Archived link ── */
+    /* ── Footer links ── */
+    .inbox-footer { padding: .75rem 1.1rem; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; font-size: .8rem; color: var(--text-muted); }
+    .inbox-footer a { color: var(--text-muted); text-decoration: none; font-weight: 600; }
+    .inbox-footer a:hover { color: var(--accent); }
     .archived-link { text-align: center; margin-top: 2.5rem; font-size: .84rem; color: var(--text-muted); }
     .archived-link a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+    /* ── Quick capture modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 900; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: .85rem; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.2); padding: 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1rem; }
+    html.dark .modal-box { box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    .modal-box h2 { font-size: 1.1rem; font-weight: 800; margin: 0; }
+    .modal-box label { font-size: .82rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: .3rem; }
+    .modal-box input, .modal-box textarea { background: var(--bg); border: 1px solid var(--border); border-radius: .45rem; padding: .55rem .85rem; font-size: .88rem; color: var(--text); font-family: inherit; width: 100%; box-sizing: border-box; transition: border-color .15s; }
+    .modal-box input:focus, .modal-box textarea:focus { outline: none; border-color: var(--accent); }
+    .modal-box textarea { resize: vertical; min-height: 80px; }
+    .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; }
+    .btn-modal-cancel { background: transparent; border: 1px solid var(--border); border-radius: .45rem; padding: .5rem 1rem; font-size: .85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit; }
+    .btn-modal-submit { background: var(--accent); color: #1A1A1A; border: none; border-radius: .45rem; padding: .5rem 1.15rem; font-size: .85rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+    .btn-modal-submit:hover { opacity: .88; }
   </style>
 </head>
-<body>
+<body class="theme-quiet">
 
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox" class="active">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/task-manager/kanban">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review">Review</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-    <div class="nav-actions">
-      <button class="btn-noise" id="btn-noise" onclick="toggleNoise()">🎧 Noise</button>
-      <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">🌙 Dark</button>
-    </div>
-  </nav>
+  {% include "_nav.html" %}
 
   <main>
     <div class="page-header">
       <div>
-        <h1>📥 Meeting Inbox</h1>
-        <p class="subtitle">Review notes from meetings before anything becomes a task.</p>
+        <h1>Inbox</h1>
+        <p class="subtitle">Capture everything — brain dumps, meeting notes, quick ideas. Process one at a time.</p>
       </div>
+      <button class="btn-capture" onclick="openCapture()">＋ Quick capture</button>
     </div>
 
     <!-- Tab bar -->
     <div class="tab-bar">
       {% if show_archived %}
-        <a href="{{ base }}/inbox">Active</a>
+        <a href="{{ base }}/inbox">Needs review</a>
         <a href="{{ base }}/inbox/archived" class="active">Archived{% if archived_count %} ({{ archived_count }}){% endif %}</a>
       {% else %}
-        <a href="{{ base }}/inbox" class="active">Active{% if items %} ({{ items | length }}){% endif %}</a>
+        <a href="{{ base }}/inbox" class="active">Needs review{% if unreviewed_count %} ({{ unreviewed_count }}){% endif %}</a>
         <a href="{{ base }}/inbox/archived">Archived{% if archived_count %} ({{ archived_count }}){% endif %}</a>
       {% endif %}
     </div>
@@ -140,27 +151,49 @@
       <div class="inbox-list-panel">
         {% if not items %}
           <div class="empty-state">
-            <div class="icon">📭</div>
-            <strong>{% if show_archived %}Nothing archived yet{% else %}Inbox zero{% endif %}</strong>
-            <p>{% if show_archived %}Archived notes will appear here.{% else %}New meeting notes will appear here once imported.{% endif %}</p>
+            {% if show_archived %}
+              <div class="icon"></div>
+              <strong>Nothing archived yet</strong>
+              <p>Archived notes will appear here.</p>
+            {% else %}
+              <div class="icon"></div>
+              <strong>Inbox zero!</strong>
+              <p>Nothing left to review. Great work.</p>
+              <button class="btn-capture-empty" onclick="openCapture()">＋ Capture a new idea</button>
+            {% endif %}
           </div>
         {% else %}
-          <div class="inbox-list">
-            {% for item in items %}
+
+          {% set needs_review = items | selectattr('status', 'ne', 'promoted') | list %}
+          {% set processed    = items | selectattr('status', 'equalto', 'promoted') | list %}
+
+          <div class="inbox-list" id="inbox-list">
+
+            {% if needs_review and processed and not show_archived %}
+              <div class="inbox-section-label">Needs review ({{ needs_review | length }})</div>
+            {% endif %}
+
+            {% for item in needs_review if not show_archived %}
               <a class="inbox-card status-{{ item.status }}" href="{{ base }}/inbox/{{ item.id }}"
-                 data-detail-url="{{ base }}/inbox/{{ item.id }}">
+                 data-detail-url="{{ base }}/inbox/{{ item.id }}"
+                 data-item-id="{{ item.id }}"
+                 data-item-title="{{ item.title | e }}">
                 <div class="inbox-card-body">
                   <div class="inbox-card-title">{{ item.title }}</div>
                   <div class="inbox-card-meta">
-                    <span class="badge badge-{{ item.source_type | default('whisper') }}">🎙 {{ item.source_type | default('meeting') }}</span>
+                    {% set src = item.source_type | default('meeting') %}
+                    <span class="badge badge-{{ src }}">
+                      {% if src == 'brain_dump' %}Quick note
+                      {% elif src == 'meeting' %}Meeting
+                      {% else %}{{ src | replace('_', ' ') | title }}{% endif %}
+                    </span>
                     <span class="badge badge-{{ item.status }}">
                       {% if item.status == 'new' %}● New
                       {% elif item.status == 'reviewing' %}◎ Reviewing
-                      {% elif item.status == 'promoted' %}✓ Task created
-                      {% else %}{{ item.status }}{% endif %}
+                      {% else %}{{ item.status | title }}{% endif %}
                     </span>
                     {% if item.suggested_actions_json %}
-                      <span class="action-pill">{{ item.suggested_actions_json.count('"') // 2 }} suggestions</span>
+                      <span class="action-pill">{{ item.suggested_actions_json.count('"') // 2 }} action suggestions</span>
                     {% endif %}
                     <span>{{ item.created_at.strftime('%b %d, %I:%M %p') }}</span>
                   </div>
@@ -169,36 +202,97 @@
                   {% elif item.raw_content %}
                     <div class="inbox-card-summary">{{ item.raw_content[:200] }}</div>
                   {% endif %}
+                  <div class="card-quick-actions" onclick="event.preventDefault(); event.stopPropagation();">
+                    <button class="btn-card-use"
+                            onclick="quickUse(event, {{ item.id }}, this.closest('.inbox-card').dataset.itemTitle)">✓ Use</button>
+                    <button class="btn-card-dismiss"
+                            onclick="quickDismiss(event, {{ item.id }}, this)">✕ Dismiss</button>
+                  </div>
                 </div>
-                <span class="btn-review">
-                  {% if item.status == 'promoted' %}View →{% else %}Review →{% endif %}
-                </span>
+                <span class="btn-review">Review →</span>
               </a>
             {% endfor %}
+
+            {# Show all items on archived tab, or processed items in active tab #}
+            {% if show_archived %}
+              {% for item in items %}
+                <a class="inbox-card status-{{ item.status }}" href="{{ base }}/inbox/{{ item.id }}"
+                   data-detail-url="{{ base }}/inbox/{{ item.id }}">
+                  <div class="inbox-card-body">
+                    <div class="inbox-card-title">{{ item.title }}</div>
+                    <div class="inbox-card-meta">
+                      {% set src = item.source_type | default('meeting') %}
+                      <span class="badge badge-{{ src }}">
+                        {% if src == 'brain_dump' %}Quick note
+                        {% elif src == 'meeting' %}Meeting
+                        {% else %}{{ src | replace('_', ' ') | title }}{% endif %}
+                      </span>
+                      <span class="badge badge-archived">Archived</span>
+                      <span>{{ item.created_at.strftime('%b %d, %I:%M %p') }}</span>
+                    </div>
+                    {% if item.summary %}
+                      <div class="inbox-card-summary">{{ item.summary }}</div>
+                    {% elif item.raw_content %}
+                      <div class="inbox-card-summary">{{ item.raw_content[:200] }}</div>
+                    {% endif %}
+                  </div>
+                  <span class="btn-view">View →</span>
+                </a>
+              {% endfor %}
+            {% else %}
+              {% if processed %}
+                <div class="processed-toggle" id="processed-toggle" onclick="toggleProcessed()">
+                  ▸ Show {{ processed | length }} processed item{{ 's' if (processed | length) != 1 }}
+                </div>
+                {% for item in processed %}
+                  <a class="inbox-card status-promoted" href="{{ base }}/inbox/{{ item.id }}"
+                     data-detail-url="{{ base }}/inbox/{{ item.id }}">
+                    <div class="inbox-card-body">
+                      <div class="inbox-card-title">{{ item.title }}</div>
+                      <div class="inbox-card-meta">
+                        {% set src = item.source_type | default('meeting') %}
+                        <span class="badge badge-{{ src }}">
+                          {% if src == 'brain_dump' %}Quick note
+                          {% elif src == 'meeting' %}Meeting
+                          {% else %}{{ src | replace('_', ' ') | title }}{% endif %}
+                        </span>
+                        <span class="badge badge-promoted">✓ Task created</span>
+                        <span>{{ item.created_at.strftime('%b %d, %I:%M %p') }}</span>
+                      </div>
+                    </div>
+                    <span class="btn-view">View →</span>
+                  </a>
+                {% endfor %}
+              {% endif %}
+            {% endif %}
+
           </div>
 
-          {% set promoted_count = items | selectattr('status', 'equalto', 'promoted') | list | length %}
-          {% if promoted_count > 0 and not show_archived %}
-            <div class="processed-toggle" id="processed-toggle" onclick="toggleProcessed()">
-              ▸ Show {{ promoted_count }} processed item{{ 's' if promoted_count != 1 }}
-            </div>
-          {% endif %}
-
-          {% if not show_archived and archived_count %}
-            <div class="archived-link" style="padding:1rem;border-top:1px solid var(--border-subtle);">
-              <a href="{{ base }}/inbox/archived">View {{ archived_count }} archived note{{ 's' if archived_count != 1 }}</a>
-            </div>
-          {% endif %}
-          <div class="archived-link" style="padding:.5rem 1rem 1.25rem;font-size:.8rem;">
-            <a href="{{ base }}/integrations/notion">⚙ Configure Notion import</a>
+          <div class="inbox-footer">
+            {% if not show_archived and archived_count %}
+              <a href="{{ base }}/inbox/archived">{{ archived_count }} archived note{{ 's' if archived_count != 1 }}</a>
+            {% else %}
+              <span></span>
+            {% endif %}
+            <span style="display:flex;gap:.75rem;">
+              <a href="{{ base }}/integrations/microsoft" style="font-size:.75rem;color:var(--text-faint);">Microsoft 365</a>
+              <a href="{{ base }}/integrations/notion" style="font-size:.75rem;color:var(--text-faint);">Configure import</a>
+            </span>
           </div>
+
         {% endif %}
       </div><!-- /inbox-list-panel -->
 
       <!-- ── Detail panel (right, desktop only) ── -->
       <div class="inbox-detail-placeholder" id="inbox-detail-placeholder">
-        <div style="font-size:2rem;opacity:.35;">📄</div>
-        <p>Select a note to review it here</p>
+        <div style="font-size:2.5rem;opacity:.3;"></div>
+        {% if unreviewed_count %}
+          <p style="font-weight:600;color:var(--text-muted);">{{ unreviewed_count }} item{{ 's' if unreviewed_count != 1 }} need{{ '' if unreviewed_count != 1 else 's' }} review</p>
+          <p style="font-size:.82rem;">Select one from the list to get started</p>
+        {% else %}
+          <p style="font-weight:600;color:var(--text-muted);">All clear!</p>
+          <p style="font-size:.82rem;">Select any item to view it</p>
+        {% endif %}
       </div>
       <iframe class="inbox-detail-frame" id="inbox-detail-frame" title="Note detail"
               style="display:none;" src="about:blank"></iframe>
@@ -206,7 +300,28 @@
     </div><!-- /inbox-page-inner -->
   </main>
 
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <!-- ── Quick capture modal ── -->
+  <div class="modal-overlay" id="capture-modal" onclick="handleModalClick(event)">
+    <div class="modal-box">
+      <h2>＋ Quick capture</h2>
+      <form method="post" action="{{ base }}/inbox/quick-capture">
+        <div style="margin-bottom:.75rem;">
+          <label for="cap-title">What's on your mind?</label>
+          <input id="cap-title" name="title" type="text" placeholder="Idea, follow-up, reminder…" required autofocus />
+        </div>
+        <div style="margin-bottom:.75rem;">
+          <label for="cap-content">More detail (optional)</label>
+          <textarea id="cap-content" name="raw_content" placeholder="Any extra context…"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeCapture()">Cancel</button>
+          <button type="submit" class="btn-modal-submit">Capture →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ base }}/static/app.js?v=26"></script>
   <script>
   (function() {
     const isWide = () => window.innerWidth >= 1100;
@@ -215,7 +330,7 @@
 
     document.querySelectorAll('.inbox-card[data-detail-url]').forEach(card => {
       card.addEventListener('click', e => {
-        if (!isWide()) return; // mobile: let normal nav happen
+        if (!isWide()) return;
         e.preventDefault();
         document.querySelectorAll('.inbox-card').forEach(c => c.classList.remove('active-detail'));
         card.classList.add('active-detail');
@@ -225,7 +340,6 @@
       });
     });
 
-    // When iframe loads, sync the list card with the item's current status
     frame.addEventListener('load', () => {
       try {
         const frameUrl = frame.contentWindow.location.href;
@@ -233,7 +347,6 @@
           window.location.reload();
           return;
         }
-        // Extract item ID from URL like /task-manager/inbox/42
         const m = frameUrl.match(/\/inbox\/(\d+)/);
         if (!m) return;
         const itemId = m[1];
@@ -242,18 +355,16 @@
         const card = document.querySelector(`.inbox-card[data-detail-url$="/inbox/${itemId}"]`);
         if (!card) return;
         if (isPromoted) {
-          // Update card status class and badge
           card.classList.remove('status-new', 'status-reviewing');
           card.classList.add('status-promoted');
           const badge = card.querySelector('.badge-new, .badge-reviewing, .badge-promoted');
           if (badge) { badge.className = 'badge badge-promoted'; badge.textContent = '✓ Task created'; }
           const btn = card.querySelector('.btn-review');
-          if (btn) btn.textContent = 'View →';
-          // Update toggle count
+          if (btn) { btn.className = 'btn-view'; btn.textContent = 'View →'; }
           const totalPromoted = document.querySelectorAll('.inbox-card.status-promoted').length;
           const toggle = document.getElementById('processed-toggle');
           if (toggle) {
-            const showing = document.querySelector('.inbox-list')?.classList.contains('show-processed');
+            const showing = document.getElementById('inbox-list')?.classList.contains('show-processed');
             toggle.style.display = '';
             toggle.textContent = showing
               ? '▾ Hide processed item' + (totalPromoted !== 1 ? 's' : '')
@@ -263,10 +374,9 @@
       } catch(err) {}
     });
   })();
-  </script>
-  <script>
+
   function toggleProcessed() {
-    const list = document.querySelector('.inbox-list');
+    const list = document.getElementById('inbox-list');
     const btn  = document.getElementById('processed-toggle');
     if (!list || !btn) return;
     const showing = list.classList.toggle('show-processed');
@@ -275,6 +385,82 @@
       ? '▾ Hide processed item' + (count !== 1 ? 's' : '')
       : '▸ Show ' + count + ' processed item' + (count !== 1 ? 's' : '');
   }
+
+  const BASE = "{{ base }}";
+
+  async function quickUse(e, itemId, title) {
+    e.preventDefault(); e.stopPropagation();
+    if (!confirm(`Create task: "${title}"?`)) return;
+    try {
+      await fetch(`${BASE}/inbox/${itemId}/promote-task`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ title: title }),
+      });
+    } catch(err) { /* ignore */ }
+    slideOutCard(itemId);
+  }
+
+  async function quickDismiss(e, itemId, btn) {
+    e.preventDefault(); e.stopPropagation();
+    if (!confirm('Archive this item? You can find it later in Archived.')) return;
+    try {
+      await fetch(`${BASE}/inbox/${itemId}/archive`, { method: 'POST' });
+    } catch(err) { /* ignore */ }
+    slideOutCard(itemId);
+  }
+
+  function slideOutCard(itemId) {
+    const card = document.querySelector(`.inbox-card[data-item-id="${itemId}"]`);
+    if (!card) return;
+    card.style.transition = 'opacity 0.3s, max-height 0.35s, padding 0.35s, margin 0.35s';
+    card.style.overflow = 'hidden';
+    card.style.maxHeight = card.offsetHeight + 'px';
+    requestAnimationFrame(() => {
+      card.style.opacity = '0';
+      card.style.maxHeight = '0';
+      card.style.paddingTop = '0';
+      card.style.paddingBottom = '0';
+      card.style.marginBottom = '0';
+    });
+    setTimeout(() => {
+      card.remove();
+      updateNeedsReviewCount();
+    }, 380);
+  }
+
+  function updateNeedsReviewCount() {
+    const remaining = document.querySelectorAll('.inbox-card.status-new, .inbox-card.status-reviewing').length;
+    // Update section label
+    const label = document.querySelector('.inbox-section-label');
+    if (label) label.textContent = `Needs review (${remaining})`;
+    // Update tab text
+    const tab = document.querySelector('.tab-bar a.active');
+    if (tab && tab.href.includes('/inbox') && !tab.href.includes('archived')) {
+      tab.textContent = remaining > 0 ? `Needs review (${remaining})` : 'Needs review';
+    }
+    if (remaining === 0) window.location.reload();
+  }
+
+  function openCapture() {
+    const modal = document.getElementById('capture-modal');
+    modal.classList.add('open');
+    setTimeout(() => document.getElementById('cap-title')?.focus(), 50);
+  }
+  function closeCapture() {
+    document.getElementById('capture-modal').classList.remove('open');
+  }
+  function handleModalClick(e) {
+    if (e.target === document.getElementById('capture-modal')) closeCapture();
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeCapture();
+    if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const active = document.activeElement;
+      const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+      if (!isTyping) openCapture();
+    }
+  });
   </script>
 </body>
 </html>

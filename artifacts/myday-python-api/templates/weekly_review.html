@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Your Week — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     main { max-width: 760px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
 
@@ -69,35 +70,13 @@
     .no-wins { font-size: .88rem; color: var(--md-text-faint); font-style: italic; line-height: 1.6; }
   </style>
 </head>
-<body>
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
-      <a href="{{ base }}/close-day">🌙 Close Day</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/task-manager/kanban">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review" class="active" style="color:var(--md-primary);font-weight:700;">Review</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-    <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
-    </div>
-  </nav>
+<body class="theme-quiet">
+  {% include "_nav.html" %}
 
   <main>
 
     <div class="wr-header">
-      <div class="wr-badge">📊 Weekly Review</div>
+      <div class="wr-badge">Weekly Review</div>
       <h1>Your Week</h1>
       <div class="wr-dates">{{ week_start | datefmt('%b %-d') }} – {{ today | datefmt('%b %-d, %Y') }}</div>
     </div>
@@ -201,6 +180,6 @@
 
   </main>
 
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>
