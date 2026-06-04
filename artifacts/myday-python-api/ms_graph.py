@@ -320,3 +320,120 @@ def _parse_received(s: str) -> datetime:
         return datetime.fromisoformat(s.replace("Z", "+00:00")).replace(tzinfo=None)
     except Exception:
         return datetime.utcnow()
+
+
+# ─── Calendar WRITE (MyDay↔TimeTracker bridge: coded work blocks) ─────────────
+# Writes events whose subject the V2A payroll bot reads: "{notes}: CC1/CC2/CC3".
+# Mirrors C:\TimeTracker\graph_writer.py so both apps produce identical events.
+
+def _graph_send(method: str, path: str, body: Optional[dict] = None) -> dict:
+    token = _get_token()
+    if not token:
+        raise RuntimeError("No conectado a Microsoft 365.")
+    resp = requests.request(
+        method, f"{GRAPH}{path}",
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        json=body, timeout=25,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Graph error {resp.status_code}: {resp.text[:300]}")
+    return resp.json() if resp.content else {}
+
+
+def _user_timezone() -> str:
+    """User's Outlook timezone (e.g. 'Eastern Standard Time'); fallback Eastern."""
+    try:
+        return _graph_get("/me/mailboxSettings/timeZone").get("value") or "Eastern Standard Time"
+    except Exception:
+        return "Eastern Standard Time"
+
+
+def _sanitize_notes(notes: Optional[str]) -> str:
+    # The bot splits the subject on the first ':', so notes must not contain one.
+    cleaned = " ".join((notes or "").replace(":", " -").split())
+    return cleaned or "Work"
+
+
+def build_block_subject(notes, cc1, cc2, cc3, pay_type=None) -> str:
+    """Subject in the exact format the payroll bot parses."""
+    pt = (pay_type or "").strip().lower()
+    if "sick" in pt:
+        return "SICK"
+    if pt in ("pto", "parental leave", "parental", "vacation", "holiday"):
+        return "PTO"
+    return f"{_sanitize_notes(notes)}: {cc1 or ''}/{cc2 or ''}/{cc3 or ''}"
+
+
+def create_event(subject: str, start_iso: str, minutes: int,
+                 body_text: str = "", all_day: bool = False) -> str:
+    """Create an Outlook event; returns its id. start_iso = naive local ISO."""
+    tz = _user_timezone()
+    start_dt = datetime.fromisoformat(start_iso)
+    event = {
+        "subject": subject,
+        "body": {"contentType": "text", "content": body_text or ""},
+        "isReminderOn": False,
+        "showAs": "oof" if all_day else "busy",
+    }
+    if all_day:
+        event["isAllDay"] = True
+        event["start"] = {"dateTime": start_dt.strftime("%Y-%m-%dT00:00:00"), "timeZone": tz}
+        event["end"] = {"dateTime": (start_dt + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00"), "timeZone": tz}
+    else:
+        end_dt = start_dt + timedelta(minutes=int(minutes or 30))
+        event["start"] = {"dateTime": start_dt.strftime("%Y-%m-%dT%H:%M:%S"), "timeZone": tz}
+        event["end"] = {"dateTime": end_dt.strftime("%Y-%m-%dT%H:%M:%S"), "timeZone": tz}
+    return _graph_send("POST", "/me/events", event).get("id")
+
+
+def update_event(event_id: str, subject: Optional[str] = None,
+                 start_iso: Optional[str] = None, minutes: Optional[int] = None) -> bool:
+    body: dict = {}
+    if subject is not None:
+        body["subject"] = subject
+    if start_iso is not None:
+        tz = _user_timezone()
+        sdt = datetime.fromisoformat(start_iso)
+        body["start"] = {"dateTime": sdt.strftime("%Y-%m-%dT%H:%M:%S"), "timeZone": tz}
+        body["end"] = {"dateTime": (sdt + timedelta(minutes=int(minutes or 30))).strftime("%Y-%m-%dT%H:%M:%S"), "timeZone": tz}
+    if body:
+        _graph_send("PATCH", f"/me/events/{event_id}", body)
+    return True
+
+
+def delete_event(event_id: str) -> bool:
+    _graph_send("DELETE", f"/me/events/{event_id}")
+    return True
+
+
+def get_events_between(start_dt, end_dt) -> list:
+    """Busy calendar events in [start_dt, end_dt], times in the user's LOCAL tz
+    (via Prefer header). Skips all-day and free/tentative. For the auto-planner."""
+    token = _get_token()
+    if not token:
+        return []
+    tz = _user_timezone()
+    try:
+        resp = requests.get(
+            f"{GRAPH}/me/calendarView",
+            headers={"Authorization": f"Bearer {token}", "Prefer": f'outlook.timezone="{tz}"'},
+            params={
+                "startDateTime": start_dt.isoformat(), "endDateTime": end_dt.isoformat(),
+                "$select": "subject,start,end,isAllDay,showAs", "$orderby": "start/dateTime", "$top": "150",
+            },
+            timeout=25,
+        )
+        if resp.status_code >= 400:
+            return []
+    except Exception:
+        return []
+    out = []
+    for e in resp.json().get("value", []):
+        if e.get("isAllDay") or e.get("showAs") in ("free", "tentative"):
+            continue
+        out.append({
+            "start": (e.get("start") or {}).get("dateTime"),
+            "end": (e.get("end") or {}).get("dateTime"),
+            "subject": e.get("subject"),
+        })
+    return out

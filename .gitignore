@@ -67,3 +67,8 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+
+# Billing catalog seed — contains V2A client/engagement names; regenerable from the
+# "Time and attendance" workbooks. Kept out of git (the live catalog lives in Postgres).
+billing_catalog_seed.json
+**/billing_catalog_seed.json

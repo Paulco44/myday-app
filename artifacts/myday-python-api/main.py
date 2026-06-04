@@ -26,6 +26,8 @@ import models
 import schemas
 import agent
 import ms_graph
+import billing_catalog
+import reconcile
 from database import engine, get_db, Base, SessionLocal
 
 BASE = "/task-manager"
@@ -72,6 +74,13 @@ def run_migrations():
         ("card_id", "INTEGER"),             # bridge: linked Kanban card
         ("status_note", "TEXT"),
         ("assignee", "VARCHAR(100)"),
+        ("billing_client_id", "INTEGER"),
+        ("billing_project_id", "INTEGER"),
+        ("billing_task_id", "INTEGER"),
+        ("scheduled_start", "TIMESTAMP"),
+        ("scheduled_minutes", "INTEGER"),
+        ("calendar_event_id", "TEXT"),
+        ("calendar_pushed_at", "TIMESTAMP"),
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
@@ -88,6 +97,8 @@ def run_migrations():
         ("notion_url", "TEXT"),
         ("exported_at", "DATETIME"),
         ("last_synced_at", "DATETIME"),
+        ("billing_client_id", "INTEGER"),
+        ("billing_project_id", "INTEGER"),
     ]
     note_cols = [
         ("notion_page_id", "TEXT"),
@@ -109,7 +120,9 @@ def run_migrations():
                     conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
                     conn.commit()
                 except Exception:
-                    pass
+                    # On Postgres a failed ALTER (e.g. column already exists) aborts the
+                    # transaction; roll back so the *next* ALTER isn't skipped in cascade.
+                    conn.rollback()
 
 
 # ─── Bridge helpers ───────────────────────────────────────────────────────────
@@ -325,6 +338,7 @@ async def lifespan(app):
     db = SessionLocal()
     try:
         ensure_settings(db)
+        billing_catalog.seed_if_empty(db)  # import the partial V2A codes catalog on first run
         # Sweep any done tasks that still carry is_now=True (data integrity guard)
         db.query(models.Task).filter(
             models.Task.status == "done", models.Task.is_now == True
@@ -889,6 +903,10 @@ async def edit_task_get(
             "energy_tags": ENERGY_TAGS,
             "statuses": STATUSES,
             "status_labels": STATUS_LABELS,
+            # Billing bridge: the project's CC2 drives the CC3 (task-type) cascade
+            "billing_project_id": (db_task.project.billing_project_id
+                                   if db_task.project and db_task.project.billing_project_id else None),
+            "billing_project_name": (db_task.project.name if db_task.project else None),
         },
     )
 
@@ -2225,6 +2243,8 @@ def project_detail(project_id: int, request: Request, db: Session = Depends(get_
         (t for t in tasks if t.focus_state in ("now", "next", "later")), None
     )
     export_targets = db.query(models.NotionExportTarget).order_by(models.NotionExportTarget.is_default.desc()).all()
+    bclient = db.get(models.BillingClient, project.billing_client_id) if project.billing_client_id else None
+    bproject = db.get(models.BillingProject, project.billing_project_id) if project.billing_project_id else None
     return templates.TemplateResponse(
         request, "project_detail.html",
         {
@@ -2235,6 +2255,8 @@ def project_detail(project_id: int, request: Request, db: Session = Depends(get_
             "export_targets": export_targets,
             "is_notion_configured": notion.is_configured(),
             "exported": project.notion_url is not None,
+            "billing_client": bclient,
+            "billing_project": bproject,
         },
     )
 
@@ -2637,6 +2659,527 @@ def command_center_status():
         "myday": True,
         "transcribe": _port_open(**{k: SIBLING_APPS["transcribe"][k] for k in ("host", "port")}),
         "timetracker": _port_open(**{k: SIBLING_APPS["timetracker"][k] for k in ("host", "port")}),
+    }
+
+
+# ─── Billing codes catalog + cascade (MyDay↔TimeTracker bridge) ───────────────
+
+def _bc_dict(row):
+    return {"id": row.id, "name": row.name, "code": row.code or ""}
+
+
+@app.post(f"{BASE}/billing/import")
+def billing_import(db: Session = Depends(get_db)):
+    """(Re)import the codes catalog from billing_catalog_seed.json."""
+    result = billing_catalog.import_catalog(db)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.get(f"{BASE}/billing/clients")
+def billing_clients(db: Session = Depends(get_db)):
+    return {"clients": [_bc_dict(c) for c in billing_catalog.list_clients(db)]}
+
+
+@app.get(f"{BASE}/billing/projects")
+def billing_projects(client_id: int = Query(...), db: Session = Depends(get_db)):
+    return {"projects": [_bc_dict(p) for p in billing_catalog.projects_for_client(db, client_id)]}
+
+
+@app.get(f"{BASE}/billing/tasks")
+def billing_tasks(project_id: int = Query(...), db: Session = Depends(get_db)):
+    return {"tasks": [_bc_dict(t) for t in billing_catalog.tasks_for_project(db, project_id)]}
+
+
+@app.get(f"{BASE}/billing/catalog")
+def billing_catalog_all(db: Session = Depends(get_db)):
+    """Full catalog snapshot (for the admin/settings view)."""
+    return {
+        "clients": [_bc_dict(c) for c in db.query(models.BillingClient).order_by(models.BillingClient.name).all()],
+        "projects": [_bc_dict(p) for p in db.query(models.BillingProject).order_by(models.BillingProject.name).all()],
+        "tasks": [_bc_dict(t) for t in db.query(models.BillingTask).order_by(models.BillingTask.name).all()],
+    }
+
+
+def _task_billing_codes(db: Session, task: models.Task):
+    """Resolve (cc1, cc2, cc3) for a task: task-level override → project default."""
+    client_id = task.billing_client_id
+    project_id = task.billing_project_id
+    proj = task.project if task.project_id else None
+    if client_id is None and proj is not None:
+        client_id = proj.billing_client_id
+    if project_id is None and proj is not None:
+        project_id = proj.billing_project_id
+    c = db.get(models.BillingClient, client_id) if client_id else None
+    p = db.get(models.BillingProject, project_id) if project_id else None
+    t = db.get(models.BillingTask, task.billing_task_id) if task.billing_task_id else None
+    return (c.code if c else "") or "", (p.code if p else "") or "", (t.code if t else "") or ""
+
+
+class ProjectBillingBody(_BaseModel):
+    client_id: Optional[int] = None
+    project_id: Optional[int] = None
+
+
+@app.post(f"{BASE}/projects/{{project_id}}/billing")
+def set_project_billing(project_id: int, body: ProjectBillingBody, db: Session = Depends(get_db)):
+    """Assign a MyDay project its default Client (CC1) + Project (CC2) codes."""
+    proj = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not proj:
+        raise HTTPException(status_code=404, detail="project not found")
+    proj.billing_client_id = body.client_id
+    proj.billing_project_id = body.project_id
+    db.commit()
+    c = db.get(models.BillingClient, body.client_id) if body.client_id else None
+    p = db.get(models.BillingProject, body.project_id) if body.project_id else None
+    return {"ok": True, "client": _bc_dict(c) if c else None, "project": _bc_dict(p) if p else None}
+
+
+class PushCalBody(_BaseModel):
+    start: Optional[str] = None     # naive local ISO; falls back to task.scheduled_start
+    minutes: Optional[int] = None
+    billing_task_id: Optional[int] = None    # CC3 chosen for this block
+    billing_client_id: Optional[int] = None  # optional CC1 override
+    billing_project_id: Optional[int] = None # optional CC2 override
+
+
+@app.post(f"{BASE}/tasks/{{task_id}}/push-calendar")
+def push_task_calendar(task_id: int, body: PushCalBody, db: Session = Depends(get_db)):
+    """Write this task as a coded work block on the Outlook calendar (idempotent)."""
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="task not found")
+    # Persist any billing choices passed from the UI before resolving codes.
+    if body.billing_task_id is not None:
+        task.billing_task_id = body.billing_task_id
+    if body.billing_client_id is not None:
+        task.billing_client_id = body.billing_client_id
+    if body.billing_project_id is not None:
+        task.billing_project_id = body.billing_project_id
+    start = body.start or (task.scheduled_start.isoformat() if task.scheduled_start else None)
+    if not start:
+        raise HTTPException(status_code=422, detail="no start time (set scheduled_start or pass start)")
+    minutes = body.minutes or task.scheduled_minutes or task.time_estimate_minutes or 60
+    cc1, cc2, cc3 = _task_billing_codes(db, task)
+    subject = ms_graph.build_block_subject(task.title, cc1, cc2, cc3)
+    try:
+        if task.calendar_event_id:
+            ms_graph.update_event(task.calendar_event_id, subject=subject, start_iso=start, minutes=minutes)
+            ev_id = task.calendar_event_id
+        else:
+            ev_id = ms_graph.create_event(subject, start, minutes, body_text=task.description or "")
+        task.calendar_event_id = ev_id
+        task.calendar_pushed_at = datetime.utcnow()
+        task.scheduled_start = datetime.fromisoformat(start)
+        task.scheduled_minutes = minutes
+        db.commit()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"calendar error: {exc}")
+    return {"ok": True, "event_id": ev_id, "subject": subject, "codes": f"{cc1}/{cc2}/{cc3}"}
+
+
+# ─── Weekly planner (plan the week → coded blocks → push to calendar) ──────────
+
+def _block_dict(db: Session, t: models.Task):
+    cc1, cc2, cc3 = _task_billing_codes(db, t)
+    return {
+        "id": t.id,
+        "title": t.title,
+        "time": t.scheduled_start.strftime("%H:%M") if t.scheduled_start else "",
+        "iso": t.scheduled_start.isoformat() if t.scheduled_start else "",
+        "minutes": t.scheduled_minutes or 60,
+        "cc1": cc1, "cc2": cc2, "cc3": cc3,
+        "codes": f"{cc1}/{cc2}/{cc3}",
+        "complete": bool(cc1 and cc2 and cc3),
+        "billing_client_id": t.billing_client_id,
+        "billing_project_id": t.billing_project_id,
+        "billing_task_id": t.billing_task_id,
+        "pushed": bool(t.calendar_event_id),
+    }
+
+
+@app.get(f"{BASE}/planner", response_class=HTMLResponse)
+def planner(request: Request, week_start: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    today = date.today()
+    ws = date.fromisoformat(week_start) if week_start else (today - timedelta(days=today.weekday()))
+    ws = ws - timedelta(days=ws.weekday())  # snap to Monday
+    start_dt = datetime(ws.year, ws.month, ws.day)
+    end_dt = start_dt + timedelta(days=7)
+    blocks = (
+        db.query(models.Task)
+        .filter(models.Task.scheduled_start >= start_dt, models.Task.scheduled_start < end_dt)
+        .order_by(models.Task.scheduled_start)
+        .all()
+    )
+    day_names = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    days = []
+    for i in range(7):
+        d = ws + timedelta(days=i)
+        d0 = datetime(d.year, d.month, d.day)
+        d1 = d0 + timedelta(days=1)
+        db_blocks = [_block_dict(db, b) for b in blocks if d0 <= b.scheduled_start < d1]
+        days.append({
+            "name": day_names[i], "date": d, "iso": d.isoformat(),
+            "is_today": d == today, "blocks": db_blocks,
+            "total_min": sum(b["minutes"] for b in db_blocks),
+        })
+    return templates.TemplateResponse(
+        request, "planner.html",
+        {
+            "base": BASE, "week_start": ws.isoformat(),
+            "prev_week": (ws - timedelta(days=7)).isoformat(),
+            "next_week": (ws + timedelta(days=7)).isoformat(),
+            "week_label": f"{ws.strftime('%d %b')} – {(ws + timedelta(days=6)).strftime('%d %b')}",
+            "days": days,
+            "block_count": len(blocks),
+        },
+    )
+
+
+class PlannerBlockBody(_BaseModel):
+    block_id: Optional[int] = None          # edit existing block (task)
+    title: Optional[str] = None             # for a new block
+    scheduled_start: str                    # naive local ISO (date + time)
+    scheduled_minutes: int = 60
+    billing_client_id: Optional[int] = None
+    billing_project_id: Optional[int] = None
+    billing_task_id: Optional[int] = None
+
+
+@app.post(f"{BASE}/planner/block")
+def planner_block(body: PlannerBlockBody, db: Session = Depends(get_db)):
+    """Create or update a scheduled block (a Task with scheduled_start + codes)."""
+    if body.block_id:
+        t = db.query(models.Task).filter(models.Task.id == body.block_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="block not found")
+    else:
+        t = models.Task(title=(body.title or "Bloque").strip(), status="todo", source_type="planner")
+        db.add(t)
+    if body.title is not None:
+        t.title = body.title.strip() or t.title
+    t.scheduled_start = datetime.fromisoformat(body.scheduled_start)
+    t.scheduled_minutes = body.scheduled_minutes
+    t.billing_client_id = body.billing_client_id
+    t.billing_project_id = body.billing_project_id
+    t.billing_task_id = body.billing_task_id
+    db.commit()
+    db.refresh(t)
+    return {"ok": True, "block": _block_dict(db, t)}
+
+
+class MoveBody(_BaseModel):
+    scheduled_start: str
+    scheduled_minutes: Optional[int] = None
+
+
+@app.post(f"{BASE}/planner/block/{{task_id}}/move")
+def planner_move(task_id: int, body: MoveBody, db: Session = Depends(get_db)):
+    """Reschedule a block (drag-drop) — only timing, never touches its codes."""
+    t = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="block not found")
+    t.scheduled_start = datetime.fromisoformat(body.scheduled_start)
+    if body.scheduled_minutes:
+        t.scheduled_minutes = body.scheduled_minutes
+    # Keep the calendar event in sync if already pushed (subject/codes unchanged).
+    if t.calendar_event_id:
+        try:
+            ms_graph.update_event(t.calendar_event_id,
+                                  start_iso=t.scheduled_start.isoformat(),
+                                  minutes=t.scheduled_minutes or 60)
+        except Exception:
+            pass
+    db.commit()
+    return {"ok": True, "block": _block_dict(db, t)}
+
+
+@app.post(f"{BASE}/planner/block/{{task_id}}/unschedule")
+def planner_unschedule(task_id: int, delete_event: int = Query(default=1), db: Session = Depends(get_db)):
+    """Remove a block from the week. Also deletes its calendar event by default."""
+    t = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="block not found")
+    if delete_event and t.calendar_event_id:
+        try:
+            ms_graph.delete_event(t.calendar_event_id)
+        except Exception:
+            pass
+        t.calendar_event_id = None
+        t.calendar_pushed_at = None
+    t.scheduled_start = None
+    db.commit()
+    return {"ok": True}
+
+
+def _unschedule_task(t: models.Task, delete_event: bool = True):
+    if delete_event and t.calendar_event_id:
+        try:
+            ms_graph.delete_event(t.calendar_event_id)
+        except Exception:
+            pass
+        t.calendar_event_id = None
+        t.calendar_pushed_at = None
+    t.scheduled_start = None
+
+
+@app.post(f"{BASE}/planner/clear-week")
+def planner_clear_week(week_start: str = Query(...), delete_events: int = Query(default=1),
+                       db: Session = Depends(get_db)):
+    """Reset the week: unschedule every block (back to backlog) + delete their events."""
+    ws = date.fromisoformat(week_start)
+    start_dt = datetime(ws.year, ws.month, ws.day)
+    end_dt = start_dt + timedelta(days=7)
+    rows = (
+        db.query(models.Task)
+        .filter(models.Task.scheduled_start >= start_dt, models.Task.scheduled_start < end_dt)
+        .all()
+    )
+    for t in rows:
+        _unschedule_task(t, bool(delete_events))
+    db.commit()
+    return {"ok": True, "cleared": len(rows)}
+
+
+class UndoIdsBody(_BaseModel):
+    ids: List[int]
+    delete_events: bool = True
+
+
+@app.post(f"{BASE}/planner/unschedule-batch")
+def planner_unschedule_batch(body: UndoIdsBody, db: Session = Depends(get_db)):
+    """Undo: unschedule a specific set of blocks (e.g. what auto-plan just created)."""
+    rows = db.query(models.Task).filter(models.Task.id.in_(body.ids or [])).all()
+    for t in rows:
+        _unschedule_task(t, body.delete_events)
+    db.commit()
+    return {"ok": True, "cleared": len(rows)}
+
+
+@app.post(f"{BASE}/planner/push-week")
+def planner_push_week(week_start: str = Query(...), db: Session = Depends(get_db)):
+    """Push every fully-coded block of the week to the calendar. Reports the rest."""
+    ws = date.fromisoformat(week_start)
+    start_dt = datetime(ws.year, ws.month, ws.day)
+    end_dt = start_dt + timedelta(days=7)
+    blocks = (
+        db.query(models.Task)
+        .filter(models.Task.scheduled_start >= start_dt, models.Task.scheduled_start < end_dt)
+        .order_by(models.Task.scheduled_start)
+        .all()
+    )
+    pushed, skipped, errors = [], [], []
+    for t in blocks:
+        cc1, cc2, cc3 = _task_billing_codes(db, t)
+        if not (cc1 and cc2 and cc3):
+            skipped.append({"id": t.id, "title": t.title, "codes": f"{cc1}/{cc2}/{cc3}"})
+            continue
+        subject = ms_graph.build_block_subject(t.title, cc1, cc2, cc3)
+        start_iso = t.scheduled_start.isoformat()
+        minutes = t.scheduled_minutes or 60
+        try:
+            if t.calendar_event_id:
+                ms_graph.update_event(t.calendar_event_id, subject=subject, start_iso=start_iso, minutes=minutes)
+            else:
+                t.calendar_event_id = ms_graph.create_event(subject, start_iso, minutes, body_text=t.description or "")
+            t.calendar_pushed_at = datetime.utcnow()
+            db.commit()
+            pushed.append({"id": t.id, "title": t.title, "codes": subject.rsplit(": ", 1)[-1]})
+        except Exception as exc:
+            db.rollback()
+            errors.append({"id": t.id, "title": t.title, "error": str(exc)[:160]})
+    return {"pushed": pushed, "skipped_incomplete": skipped, "errors": errors,
+            "summary": {"pushed": len(pushed), "skipped": len(skipped), "errors": len(errors)}}
+
+
+@app.get(f"{BASE}/planner/backlog")
+def planner_backlog(db: Session = Depends(get_db)):
+    """Unscheduled, actionable tasks ranked by what MyDay already knows:
+    urgent (due soon/overdue), important (high priority / win), stimulating (energy)."""
+    today = date.today()
+    soon = today + timedelta(days=3)
+    tasks = (
+        db.query(models.Task)
+        .filter(models.Task.status.notin_(["done", "dropped"]),
+                models.Task.scheduled_start.is_(None))
+        .all()
+    )
+    items = []
+    for t in tasks:
+        overdue = bool(t.due_date and t.due_date < today)
+        urgent = bool(t.due_date and t.due_date <= soon)
+        important = (t.priority == "high") or (t.today_category == "win")
+        stimulating = t.energy_tag in ("creative", "social")
+        cc1, cc2, cc3 = _task_billing_codes(db, t)
+        items.append({
+            "id": t.id, "title": t.title,
+            "due": t.due_date.isoformat() if t.due_date else None,
+            "overdue": overdue, "urgent": urgent, "important": important, "stimulating": stimulating,
+            "priority": t.priority, "energy_tag": t.energy_tag,
+            "minutes": t.time_estimate_minutes or 60,
+            "project": t.project.name if t.project else None,
+            "codes": f"{cc1}/{cc2}/{cc3}", "has_codes": bool(cc1 and cc2 and cc3),
+            "_rank": (0 if overdue else 1 if urgent else 2 if important else 3 if stimulating else 4,
+                      t.due_date.isoformat() if t.due_date else "9999",
+                      0 if t.priority == "high" else 1 if t.priority == "medium" else 2),
+        })
+    items.sort(key=lambda x: x["_rank"])
+    for x in items:
+        x.pop("_rank", None)
+    return {"tasks": items, "count": len(items)}
+
+
+def _free_intervals(busy, work_start=9 * 60, work_end=18 * 60, lunch=(13 * 60, 14 * 60), min_len=15):
+    """Free (start,end) minute-intervals in the workday after removing busy + lunch."""
+    blocked = sorted([(max(s, work_start), min(e, work_end)) for s, e in (list(busy) + [lunch]) if e > s])
+    free, cur = [], work_start
+    for s, e in blocked:
+        if e <= cur:
+            continue
+        if s > cur:
+            free.append([cur, s])
+        cur = max(cur, e)
+    if cur < work_end:
+        free.append([cur, work_end])
+    return [iv for iv in free if iv[1] - iv[0] >= min_len]
+
+
+def _local_minutes(iso):
+    """Minutes-from-midnight + date for a local ISO dateTime string (event)."""
+    try:
+        dt = datetime.fromisoformat((iso or "")[:19])
+        return dt.date().isoformat(), dt.hour * 60 + dt.minute, dt.hour * 60 + dt.minute
+    except Exception:
+        return None, None, None
+
+
+@app.post(f"{BASE}/planner/auto-plan")
+def planner_auto_plan(week_start: str = Query(...), db: Session = Depends(get_db)):
+    """Draft the week: drop prioritized unscheduled tasks into free slots
+    (workday minus meetings, existing blocks, lunch). Mon–Fri, today onward.
+    Creates blocks (scheduled_start) but does NOT push to the calendar."""
+    today = date.today()
+    ws = date.fromisoformat(week_start)
+    start_dt = datetime(ws.year, ws.month, ws.day)
+    end_dt = start_dt + timedelta(days=7)
+
+    # Existing blocks this week (busy) per day
+    existing = (
+        db.query(models.Task)
+        .filter(models.Task.scheduled_start >= start_dt, models.Task.scheduled_start < end_dt)
+        .all()
+    )
+    busy_by_day = {}
+    for b in existing:
+        d = b.scheduled_start.date().isoformat()
+        sm = b.scheduled_start.hour * 60 + b.scheduled_start.minute
+        busy_by_day.setdefault(d, []).append((sm, sm + (b.scheduled_minutes or 60)))
+
+    # Calendar meetings this week (busy)
+    try:
+        for ev in ms_graph.get_events_between(start_dt, end_dt):
+            d, sm, _ = _local_minutes(ev.get("start"))
+            d2, em, _ = _local_minutes(ev.get("end"))
+            if d and d == d2 and em > sm:
+                busy_by_day.setdefault(d, []).append((sm, em))
+    except Exception:
+        pass
+
+    # Free intervals per workday (today onward, Mon–Fri)
+    free_by_day = {}
+    for i in range(7):
+        d = ws + timedelta(days=i)
+        if d.weekday() >= 5 or d < today:
+            continue
+        free_by_day[d.isoformat()] = _free_intervals(busy_by_day.get(d.isoformat(), []))
+
+    # Prioritized unscheduled backlog (reuse the same ranking as /planner/backlog)
+    soon = today + timedelta(days=3)
+    cand = (
+        db.query(models.Task)
+        .filter(models.Task.status.notin_(["done", "dropped"]), models.Task.scheduled_start.is_(None))
+        .all()
+    )
+    def rank(t):
+        overdue = bool(t.due_date and t.due_date < today)
+        urgent = bool(t.due_date and t.due_date <= soon)
+        important = (t.priority == "high") or (t.today_category == "win")
+        stim = t.energy_tag in ("creative", "social")
+        return (0 if overdue else 1 if urgent else 2 if important else 3 if stim else 4,
+                t.due_date.isoformat() if t.due_date else "9999",
+                0 if t.priority == "high" else 1 if t.priority == "medium" else 2)
+    cand.sort(key=rank)
+
+    placed, unplaced = [], []
+    for t in cand:
+        dur = min(t.time_estimate_minutes or 60, 240)
+        done = False
+        for d_iso in sorted(free_by_day):
+            for iv in free_by_day[d_iso]:
+                if iv[1] - iv[0] >= dur:
+                    sm = iv[0]
+                    t.scheduled_start = datetime.fromisoformat(f"{d_iso}T{sm // 60:02d}:{sm % 60:02d}:00")
+                    t.scheduled_minutes = dur
+                    iv[0] += dur
+                    placed.append({"id": t.id, "title": t.title, "day": d_iso, "time": f"{sm // 60:02d}:{sm % 60:02d}", "minutes": dur})
+                    done = True
+                    break
+            if done:
+                break
+        if not done:
+            unplaced.append({"id": t.id, "title": t.title})
+    db.commit()
+    return {"placed": placed, "unplaced": unplaced,
+            "summary": {"placed": len(placed), "unplaced": len(unplaced)}}
+
+
+@app.get(f"{BASE}/planner/reconcile")
+def planner_reconcile(week_start: str = Query(...), db: Session = Depends(get_db)):
+    """Planned (MyDay blocks) vs actual (TimeTracker time_entries) for the week."""
+    ws = date.fromisoformat(week_start)
+    start_dt = datetime(ws.year, ws.month, ws.day)
+    end_dt = start_dt + timedelta(days=7)
+    blocks = (
+        db.query(models.Task)
+        .filter(models.Task.scheduled_start >= start_dt, models.Task.scheduled_start < end_dt)
+        .all()
+    )
+    # code -> name from the billing catalog (for nice labels)
+    name_by_code = {p.code: p.name for p in db.query(models.BillingProject).all() if p.code}
+
+    planned_proj, planned_day, planned_total = {}, {}, 0.0
+    for t in blocks:
+        _, cc2, _ = _task_billing_codes(db, t)
+        code = cc2 or "(sin código)"
+        hours = (t.scheduled_minutes or 60) / 60.0
+        planned_proj[code] = planned_proj.get(code, 0.0) + hours
+        d = t.scheduled_start.date().isoformat()
+        planned_day[d] = planned_day.get(d, 0.0) + hours
+        planned_total += hours
+
+    actual = reconcile.actual_for_week(ws)
+
+    codes = set(planned_proj) | set(actual["by_project"])
+    by_project = []
+    for c in sorted(codes):
+        pl = planned_proj.get(c, 0.0)
+        ac = actual["by_project"].get(c, {}).get("hours", 0.0)
+        name = name_by_code.get(c) or actual["by_project"].get(c, {}).get("name") or ""
+        by_project.append({"code": c, "name": name, "planned": round(pl, 2),
+                           "actual": round(ac, 2), "delta": round(ac - pl, 2)})
+
+    by_day = []
+    for i in range(7):
+        d = (ws + timedelta(days=i)).isoformat()
+        by_day.append({"date": d, "planned": round(planned_day.get(d, 0.0), 2),
+                       "actual": round(actual["by_day"].get(d, 0.0), 2)})
+
+    return {
+        "available": actual["available"],
+        "by_project": by_project, "by_day": by_day,
+        "planned_total": round(planned_total, 2),
+        "actual_total": round(actual["total"], 2),
     }
 
 

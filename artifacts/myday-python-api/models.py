@@ -22,6 +22,9 @@ class Project(Base):
     notion_url = Column(String, nullable=True)
     exported_at = Column(DateTime, nullable=True)
     last_synced_at = Column(DateTime, nullable=True)
+    # Billing bridge: default Client (CC1) + Project (CC2) this project bills to
+    billing_client_id = Column(Integer, ForeignKey("billing_clients.id", ondelete="SET NULL"), nullable=True)
+    billing_project_id = Column(Integer, ForeignKey("billing_projects.id", ondelete="SET NULL"), nullable=True)
 
     tasks = relationship("Task", back_populates="project")
     recurring_tasks = relationship("RecurringTask", back_populates="project")
@@ -61,6 +64,15 @@ class Task(Base):
     # Collaboration / context
     status_note = Column(Text, nullable=True)     # why it's in this status / blockers
     assignee = Column(String(100), nullable=True) # person responsible
+    # Billing bridge — CC1/CC2/CC3 for this block (default inherited from project, overridable)
+    billing_client_id = Column(Integer, ForeignKey("billing_clients.id", ondelete="SET NULL"), nullable=True)
+    billing_project_id = Column(Integer, ForeignKey("billing_projects.id", ondelete="SET NULL"), nullable=True)
+    billing_task_id = Column(Integer, ForeignKey("billing_tasks.id", ondelete="SET NULL"), nullable=True)
+    # Weekly planner block + Outlook calendar push (idempotent)
+    scheduled_start = Column(DateTime, nullable=True)   # planned block start
+    scheduled_minutes = Column(Integer, nullable=True)  # planned block duration
+    calendar_event_id = Column(String, nullable=True)   # Outlook event id (re-push/update)
+    calendar_pushed_at = Column(DateTime, nullable=True)
 
     project = relationship("Project", back_populates="tasks")
     subtasks = relationship("Subtask", back_populates="task", cascade="all, delete-orphan")
@@ -295,3 +307,56 @@ class NotionExportTarget(Base):
     target_type = Column(String, nullable=False, default="page")  # page | database
     is_default = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ─── Billing codes catalog (MyDay↔TimeTracker bridge) ─────────────────────────
+# Mirrors V2A's Paylocity coding: Client (CC1) → Project (CC2) → Task (CC3),
+# where Client↔Project is many-to-many and Project→Task is one-to-many.
+# Imported from TimeTracker's catalog / the "Time and attendance" workbooks.
+
+class BillingClient(Base):
+    """CC1 — client / service-line / practice bucket (e.g. 'Public Sector' 5.6)."""
+    __tablename__ = "billing_clients"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    code = Column(String, nullable=True)            # may be blank in a partial catalog
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BillingProject(Base):
+    """CC2 — project / engagement (e.g. 'Knowledge 4 Impact' V2A006)."""
+    __tablename__ = "billing_projects"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    code = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BillingTask(Base):
+    """CC3 — task / work type (e.g. 'Meetings & Work Sessions' 8)."""
+    __tablename__ = "billing_tasks"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    code = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BillingClientProject(Base):
+    """Valid Client↔Project pairing (many-to-many)."""
+    __tablename__ = "billing_client_project"
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("billing_clients.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(Integer, ForeignKey("billing_projects.id", ondelete="CASCADE"), nullable=False)
+    __table_args__ = (UniqueConstraint("client_id", "project_id", name="uq_client_project"),)
+
+
+class BillingProjectTask(Base):
+    """Valid Project→Task pairing (which task types apply to a project)."""
+    __tablename__ = "billing_project_task"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("billing_projects.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("billing_tasks.id", ondelete="CASCADE"), nullable=False)
+    __table_args__ = (UniqueConstraint("project_id", "task_id", name="uq_project_task"),)
