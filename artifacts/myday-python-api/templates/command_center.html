@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Command Center — MyDay</title>
+
+  <!-- ─ Anti-flicker: apply saved theme BEFORE any paint ─ -->
+  <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
+
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
+
+  <style>
+    main.cc { max-width: 820px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
+
+    /* ── Header ── */
+    .cc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+    .cc-head h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -.01em; }
+    .cc-date { color: var(--text-muted); margin-top: .2rem; font-size: .85rem; }
+
+    /* ── Status dots ── */
+    .cc-status { display: flex; gap: 1rem; align-items: center; font-size: .76rem; color: var(--text-muted); padding-top: .35rem; }
+    .cc-status .s { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
+    .cc-status .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--border); flex: none; transition: background .2s; }
+    .cc-status .s.up   .dot { background: var(--success); }
+    .cc-status .s.down .dot { background: var(--text-faint); }
+
+    /* ── Today focus card ── */
+    .cc-today { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: .85rem; padding: 1.3rem 1.4rem; margin-bottom: 1.75rem; }
+    .cc-today .eyebrow { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); font-weight: 700; margin-bottom: .55rem; }
+    .cc-today .objective { font-size: 1.18rem; font-weight: 700; line-height: 1.35; color: var(--text); }
+    .cc-today .reason { font-size: .85rem; color: var(--text-muted); margin-top: .35rem; }
+    .cc-nn { display: flex; gap: 1.5rem; margin-top: 1.1rem; padding-top: 1.05rem; border-top: 1px solid var(--border-subtle); flex-wrap: wrap; }
+    .cc-nn .slot { min-width: 0; }
+    .cc-nn .slot .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-faint); font-weight: 700; }
+    .cc-nn .slot .val { font-size: .92rem; color: var(--text); margin-top: .2rem; font-weight: 500; }
+    .cc-nn .slot.empty .val { color: var(--text-faint); font-style: italic; font-weight: 400; }
+    .cc-meet { font-size: .82rem; color: var(--text-muted); margin-top: .9rem; }
+    .cc-today.muted { color: var(--text-muted); font-size: .9rem; }
+    .cc-today .cc-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+    /* ── Action tiles ── */
+    .cc-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+    .cc-tile { display: flex; flex-direction: column; gap: .25rem; position: relative; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: .8rem; padding: 1.15rem 1.25rem; text-decoration: none; color: var(--text); transition: border-color .15s, transform .12s, background .15s; }
+    .cc-tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .cc-tile-primary { border-color: var(--accent); background: var(--accent-soft); }
+    .cc-tile-primary:hover { background: var(--accent-soft); }
+    .cc-tile-k { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: .45rem; }
+    .cc-tile-d { font-size: .8rem; color: var(--text-muted); line-height: 1.35; }
+    .cc-badge { font-style: normal; background: var(--accent); color: #fff; font-size: .72rem; font-weight: 700; border-radius: 999px; padding: .04rem .42rem; line-height: 1.5; }
+    html.dark .cc-badge { color: #1A1A1A; }
+    .cc-tile-status { position: absolute; top: 1.05rem; right: 1.1rem; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); }
+    .cc-tile-status.up   { color: var(--success); }
+    .cc-tile[data-app].down { opacity: .62; }
+
+    @media (max-width: 640px) { .cc-tiles { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="myday-page theme-quiet">
+  {% include "_nav.html" %}
+
+  <main class="cc">
+    <header class="cc-head">
+      <div>
+        <h1 id="cc-greeting">Tu día</h1>
+        <p class="cc-date" id="cc-date"></p>
+      </div>
+      <div class="cc-status" id="cc-status">
+        <span class="s" data-svc="myday"><span class="dot"></span>MyDay</span>
+        <span class="s" data-svc="transcribe"><span class="dot"></span>Transcribe</span>
+        <span class="s" data-svc="timetracker"><span class="dot"></span>TimeTracker</span>
+      </div>
+    </header>
+
+    <section class="cc-today muted" id="cc-today">Cargando tu enfoque de hoy…</section>
+
+    <section class="cc-tiles">
+      <a class="cc-tile cc-tile-primary" href="{{ base }}/my-day">
+        <span class="cc-tile-k">Mi Día</span>
+        <span class="cc-tile-d">Planifica y ejecuta — now / next / bloques de tiempo</span>
+      </a>
+      <a class="cc-tile" href="{{ base }}/inbox">
+        <span class="cc-tile-k">Inbox{% if inbox_unreviewed %} <em class="cc-badge">{{ inbox_unreviewed }}</em>{% endif %}</span>
+        <span class="cc-tile-d">Triar lo capturado de reuniones, email y mente</span>
+      </a>
+      <a class="cc-tile" href="{{ transcribe_url }}" data-app="transcribe" target="_blank" rel="noopener">
+        <span class="cc-tile-k">Grabar reunión</span>
+        <span class="cc-tile-d">Transcribe → notas estructuradas al inbox</span>
+        <span class="cc-tile-status" data-status="transcribe"></span>
+      </a>
+      <a class="cc-tile" href="{{ timetracker_url }}" data-app="timetracker" target="_blank" rel="noopener">
+        <span class="cc-tile-k">Revisar tiempo</span>
+        <span class="cc-tile-d">TimeTracker → Outlook → Paylocity</span>
+        <span class="cc-tile-status" data-status="timetracker"></span>
+      </a>
+    </section>
+  </main>
+
+  <script src="{{ base }}/static/app.js?v=26"></script>
+  <script>
+  (function () {
+    var BASE = "{{ base }}";
+
+    // ── Greeting + date ──
+    var h = new Date().getHours();
+    var greet = h < 12 ? "Buenos días" : (h < 19 ? "Buenas tardes" : "Buenas noches");
+    document.getElementById("cc-greeting").textContent = greet + ", Paul";
+    try {
+      var ds = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+      document.getElementById("cc-date").textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+    } catch (e) {}
+
+    // ── Live status dots + tile pills ──
+    fetch(BASE + "/command-center/status")
+      .then(function (r) { return r.json(); })
+      .then(function (st) {
+        ["myday", "transcribe", "timetracker"].forEach(function (svc) {
+          var el = document.querySelector('.cc-status .s[data-svc="' + svc + '"]');
+          if (el) el.classList.add(st[svc] ? "up" : "down");
+        });
+        ["transcribe", "timetracker"].forEach(function (svc) {
+          var pill = document.querySelector('.cc-tile-status[data-status="' + svc + '"]');
+          var tile = document.querySelector('.cc-tile[data-app="' + svc + '"]');
+          if (st[svc]) { if (pill) { pill.textContent = "activa"; pill.classList.add("up"); } }
+          else { if (pill) pill.textContent = "apagada"; if (tile) tile.classList.add("down"); }
+        });
+      })
+      .catch(function () {});
+
+    // ── Today's focus (cached daily briefing) ──
+    var box = document.getElementById("cc-today");
+    function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function slot(lbl, val) {
+      var empty = !val ? " empty" : "";
+      return '<div class="slot' + empty + '"><div class="lbl">' + lbl + '</div><div class="val">' +
+             (val ? esc(val) : "—") + "</div></div>";
+    }
+    function renderBriefing(b) {
+      box.classList.remove("muted");
+      box.innerHTML =
+        '<div class="eyebrow">El objetivo de hoy</div>' +
+        '<div class="objective">' + esc(b.objective || "Sin objetivo definido aún") + "</div>" +
+        (b.objective_reason ? '<div class="reason">' + esc(b.objective_reason) + "</div>" : "") +
+        '<div class="cc-nn">' + slot("Ahora", b.now) + slot("Siguiente", b.next) + "</div>" +
+        (b.meetings ? '<div class="cc-meet">' + esc(b.meetings) + "</div>" : "");
+    }
+    function showFallback() {
+      box.classList.add("muted");
+      box.innerHTML = 'Aún no hay enfoque para hoy. ' +
+        '<a class="cc-link" href="' + BASE + '/my-day">Planifica tu día →</a>';
+    }
+    // The first call of the day generates the briefing (a few seconds). Retry a
+    // couple of times while it's still warming up before falling back.
+    function loadBriefing(attempt) {
+      fetch(BASE + "/my-day/briefing")
+        .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.json(); })
+        .then(renderBriefing)
+        .catch(function () {
+          if (attempt < 3) {
+            box.classList.add("muted");
+            box.textContent = "Generando tu enfoque de hoy…";
+            setTimeout(function () { loadBriefing(attempt + 1); }, 2500);
+          } else {
+            showFallback();
+          }
+        });
+    }
+    loadBriefing(1);
+  })();
+  </script>
+</body>
+</html>

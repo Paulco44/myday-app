@@ -285,6 +285,7 @@ nav {
   white-space: nowrap;
   transition: background .15s, color .15s;
   letter-spacing: 0.02em;
+  text-decoration: none;
 }
 .ctrl-btn:hover { background: var(--ctrl-hover); color: var(--text); }
 .ctrl-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }

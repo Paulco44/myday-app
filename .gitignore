@@ -62,3 +62,8 @@ __pycache__/
 # Microsoft 365 token cache (contains refresh tokens)
 .ms_token_cache.json
 **/.ms_token_cache.json
+
+# Local SQLite databases (may contain client data; real DB is PostgreSQL)
+*.db
+*.sqlite
+*.sqlite3

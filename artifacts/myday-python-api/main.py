@@ -361,8 +361,8 @@ app.mount(f"{BASE}/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 async def root_redirect(db: Session = Depends(get_db)):
-    # Morning check-in retired (folded into My Day's briefing card).
-    return RedirectResponse(url=f"{BASE}/my-day", status_code=302)
+    # Command Center is the home / morning landing; My Day is the execution view.
+    return RedirectResponse(url=f"{BASE}/command-center", status_code=302)
 
 
 # ─── Health ──────────────────────────────────────────────────────────────────
@@ -377,7 +377,7 @@ def health():
 @app.get(f"{BASE}", response_class=HTMLResponse)
 @app.get(f"{BASE}/", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
-    return RedirectResponse(url=f"{BASE}/my-day", status_code=302)
+    return RedirectResponse(url=f"{BASE}/command-center", status_code=302)
 
 
 # ─── Morning Check-In ────────────────────────────────────────────────────────
@@ -2585,6 +2585,59 @@ def my_day_briefing_refresh(db: Session = Depends(get_db)):
     if "error" in result:
         raise HTTPException(status_code=503, detail=result["error"])
     return result
+
+
+# ─── Command Center (single home + launch hub for the 3 apps) ─────────────────
+import socket as _socket
+
+# Sibling apps in Paul's daily workflow (started by START-MyDay.bat).
+SIBLING_APPS = {
+    "transcribe":  {"host": "127.0.0.1", "port": 8088, "url": "http://localhost:8088"},
+    "timetracker": {"host": "127.0.0.1", "port": 8787, "url": "http://localhost:8787"},
+}
+
+
+def _port_open(host: str, port: int, timeout: float = 0.35) -> bool:
+    """True if something is listening on host:port (used for live/down dots)."""
+    try:
+        with _socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+@app.get(f"{BASE}/command-center", response_class=HTMLResponse)
+async def command_center(request: Request, db: Session = Depends(get_db)):
+    today = date.today()
+    daily_log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    inbox_unreviewed = (
+        db.query(models.InboxItem)
+        .filter(models.InboxItem.status.in_(["new", "reviewing"]))
+        .count()
+    )
+    response = templates.TemplateResponse(
+        request, "command_center.html",
+        {
+            "base": BASE,
+            "today": today,
+            "energy_today": daily_log.energy_today if daily_log else None,
+            "inbox_unreviewed": inbox_unreviewed,
+            "transcribe_url": SIBLING_APPS["transcribe"]["url"],
+            "timetracker_url": SIBLING_APPS["timetracker"]["url"],
+        },
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get(f"{BASE}/command-center/status")
+def command_center_status():
+    """Live/down status of the three workflow apps. MyDay is up by definition."""
+    return {
+        "myday": True,
+        "transcribe": _port_open(**{k: SIBLING_APPS["transcribe"][k] for k in ("host", "port")}),
+        "timetracker": _port_open(**{k: SIBLING_APPS["timetracker"][k] for k in ("host", "port")}),
+    }
 
 
 # ─── Morning ritual folded into My Day (energy + brain dump) ───────────────────
