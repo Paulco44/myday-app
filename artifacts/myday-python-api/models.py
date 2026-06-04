@@ -58,6 +58,10 @@ class Task(Base):
     # Bridge: linked Kanban card
     card_id = Column(Integer, nullable=True)      # cards.id (React Kanban)
 
+    # Collaboration / context
+    status_note = Column(Text, nullable=True)     # why it's in this status / blockers
+    assignee = Column(String(100), nullable=True) # person responsible
+
     project = relationship("Project", back_populates="tasks")
     subtasks = relationship("Subtask", back_populates="task", cascade="all, delete-orphan")
     task_tags = relationship("TaskTag", back_populates="task", cascade="all, delete-orphan")

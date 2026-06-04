@@ -65,7 +65,8 @@
     html.dark .card:has(.pri-medium) { border-left-color: #F97316; }
     html.dark .card:has(.pri-low)    { border-left-color: #374151; }
 
-    .card-title { font-weight: 600; font-size: .87rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-title { font-weight: 600; font-size: .87rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; cursor: default; }
+    .card-title[title]:hover::after { content: attr(title); position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #1e293b; color: #f8fafc; padding: .4rem .75rem; border-radius: .4rem; font-size: .8rem; font-weight: 500; max-width: 320px; white-space: normal; line-height: 1.4; z-index: 9999; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
     .card-meta { margin-top: .35rem; display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
     .pri-high   { color: #dc2626; font-weight: 700; font-size:.82rem; }
     .pri-medium { color: #d97706; font-size:.82rem; }
@@ -205,12 +206,12 @@
             {% if task.id == now_task_id %}
             <div class="card-now-badge">▶ NOW</div>
             {% endif %}
-            <div class="card-title">{{ task.title }}</div>
+            <div class="card-title" title="{{ task.title }}">{{ task.title }}</div>
             <div class="card-meta">
               <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
               {% if task.due_date %}
               <span class="card-due {% if task.due_date < today %}overdue{% endif %}">
-                {{ task.due_date.strftime('%b %-d') }}
+                {{ task.due_date | datefmt('%b %-d') }}
               </span>
               {% endif %}
               {% if task.project %}<span class="card-project">{{ task.project.name }}</span>{% endif %}
@@ -405,7 +406,7 @@
           ? formatDate(data.task.due_date)
           : '';
         preview.innerHTML = `
-          <div class="card-title">${escHtml(data.task.title)}</div>
+          <div class="card-title" title="${escHtml(data.task.title)}">${escHtml(data.task.title)}</div>
           <div class="card-meta">
             <span class="pri-${data.task.priority}">${data.task.priority.toUpperCase()}</span>
             ${dueFmt ? `<span class="card-due">${dueFmt}</span>` : ''}

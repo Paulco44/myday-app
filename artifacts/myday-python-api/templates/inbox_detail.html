@@ -272,7 +272,7 @@
           <form id="form-task" class="promo-form" method="post" action="{{ base }}/inbox/{{ item.id }}/promote-task">
             <div>
               <label for="task-title">Task title</label>
-              <input id="task-title" name="title" type="text" placeholder="What needs to happen…" required />
+              <input id="task-title" name="title" type="text" placeholder="What needs to happen…" value="{{ item.title }}" required />
             </div>
             <div>
               <label for="task-desc">Notes (optional)</label>

@@ -74,8 +74,14 @@
     .btn-review { background: var(--accent); color: #1A1A1A; border: none; border-radius: .45rem; padding: .4rem .85rem; font-size: .8rem; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap; flex-shrink: 0; align-self: center; font-family: inherit; transition: opacity .15s; }
     .btn-review:hover { opacity: .85; }
 
-    /* promoted — muted */
+    /* promoted — muted + hidden by default */
     .inbox-card.status-promoted .btn-review { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); font-weight: 600; }
+    .inbox-card.status-promoted { opacity: .45; display: none; }
+    .show-processed .inbox-card.status-promoted { display: flex; }
+
+    /* processed toggle */
+    .processed-toggle { padding: .65rem 1.1rem; font-size: .82rem; color: var(--accent); cursor: pointer; font-weight: 600; border-top: 1px solid var(--border-subtle); text-align: center; user-select: none; }
+    .processed-toggle:hover { background: var(--bg); }
 
     /* ── Action count pill ── */
     .action-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: .15rem .5rem; font-size:.82rem; color: var(--text-muted); font-weight: 600; }
@@ -171,6 +177,13 @@
             {% endfor %}
           </div>
 
+          {% set promoted_count = items | selectattr('status', 'equalto', 'promoted') | list | length %}
+          {% if promoted_count > 0 and not show_archived %}
+            <div class="processed-toggle" id="processed-toggle" onclick="toggleProcessed()">
+              ▸ Show {{ promoted_count }} processed item{{ 's' if promoted_count != 1 }}
+            </div>
+          {% endif %}
+
           {% if not show_archived and archived_count %}
             <div class="archived-link" style="padding:1rem;border-top:1px solid var(--border-subtle);">
               <a href="{{ base }}/inbox/archived">View {{ archived_count }} archived note{{ 's' if archived_count != 1 }}</a>
@@ -212,17 +225,56 @@
       });
     });
 
-    // When a form inside the iframe submits (e.g. "create task"), reload the list
+    // When iframe loads, sync the list card with the item's current status
     frame.addEventListener('load', () => {
       try {
         const frameUrl = frame.contentWindow.location.href;
-        // If the iframe navigated to the inbox list itself (redirect after action), reload outer
         if (frameUrl.includes('/inbox') && !frameUrl.includes('/inbox/')) {
           window.location.reload();
+          return;
+        }
+        // Extract item ID from URL like /task-manager/inbox/42
+        const m = frameUrl.match(/\/inbox\/(\d+)/);
+        if (!m) return;
+        const itemId = m[1];
+        const frameDoc = frame.contentDocument;
+        const isPromoted = frameDoc && frameDoc.querySelector('.badge-promoted');
+        const card = document.querySelector(`.inbox-card[data-detail-url$="/inbox/${itemId}"]`);
+        if (!card) return;
+        if (isPromoted) {
+          // Update card status class and badge
+          card.classList.remove('status-new', 'status-reviewing');
+          card.classList.add('status-promoted');
+          const badge = card.querySelector('.badge-new, .badge-reviewing, .badge-promoted');
+          if (badge) { badge.className = 'badge badge-promoted'; badge.textContent = '✓ Task created'; }
+          const btn = card.querySelector('.btn-review');
+          if (btn) btn.textContent = 'View →';
+          // Update toggle count
+          const totalPromoted = document.querySelectorAll('.inbox-card.status-promoted').length;
+          const toggle = document.getElementById('processed-toggle');
+          if (toggle) {
+            const showing = document.querySelector('.inbox-list')?.classList.contains('show-processed');
+            toggle.style.display = '';
+            toggle.textContent = showing
+              ? '▾ Hide processed item' + (totalPromoted !== 1 ? 's' : '')
+              : '▸ Show ' + totalPromoted + ' processed item' + (totalPromoted !== 1 ? 's' : '');
+          }
         }
       } catch(err) {}
     });
   })();
+  </script>
+  <script>
+  function toggleProcessed() {
+    const list = document.querySelector('.inbox-list');
+    const btn  = document.getElementById('processed-toggle');
+    if (!list || !btn) return;
+    const showing = list.classList.toggle('show-processed');
+    const count = list.querySelectorAll('.inbox-card.status-promoted').length;
+    btn.textContent = showing
+      ? '▾ Hide processed item' + (count !== 1 ? 's' : '')
+      : '▸ Show ' + count + ' processed item' + (count !== 1 ? 's' : '');
+  }
   </script>
 </body>
 </html>

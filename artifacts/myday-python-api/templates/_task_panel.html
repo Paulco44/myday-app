@@ -1,0 +1,111 @@
+<!-- ── Task Detail Panel ─────────────────────────────────────────────────── -->
+<div id="panel-backdrop" class="panel-backdrop" onclick="closeTaskPanel()"></div>
+
+<aside id="task-panel" class="task-panel" role="dialog" aria-label="Task detail">
+  <div class="panel-header">
+    <div class="panel-header-actions">
+      <button class="panel-btn-icon" id="panel-expand-btn" onclick="togglePanelExpand()" title="Expand (X)">⛶</button>
+      <a id="panel-edit-link" class="panel-btn-text" href="#" target="_self">✎ Full editor</a>
+    </div>
+    <button class="panel-btn-icon panel-close-btn" onclick="closeTaskPanel()" title="Close (Esc)">✕</button>
+  </div>
+
+  <div class="panel-body" id="panel-body">
+    <div class="panel-loading">Loading…</div>
+  </div>
+</aside>
+
+<!-- Panel content template (cloned by JS) -->
+<template id="panel-content-tpl">
+  <div class="panel-title-row">
+    <input class="panel-title-input" type="text" id="panel-title" placeholder="Task title" />
+  </div>
+
+  <div class="panel-meta-row">
+    <select class="panel-select" id="panel-status" data-field="status">
+      <option value="backlog">Backlog</option>
+      <option value="todo">To Do</option>
+      <option value="doing">Doing</option>
+      <option value="waiting">Waiting</option>
+      <option value="done">Done</option>
+    </select>
+    <select class="panel-select" id="panel-priority" data-field="priority">
+      <option value="low">↓ Low</option>
+      <option value="medium">→ Medium</option>
+      <option value="high">↑ High</option>
+    </select>
+  </div>
+
+  <div class="panel-meta-row">
+    <select class="panel-select" id="panel-focus" data-field="focus_state">
+      <option value="">— Focus —</option>
+      <option value="now">🔴 Now</option>
+      <option value="next">🟡 Next</option>
+      <option value="later_today">Later Today</option>
+      <option value="later">Later</option>
+    </select>
+    <select class="panel-select" id="panel-energy" data-field="energy_tag">
+      <option value="">— Energy —</option>
+      <option value="creative">✨ Creative</option>
+      <option value="admin">📋 Admin</option>
+      <option value="social">💬 Social</option>
+      <option value="low_energy">🌿 Low energy</option>
+    </select>
+  </div>
+
+  <div class="panel-meta-row">
+    <select class="panel-select" id="panel-timeblock" data-field="time_block">
+      <option value="">— Time block —</option>
+      <option value="morning">🌅 Morning</option>
+      <option value="afternoon">☀️ Afternoon</option>
+      <option value="evening">🌙 Evening</option>
+    </select>
+    <select class="panel-select" id="panel-project" data-field="project_id">
+      <option value="">— Project —</option>
+    </select>
+  </div>
+
+  <div class="panel-field">
+    <label class="panel-label">Due date</label>
+    <input class="panel-input" type="date" id="panel-due-date" data-field="due_date" />
+  </div>
+
+  <div class="panel-field">
+    <label class="panel-label">Description</label>
+    <textarea class="panel-textarea" id="panel-description" rows="3" placeholder="Add details…" data-field="description"></textarea>
+  </div>
+
+  <div class="panel-field">
+    <label class="panel-label">Assigned to</label>
+    <input class="panel-input" type="text" id="panel-assignee" placeholder="e.g. Paul, Maria…" data-field="assignee" />
+  </div>
+
+  <div class="panel-field">
+    <label class="panel-label">Status note <span style="font-weight:400;font-size:.8rem;color:var(--text-muted)">(blockers, context…)</span></label>
+    <textarea class="panel-textarea" id="panel-status-note" rows="2" placeholder="e.g. Waiting on response from client…" data-field="status_note"></textarea>
+  </div>
+
+  <hr class="panel-divider" />
+
+  <!-- Subtasks -->
+  <div class="panel-subtasks">
+    <div class="panel-subtasks-head">
+      <label class="panel-label">Steps</label>
+      <span class="panel-sub-progress-text" id="panel-sub-progress-text"></span>
+    </div>
+    <div class="panel-sub-bar-wrap" id="panel-sub-bar-wrap">
+      <div class="panel-sub-bar" id="panel-sub-bar"></div>
+    </div>
+    <div id="panel-subtask-list"></div>
+    <div class="panel-sub-add">
+      <input type="text" class="panel-sub-input" id="panel-sub-input"
+             placeholder="＋ Add a step… (Enter)" maxlength="200"
+             onkeydown="if(event.key==='Enter')panelAddSubtask()" />
+    </div>
+  </div>
+
+  <div class="panel-footer">
+    <button class="panel-save-btn" id="panel-save-btn" onclick="panelSave()">Save</button>
+    <button class="panel-delete-btn" onclick="panelDelete()">Delete task</button>
+  </div>
+</template>

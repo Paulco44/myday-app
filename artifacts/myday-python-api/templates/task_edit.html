@@ -82,14 +82,34 @@
       color: #fff;
     }
 
+    /* Energy & time-block color tokens (local — dark mode aware) */
+    :root {
+      --chip-creative: #5b21b6;
+      --chip-admin:    #1e40af;
+      --chip-social:   #065f46;
+      --chip-low:      #92400e;
+      --chip-morning:  #92400e;
+      --chip-afternoon:#1e40af;
+      --chip-evening:  #5b21b6;
+    }
+    html.dark {
+      --chip-creative: #a78bfa;
+      --chip-admin:    #60a5fa;
+      --chip-social:   #34d399;
+      --chip-low:      #fb923c;
+      --chip-morning:  #fb923c;
+      --chip-afternoon:#60a5fa;
+      --chip-evening:  #a78bfa;
+    }
+
     /* Coloured chip variants */
-    .chip-option.energy:checked + .chip-label.creative { background: #5b21b6; border-color: #5b21b6; }
-    .chip-option.energy:checked + .chip-label.admin { background: #1e40af; border-color: #1e40af; }
-    .chip-option.energy:checked + .chip-label.social { background: #065f46; border-color: #065f46; }
-    .chip-option.energy:checked + .chip-label.low { background: #92400e; border-color: #92400e; }
-    .chip-option.block:checked + .chip-label.morning { background: #92400e; border-color: #92400e; }
-    .chip-option.block:checked + .chip-label.afternoon { background: #1e40af; border-color: #1e40af; }
-    .chip-option.block:checked + .chip-label.evening { background: #5b21b6; border-color: #5b21b6; }
+    .chip-option.energy:checked + .chip-label.creative  { background: var(--chip-creative);  border-color: var(--chip-creative); }
+    .chip-option.energy:checked + .chip-label.admin     { background: var(--chip-admin);     border-color: var(--chip-admin); }
+    .chip-option.energy:checked + .chip-label.social    { background: var(--chip-social);    border-color: var(--chip-social); }
+    .chip-option.energy:checked + .chip-label.low       { background: var(--chip-low);       border-color: var(--chip-low); }
+    .chip-option.block:checked  + .chip-label.morning   { background: var(--chip-morning);   border-color: var(--chip-morning); }
+    .chip-option.block:checked  + .chip-label.afternoon { background: var(--chip-afternoon); border-color: var(--chip-afternoon); }
+    .chip-option.block:checked  + .chip-label.evening   { background: var(--chip-evening);   border-color: var(--chip-evening); }
 
     /* ── Divider ── */
     .divider { border: none; border-top: 1px solid var(--md-border, var(--border)); margin: 1.4rem 0; }
@@ -159,6 +179,12 @@
           <textarea id="description" name="description" placeholder="Any extra context, links, or steps…">{{ task.description or '' }}</textarea>
         </div>
 
+        <!-- Assignee -->
+        <div class="field">
+          <label for="assignee">Assigned to (optional)</label>
+          <input type="text" id="assignee" name="assignee" value="{{ task.assignee or '' }}" placeholder="e.g. Paul, Maria…" />
+        </div>
+
         <hr class="divider" />
         <div class="section-label">Status &amp; priority</div>
 
@@ -182,6 +208,12 @@
               <option value="high"   {% if task.priority == 'high'   %}selected{% endif %}>High</option>
             </select>
           </div>
+        </div>
+
+        <!-- Status note -->
+        <div class="field" style="margin-top:.85rem;">
+          <label for="status_note">Status note <span style="font-weight:400;color:var(--text-muted)">(why it's waiting, blockers, context…)</span></label>
+          <textarea id="status_note" name="status_note" placeholder="e.g. Waiting on response from client…">{{ task.status_note or '' }}</textarea>
         </div>
 
         <div class="field-grid" style="margin-top:.85rem;">

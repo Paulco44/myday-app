@@ -60,6 +60,8 @@ def run_migrations():
         ("today_flag", "BOOLEAN DEFAULT 0"),
         ("today_category", "VARCHAR(10)"),
         ("card_id", "INTEGER"),             # bridge: linked Kanban card
+        ("status_note", "TEXT"),
+        ("assignee", "VARCHAR(100)"),
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
@@ -260,7 +262,10 @@ def build_suggestions(db: Session, today: date, exclude_ids: set, energy_today: 
     base_filter = [
         models.Task.is_today == False,
         models.Task.status != "done",
-        models.Task.focus_state != "later",
+        or_(
+            models.Task.focus_state != "later",
+            models.Task.due_date == today,  # always surface due-today even if parked
+        ),
     ]
     candidates = db.query(models.Task).filter(*base_filter).all()
 
@@ -323,8 +328,34 @@ async def lifespan(app):
 app = FastAPI(title="MyDay Task Manager", lifespan=lifespan)
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+import re as _re
+
+def _datefmt(dt, fmt: str) -> str:
+    """Cross-platform strftime: %-d, %-I etc. strip leading zeros on all OSes."""
+    if dt is None:
+        return ''
+    if '%-' in fmt:
+        def _strip_zero(m):
+            val = dt.strftime(f'%{m.group(1)}').lstrip('0')
+            return val or '0'
+        fmt = _re.sub(r'%-([dIHmMS])', _strip_zero, fmt)
+    return dt.strftime(fmt)
+
+templates.env.filters['datefmt'] = _datefmt
+
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 app.mount(f"{BASE}/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+# ─── Root redirect ───────────────────────────────────────────────────────────
+
+@app.get("/")
+async def root_redirect(db: Session = Depends(get_db)):
+    today = date.today()
+    log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+    if not log or not log.has_morning_checkin:
+        return RedirectResponse(url=f"{BASE}/morning-checkin", status_code=302)
+    return RedirectResponse(url=f"{BASE}/my-day", status_code=302)
 
 
 # ─── Health ──────────────────────────────────────────────────────────────────
@@ -538,10 +569,18 @@ async def my_day(
         .all()
     )
 
+    projects = (
+        db.query(models.Project)
+        .filter(models.Project.is_active == True)
+        .order_by(models.Project.name)
+        .all()
+    )
+
     return templates.TemplateResponse(
         request, "my_day.html",
         {
             "wins_tasks": wins_tasks,
+            "projects": projects,
             "nice_tasks": nice_tasks,
             "done_wins": done_wins,
             "now_task": now_task,
@@ -873,6 +912,8 @@ async def edit_task_post(
     energy_type: Optional[str] = Form(None),
     time_estimate_minutes: Optional[str] = Form(None),
     project_id: Optional[str] = Form(None),
+    status_note: Optional[str] = Form(None),
+    assignee: Optional[str] = Form(None),
     back: str = Form(default=""),
     db: Session = Depends(get_db),
 ):
@@ -883,6 +924,8 @@ async def edit_task_post(
     db_task.status = status
     db_task.priority = priority
     db_task.description = description or None
+    db_task.status_note = status_note or None
+    db_task.assignee = assignee.strip() if assignee and assignee.strip() else None
     db_task.focus_state = focus_state if focus_state and focus_state != "none" else None
     db_task.time_block = time_block if time_block and time_block != "none" else None
     db_task.energy_tag = energy_tag if energy_tag and energy_tag != "none" else None
@@ -1163,11 +1206,18 @@ async def tasks_page(
         query = query.filter(models.Task.is_today == is_today)
     tasks = query.order_by(models.Task.created_at.desc()).all()
     projects = db.query(models.Project).all()
+    recurring = (
+        db.query(models.RecurringTask)
+        .filter(models.RecurringTask.active == True)
+        .order_by(models.RecurringTask.title)
+        .all()
+    )
     return templates.TemplateResponse(
         request, "tasks.html",
         {
             "tasks": tasks,
             "projects": projects,
+            "recurring": recurring,
             "base": BASE,
             "current_status": status,
             "current_project_id": project_id,
@@ -1218,6 +1268,32 @@ async def delete_task_form(task_id: int, db: Session = Depends(get_db)):
         db.delete(db_task)
         db.commit()
     return RedirectResponse(url=f"{BASE}/tasks-page", status_code=303)
+
+
+@app.post(f"{BASE}/tasks/bulk")
+async def bulk_tasks(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    ids = [int(i) for i in data.get("ids", []) if str(i).isdigit()]
+    action = data.get("action", "")
+    value = data.get("value", "")
+    if not ids or action not in ("status", "delete"):
+        return JSONResponse({"ok": False, "error": "Invalid request"}, status_code=400)
+    tasks = db.query(models.Task).filter(models.Task.id.in_(ids)).all()
+    if action == "delete":
+        for t in tasks:
+            if t.card_id:
+                try:
+                    db.execute(sa_text("UPDATE cards SET task_id = NULL WHERE id = :cid"), {"cid": t.card_id})
+                except Exception:
+                    pass
+            db.delete(t)
+    elif action == "status":
+        for t in tasks:
+            t.status = value
+            if value == "done" and not t.completed_at:
+                t.completed_at = datetime.utcnow()
+    db.commit()
+    return JSONResponse({"ok": True, "count": len(tasks)})
 
 
 # ─── CoP Admin (HTML) ─────────────────────────────────────────────────────────
@@ -1405,6 +1481,37 @@ def list_tasks(
     return query.order_by(models.Task.created_at.desc()).all()
 
 
+@app.get(f"{BASE}/tasks/{{task_id}}", response_model=schemas.TaskDetail)
+def get_task(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    result = schemas.TaskDetail.model_validate(task)
+    result.subtasks = [schemas.SubtaskRead.model_validate(s) for s in task.subtasks]
+    result.project_name = task.project.name if task.project else None
+    return result
+
+
+@app.patch(f"{BASE}/tasks/{{task_id}}", response_model=schemas.TaskRead)
+def patch_task(task_id: int, update: schemas.TaskUpdate, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    for field, value in update.model_dump(exclude_unset=True).items():
+        setattr(task, field, value)
+    if update.status == "done" and not task.completed_at:
+        task.completed_at = datetime.utcnow()
+    task.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+@app.get(f"{BASE}/projects-api", response_model=List[schemas.ProjectRead])
+def list_projects_api(db: Session = Depends(get_db)):
+    return db.query(models.Project).filter(models.Project.is_active == True).order_by(models.Project.name).all()
+
+
 @app.post(f"{BASE}/tasks", response_model=schemas.TaskRead, status_code=201)
 def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     db_task = models.Task(**task.model_dump())
@@ -1489,6 +1596,7 @@ async def quick_add_task(
     priority: str = Form("medium"),
     energy_type: Optional[str] = Form(default=None),
     time_estimate_minutes: Optional[int] = Form(default=None),
+    project_id: Optional[str] = Form(default=None),
     db: Session = Depends(get_db),
 ):
     task = models.Task(
@@ -1497,6 +1605,7 @@ async def quick_add_task(
         status="todo",
         energy_type=energy_type or None,
         time_estimate_minutes=time_estimate_minutes or None,
+        project_id=int(project_id) if project_id and project_id.strip().isdigit() else None,
     )
     db.add(task)
     db.commit()

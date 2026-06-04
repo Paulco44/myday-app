@@ -120,6 +120,23 @@
     .task-row-body { flex: 1; min-width: 0; }
     .task-row-title { font-weight: 600; font-size: .9rem; line-height: 1.4; margin-bottom: 0; color: var(--text); }
 
+    /* ── Plan sub-section headers (NEXT UP / LATER TODAY) ── */
+    .plan-sub-head {
+      display: flex; align-items: center; gap: .4rem;
+      font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--md-text-faint, var(--text-faint));
+      padding: .55rem .25rem .3rem;
+      cursor: pointer; user-select: none;
+      border-top: 1px solid var(--md-border-subtle, var(--border));
+      margin-top: .15rem;
+    }
+    .plan-sub-head:first-child { border-top: none; margin-top: 0; }
+    .plan-sub-head .sub-count { background: var(--md-ctrl-bg, #F3F4F6); color: var(--md-text-muted, #6B7280); font-size: .68rem; font-weight: 700; border-radius: 999px; padding: .05rem .4rem; margin-left: .15rem; }
+    .plan-sub-head .collapse-chevron { margin-left: auto; font-size: .8rem; transition: transform 200ms ease; }
+    .plan-sub-head.collapsed .collapse-chevron { transform: rotate(-90deg); }
+    .plan-sub-body { overflow: hidden; transition: max-height 280ms ease, opacity 220ms ease; }
+    .plan-sub-body.collapsed { max-height: 0 !important; opacity: 0; }
+
     /* Progressive disclosure: meta hidden until hover/expanded */
     .task-row-meta {
       display: flex; gap: .35rem; flex-wrap: wrap; align-items: center;
@@ -406,7 +423,7 @@
             {% endif %}
           </span>
         </div>
-        <div class="date">{{ today.strftime('%A, %B %-d, %Y') }}{% if not today_started %} · <a href="{{ base }}/morning-checkin" style="color:var(--accent);font-weight:600;text-decoration:none;">Brain dump →</a>{% endif %}</div>
+        <div class="date">{{ today | datefmt('%A, %B %-d, %Y') }}{% if not today_started %} · <a href="{{ base }}/morning-checkin" style="color:var(--accent);font-weight:600;text-decoration:none;">Brain dump →</a>{% endif %}</div>
       </div>
       {% if not today_started %}
       <form method="post" action="{{ base }}/my-day/start-today">
@@ -535,7 +552,7 @@
     {% if now_task %}
     <div class="now-strip" id="now-strip-{{ now_task.id }}">
       <div class="now-label">⚡ Now — Single Focus</div>
-      <div class="now-title">{{ now_task.title }}</div>
+      <div class="now-title task-panel-trigger" onclick="openTaskPanel({{ now_task.id }})">{{ now_task.title }}</div>
       <div class="now-meta">
         {% if now_task.energy_tag %}<span class="etag etag-{{ now_task.energy_tag }}">{{ now_task.energy_tag.replace('_',' ') }}</span>{% endif %}
         {% if now_task.time_block %}<span class="tblock tblock-{{ now_task.time_block }}">{{ now_task.time_block.capitalize() }}</span>{% endif %}
@@ -608,7 +625,7 @@
         {% for task in wins_tasks %}
         <div class="win-row">
           <div class="win-body">
-            <div class="win-title">{{ task.title }}</div>
+            <div class="win-title task-panel-trigger" onclick="openTaskPanel({{ task.id }})">{{ task.title }}</div>
             <div class="win-meta">
               {% if task.energy_type %}<span class="etag etag-{{ task.energy_type }}">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
               {% if task.time_estimate_minutes %}<span class="tblock">⏱ {{ task.time_estimate_minutes }} min</span>{% endif %}
@@ -632,7 +649,7 @@
         {% for task in done_wins %}
         <div class="win-row is-done">
           <div class="win-body">
-            <div class="win-title">{{ task.title }}</div>
+            <div class="win-title task-panel-trigger" onclick="openTaskPanel({{ task.id }})">{{ task.title }}</div>
           </div>
           <div class="win-actions">
             <span style="font-size:.82rem;color:var(--success);font-weight:700;">✓ Done</span>
@@ -661,7 +678,7 @@
         {% for task in nice_tasks %}
         <div class="nice-row">
           <div class="win-body">
-            <div class="win-title">{{ task.title }}</div>
+            <div class="win-title task-panel-trigger" onclick="openTaskPanel({{ task.id }})">{{ task.title }}</div>
             <div class="win-meta">
               {% if task.energy_type %}<span class="etag etag-{{ task.energy_type }}">{{ task.energy_type.replace('_',' ') }}</span>{% endif %}
               {% if task.time_estimate_minutes %}<span class="tblock">⏱ {{ task.time_estimate_minutes }} min</span>{% endif %}
@@ -710,11 +727,16 @@
       <div class="focus-panel">
 
         {% if next_task %}
+        <div class="plan-sub-head" data-section="sub-next"
+             onclick="toggleSection(this,'sub-next')">
+          Next Up <span class="sub-count">1</span>
+          <span class="collapse-chevron">▾</span>
+        </div>
+        <div class="plan-sub-body" id="sb-sub-next">
         <div class="task-row is-next">
           <div class="task-row-body">
-            <div class="task-row-title">{{ next_task.title }}</div>
+            <div class="task-row-title task-panel-trigger" onclick="openTaskPanel({{ next_task.id }})">{{ next_task.title }}</div>
             <div class="task-row-meta">
-              <span style="font-size:.82rem;font-weight:700;color:#d97706;letter-spacing:.04em;">NEXT UP</span>
               {% if next_task.energy_tag %}<span class="etag etag-{{ next_task.energy_tag }}">{{ next_task.energy_tag.replace('_',' ') }}</span>{% endif %}
               {% if next_task.time_block %}<span class="tblock tblock-{{ next_task.time_block }}">{{ next_task.time_block.capitalize() }}</span>{% endif %}
               <span class="pri-{{ next_task.priority }}">{{ next_task.priority | upper }}</span>
@@ -735,14 +757,22 @@
             <a class="btn-edit-task" href="{{ base }}/tasks/{{ next_task.id }}/edit?back={{ base }}/my-day">✎ Edit</a>
           </div>
         </div>
+        </div><!-- /sb-sub-next -->
         {% endif %}
 
+        {% if later_today_tasks %}
+        <div class="plan-sub-head" data-section="sub-later"
+             data-default-closed="{{ 'true' if later_today_tasks | length >= 4 else 'false' }}"
+             onclick="toggleSection(this,'sub-later')">
+          Later Today <span class="sub-count">{{ later_today_tasks | length }}{% if later_today_overflow > 0 %}+{% endif %}</span>
+          <span class="collapse-chevron">▾</span>
+        </div>
+        <div class="plan-sub-body" id="sb-sub-later">
         {% for task in later_today_tasks %}
         <div class="task-row is-later">
           <div class="task-row-body">
-            <div class="task-row-title">{{ task.title }}</div>
+            <div class="task-row-title task-panel-trigger" onclick="openTaskPanel({{ task.id }})">{{ task.title }}</div>
             <div class="task-row-meta">
-              <span style="font-size:.82rem;color:var(--text-faint);font-weight:600;">Later today</span>
               {% if task.energy_tag %}<span class="etag etag-{{ task.energy_tag }}">{{ task.energy_tag.replace('_',' ') }}</span>{% endif %}
               {% if task.time_block %}<span class="tblock tblock-{{ task.time_block }}">{{ task.time_block.capitalize() }}</span>{% endif %}
               <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
@@ -780,6 +810,8 @@
           + {{ later_today_overflow }} more parked for today —
           <span style="color:var(--accent);cursor:default;">they're safe, focus on the ones above.</span>
         </div>
+        {% endif %}
+        </div><!-- /sb-sub-later -->
         {% endif %}
 
       </div>
@@ -878,7 +910,7 @@
           <div class="capture-info">
             <div class="capture-title">{{ item.title | truncate(42) }}</div>
             <div class="capture-meta">
-              <span class="capture-time">{{ item.created_at.strftime('%-d %b · %-I:%M%p') | lower }}</span>
+              <span class="capture-time">{{ item.created_at | datefmt('%-d %b · %-I:%M%p') | lower }}</span>
               <span class="capture-status capture-status-{{ item.status }}">{{ item.status }}</span>
             </div>
           </div>
@@ -941,6 +973,16 @@
           <span class="quick-hint">N to open · Esc to close</span>
         </div>
 
+        {% if projects %}
+        <div class="quick-section-label">Project <span class="quick-opt">(optional)</span></div>
+        <select id="quick-project" style="width:100%;padding:.45rem .6rem;border:1px solid var(--border);border-radius:.4rem;background:var(--surface);color:var(--text);font-size:.88rem;font-family:inherit;margin-bottom:.25rem;">
+          <option value="">— No project —</option>
+          {% for p in projects %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+
         <button class="quick-submit" type="submit">Add Task →</button>
       </form>
     </div>
@@ -989,6 +1031,8 @@
       _selectedPri = 'medium';
       document.getElementById('quick-energy-val').value = '';
       document.getElementById('quick-title').value = '';
+      const qp = document.getElementById('quick-project');
+      if (qp) qp.value = '';
       document.getElementById('quick-modal').showModal();
       setTimeout(() => document.getElementById('quick-title').focus(), 50);
     }
@@ -1020,6 +1064,8 @@
       const energy = document.getElementById('quick-energy-val').value;
       if (energy)        params.energy_type = energy;
       if (_selectedTime) params.time_estimate_minutes = _selectedTime;
+      const projEl = document.getElementById('quick-project');
+      if (projEl && projEl.value) params.project_id = projEl.value;
       const body = new URLSearchParams(params);
       try {
         const r = await fetch(`${BASE}/tasks/quick-add`, { method: 'POST', body });
@@ -1077,15 +1123,33 @@
 
     // ─── Completion circle animation on submit ─────────────────────────────────────
     function celebrateDone() {
+      // Pulse the streak counter
       const streakEl = document.querySelector('.hs-item');
       if (streakEl) {
-        streakEl.style.transition = 'transform 200ms ease';
-        streakEl.style.transform = 'scale(1.15)';
+        streakEl.style.transition = 'transform 200ms ease, color 200ms ease';
+        streakEl.style.transform = 'scale(1.18)';
         streakEl.style.color = 'var(--md-success, var(--success))';
         setTimeout(() => {
           streakEl.style.transform = 'scale(1)';
           setTimeout(() => { streakEl.style.color = ''; }, 300);
         }, 250);
+      }
+      // Count-up the "done" counter
+      const allStats = document.querySelectorAll('.hs-item');
+      const doneEl = Array.from(allStats).find(el => /\d+\s+done/.test(el.textContent));
+      if (doneEl) {
+        const match = doneEl.textContent.match(/(\d+)/);
+        if (match) {
+          const next = parseInt(match[1], 10) + 1;
+          doneEl.textContent = doneEl.textContent.replace(/\d+/, next);
+          doneEl.style.transition = 'transform 200ms ease, color 200ms ease';
+          doneEl.style.transform = 'scale(1.18)';
+          doneEl.style.color = 'var(--md-success, var(--success))';
+          setTimeout(() => {
+            doneEl.style.transform = 'scale(1)';
+            setTimeout(() => { doneEl.style.color = ''; }, 300);
+          }, 250);
+        }
       }
     }
 
@@ -1100,5 +1164,7 @@
     });
   </script>
   <script src="{{ base }}/static/app.js?v=20"></script>
+  <script src="{{ base }}/static/panel.js"></script>
+  {% include '_task_panel.html' %}
 </body>
 </html>
