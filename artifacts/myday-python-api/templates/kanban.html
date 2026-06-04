@@ -5,19 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kanban — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
-    /* ── Nav ── */
-    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; gap: 0; height: 3.25rem; flex-shrink: 0; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
-    .nav-links { display: flex; gap: 0; }
-    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s; }
-    .nav-links a:hover { color: var(--text); }
-    .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
     .wip-info { margin-left: auto; font-size: .8rem; color: #94a3b8; }
     .wip-info strong { color: #475569; }
 
@@ -65,7 +58,8 @@
     html.dark .card:has(.pri-medium) { border-left-color: #F97316; }
     html.dark .card:has(.pri-low)    { border-left-color: #374151; }
 
-    .card-title { font-weight: 600; font-size: .87rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-title { font-weight: 600; font-size: .87rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; cursor: default; }
+    .card-title[title]:hover::after { content: attr(title); position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #1e293b; color: #f8fafc; padding: .4rem .75rem; border-radius: .4rem; font-size: .8rem; font-weight: 500; max-width: 320px; white-space: normal; line-height: 1.4; z-index: 9999; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
     .card-meta { margin-top: .35rem; display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
     .pri-high   { color: #dc2626; font-weight: 700; font-size:.82rem; }
     .pri-medium { color: #d97706; font-size:.82rem; }
@@ -119,42 +113,21 @@
     .empty-col { text-align: center; padding: 1rem .5rem; color: #94a3b8; font-size: .8rem; }
   </style>
 </head>
-<body>
+<body class="theme-quiet">
 
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/" class="active">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-    <span class="wip-info">WIP limit (Doing): <strong>{{ wip_limit }}</strong></span>
-    <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
-    </div>
-  </nav>
+  {% include "_nav.html" %}
 
   <div id="kanban-wins" class="kanban-wins-bar {% if done_today_count > 0 %}has-wins{% endif %}">
-    <span id="kanban-wins-count">✦ <strong id="kanban-wins-num">{{ done_today_count }}</strong> done today</span>
+    <span id="kanban-wins-count"><strong id="kanban-wins-num">{{ done_today_count }}</strong> done today</span>
   </div>
 
   <div class="energy-filter-bar">
     <span class="energy-filter-label">Filter:</span>
     <button class="energy-filter-btn active" data-energy="all">All</button>
-    <button class="energy-filter-btn" data-energy="creative">🎨</button>
-    <button class="energy-filter-btn" data-energy="admin">📋</button>
-    <button class="energy-filter-btn" data-energy="social">💬</button>
-    <button class="energy-filter-btn" data-energy="low_energy">🌙</button>
+    <button class="energy-filter-btn" data-energy="creative">Creative</button>
+    <button class="energy-filter-btn" data-energy="admin">Admin</button>
+    <button class="energy-filter-btn" data-energy="social">Social</button>
+    <button class="energy-filter-btn" data-energy="low_energy">Low energy</button>
   </div>
 
   <div class="board" id="board">
@@ -172,7 +145,7 @@
         <div>
           <div class="column-title">{{ status_labels[status] }}</div>
           {% if is_doing and exceeded %}
-          <div class="wip-warn">⚠ WIP limit exceeded ({{ tasks | length }}/{{ wip_limit }})</div>
+          <div class="wip-warn">WIP limit exceeded ({{ tasks | length }}/{{ wip_limit }})</div>
           {% endif %}
         </div>
         <span class="col-count">{{ tasks | length }}</span>
@@ -203,26 +176,26 @@
           <!-- Preview content -->
           <div class="card-preview">
             {% if task.id == now_task_id %}
-            <div class="card-now-badge">▶ NOW</div>
+            <div class="card-now-badge">NOW</div>
             {% endif %}
-            <div class="card-title">{{ task.title }}</div>
+            <div class="card-title" title="{{ task.title }}">{{ task.title }}</div>
             <div class="card-meta">
               <span class="pri-{{ task.priority }}">{{ task.priority | upper }}</span>
               {% if task.due_date %}
               <span class="card-due {% if task.due_date < today %}overdue{% endif %}">
-                {{ task.due_date.strftime('%b %-d') }}
+                {{ task.due_date | datefmt('%b %-d') }}
               </span>
               {% endif %}
               {% if task.project %}<span class="card-project">{{ task.project.name }}</span>{% endif %}
               {% if task.is_today %}<span class="card-today">Today</span>{% endif %}
               {% if task.energy_type %}
-              <span class="etag etag-{{ task.energy_type }}">{% if task.energy_type == 'creative' %}🎨 Creative{% elif task.energy_type == 'admin' %}📋 Admin{% elif task.energy_type == 'social' %}💬 Social{% elif task.energy_type == 'low_energy' %}🌙 Low energy{% endif %}</span>
+              <span class="etag etag-{{ task.energy_type }}">{% if task.energy_type == 'creative' %}Creative{% elif task.energy_type == 'admin' %}Admin{% elif task.energy_type == 'social' %}Social{% elif task.energy_type == 'low_energy' %}Low energy{% endif %}</span>
               {% endif %}
               {% if task.time_estimate_minutes %}
-              <span class="card-estimate">⏱ {{ task.time_estimate_minutes }} min</span>
+              <span class="card-estimate">{{ task.time_estimate_minutes }} min</span>
               {% endif %}
               <button class="btn-set-now" type="button"
-                      data-task-id="{{ task.id }}">▶ Set NOW</button>
+                      data-task-id="{{ task.id }}">Set NOW</button>
               {% if task.id == now_task_id %}
               <button class="btn-clear-now" type="button"
                       data-task-id="{{ task.id }}">✕ Clear</button>
@@ -405,7 +378,7 @@
           ? formatDate(data.task.due_date)
           : '';
         preview.innerHTML = `
-          <div class="card-title">${escHtml(data.task.title)}</div>
+          <div class="card-title" title="${escHtml(data.task.title)}">${escHtml(data.task.title)}</div>
           <div class="card-meta">
             <span class="pri-${data.task.priority}">${data.task.priority.toUpperCase()}</span>
             ${dueFmt ? `<span class="card-due">${dueFmt}</span>` : ''}
@@ -455,6 +428,6 @@
     }
   </script>
 
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>

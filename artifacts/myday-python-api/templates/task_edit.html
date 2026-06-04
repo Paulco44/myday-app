@@ -6,20 +6,12 @@
   <title>Edit Task — MyDay</title>
     <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=19" />
+<link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <link rel="stylesheet" href="{{ base }}/static/tokens.css?v=19" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--md-font-family, 'Lexend', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); background: var(--md-bg, var(--bg)); color: var(--md-text, var(--text)); min-height: 100vh; }
-
-    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
-    .nav-links { display: flex; }
-    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: var(--md-text-muted, var(--text-muted)); text-decoration: none; border-bottom: 2px solid transparent; }
-    .nav-links a:hover { color: var(--text); }
-    .nav-links a.checkin { color: var(--md-warning-text, #D97706); font-weight: 600; }
-    .nav-links a.nav-focus { font-size: .82rem; color: var(--md-text-faint, var(--text-faint)); }
-    .nav-links a.nav-focus:hover { color: var(--md-text-muted, var(--text-muted)); }
 
     main { max-width: 580px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 
@@ -82,14 +74,34 @@
       color: #fff;
     }
 
+    /* Energy & time-block color tokens (local — dark mode aware) */
+    :root {
+      --chip-creative: #5b21b6;
+      --chip-admin:    #1e40af;
+      --chip-social:   #065f46;
+      --chip-low:      #92400e;
+      --chip-morning:  #92400e;
+      --chip-afternoon:#1e40af;
+      --chip-evening:  #5b21b6;
+    }
+    html.dark {
+      --chip-creative: #a78bfa;
+      --chip-admin:    #60a5fa;
+      --chip-social:   #34d399;
+      --chip-low:      #fb923c;
+      --chip-morning:  #fb923c;
+      --chip-afternoon:#60a5fa;
+      --chip-evening:  #a78bfa;
+    }
+
     /* Coloured chip variants */
-    .chip-option.energy:checked + .chip-label.creative { background: #5b21b6; border-color: #5b21b6; }
-    .chip-option.energy:checked + .chip-label.admin { background: #1e40af; border-color: #1e40af; }
-    .chip-option.energy:checked + .chip-label.social { background: #065f46; border-color: #065f46; }
-    .chip-option.energy:checked + .chip-label.low { background: #92400e; border-color: #92400e; }
-    .chip-option.block:checked + .chip-label.morning { background: #92400e; border-color: #92400e; }
-    .chip-option.block:checked + .chip-label.afternoon { background: #1e40af; border-color: #1e40af; }
-    .chip-option.block:checked + .chip-label.evening { background: #5b21b6; border-color: #5b21b6; }
+    .chip-option.energy:checked + .chip-label.creative  { background: var(--chip-creative);  border-color: var(--chip-creative); }
+    .chip-option.energy:checked + .chip-label.admin     { background: var(--chip-admin);     border-color: var(--chip-admin); }
+    .chip-option.energy:checked + .chip-label.social    { background: var(--chip-social);    border-color: var(--chip-social); }
+    .chip-option.energy:checked + .chip-label.low       { background: var(--chip-low);       border-color: var(--chip-low); }
+    .chip-option.block:checked  + .chip-label.morning   { background: var(--chip-morning);   border-color: var(--chip-morning); }
+    .chip-option.block:checked  + .chip-label.afternoon { background: var(--chip-afternoon); border-color: var(--chip-afternoon); }
+    .chip-option.block:checked  + .chip-label.evening   { background: var(--chip-evening);   border-color: var(--chip-evening); }
 
     /* ── Divider ── */
     .divider { border: none; border-top: 1px solid var(--md-border, var(--border)); margin: 1.4rem 0; }
@@ -116,28 +128,8 @@
     }
   </style>
 </head>
-<body>
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="checkin">✦ Check In</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review">Review</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-      <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
-    </div>
-  </nav>
+<body class="theme-quiet">
+  {% include "_nav.html" %}
 
   <main>
     <a class="page-back" href="{{ back }}">← Back</a>
@@ -157,6 +149,12 @@
         <div class="field">
           <label for="description">Notes (optional)</label>
           <textarea id="description" name="description" placeholder="Any extra context, links, or steps…">{{ task.description or '' }}</textarea>
+        </div>
+
+        <!-- Assignee -->
+        <div class="field">
+          <label for="assignee">Assigned to (optional)</label>
+          <input type="text" id="assignee" name="assignee" value="{{ task.assignee or '' }}" placeholder="e.g. Paul, Maria…" />
         </div>
 
         <hr class="divider" />
@@ -182,6 +180,12 @@
               <option value="high"   {% if task.priority == 'high'   %}selected{% endif %}>High</option>
             </select>
           </div>
+        </div>
+
+        <!-- Status note -->
+        <div class="field" style="margin-top:.85rem;">
+          <label for="status_note">Status note <span style="font-weight:400;color:var(--text-muted)">(why it's waiting, blockers, context…)</span></label>
+          <textarea id="status_note" name="status_note" placeholder="e.g. Waiting on response from client…">{{ task.status_note or '' }}</textarea>
         </div>
 
         <div class="field-grid" style="margin-top:.85rem;">
@@ -217,7 +221,7 @@
 
             <input class="chip-option" type="radio" name="focus_state" id="fs_now" value="now"
               {% if task.focus_state == 'now' %}checked{% endif %} />
-            <label class="chip-label" for="fs_now">⚡ Now</label>
+            <label class="chip-label" for="fs_now">Now</label>
 
             <input class="chip-option" type="radio" name="focus_state" id="fs_next" value="next"
               {% if task.focus_state == 'next' %}checked{% endif %} />
@@ -243,15 +247,15 @@
 
             <input class="chip-option block" type="radio" name="time_block" id="tb_morning" value="morning"
               {% if task.time_block == 'morning' %}checked{% endif %} />
-            <label class="chip-label morning" for="tb_morning">🌅 Morning</label>
+            <label class="chip-label morning" for="tb_morning">Morning</label>
 
             <input class="chip-option block" type="radio" name="time_block" id="tb_afternoon" value="afternoon"
               {% if task.time_block == 'afternoon' %}checked{% endif %} />
-            <label class="chip-label afternoon" for="tb_afternoon">☀️ Afternoon</label>
+            <label class="chip-label afternoon" for="tb_afternoon">Afternoon</label>
 
             <input class="chip-option block" type="radio" name="time_block" id="tb_evening" value="evening"
               {% if task.time_block == 'evening' %}checked{% endif %} />
-            <label class="chip-label evening" for="tb_evening">🌙 Evening</label>
+            <label class="chip-label evening" for="tb_evening">Evening</label>
           </div>
         </div>
 
@@ -265,19 +269,19 @@
 
             <input class="chip-option energy" type="radio" name="energy_tag" id="et_creative" value="creative"
               {% if task.energy_tag == 'creative' %}checked{% endif %} />
-            <label class="chip-label creative" for="et_creative">✨ Creative</label>
+            <label class="chip-label creative" for="et_creative">Creative</label>
 
             <input class="chip-option energy" type="radio" name="energy_tag" id="et_admin" value="admin"
               {% if task.energy_tag == 'admin' %}checked{% endif %} />
-            <label class="chip-label admin" for="et_admin">📋 Admin</label>
+            <label class="chip-label admin" for="et_admin">Admin</label>
 
             <input class="chip-option energy" type="radio" name="energy_tag" id="et_social" value="social"
               {% if task.energy_tag == 'social' %}checked{% endif %} />
-            <label class="chip-label social" for="et_social">💬 Social</label>
+            <label class="chip-label social" for="et_social">Social</label>
 
             <input class="chip-option energy" type="radio" name="energy_tag" id="et_low" value="low_energy"
               {% if task.energy_tag == 'low_energy' %}checked{% endif %} />
-            <label class="chip-label low" for="et_low">🌿 Low energy</label>
+            <label class="chip-label low" for="et_low">Low energy</label>
           </div>
           <div class="field-hint">Helps match tasks to how you feel at different times of day.</div>
         </div>
@@ -302,6 +306,6 @@
       </form>
     </div>
   </main>
-<script src="{{ base }}/static/app.js?v=19"></script>
+<script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>

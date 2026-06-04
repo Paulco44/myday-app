@@ -1,0 +1,318 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MyDay — Quiet design system (pilot)
+   ───────────────────────────────────────────────────────────────────────────
+   The new single design layer. Scoped to `body.theme-quiet` so it can be
+   adopted page-by-page without disturbing the rest of the app (or the React
+   Kanban that shares tokens.css).
+
+   It works by re-defining the shared --md-* tokens within the scope. Because
+   every component already reads var(--accent)/var(--surface)/... (which map to
+   --md-*), the whole page's feel changes WITHOUT rewriting component CSS.
+
+   Direction: elegant · modern · quiet · low contrast · accent only where it
+   earns it · light weights · no emoji · hierarchy through space & tone.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+/* ── Quiet palette — light ── */
+body.theme-quiet {
+  /* Surfaces — warm paper, minimal step between layers */
+  --md-bg:            #FBFBFA;
+  --md-surface:       #FFFFFF;
+  --md-surface-alt:   #F5F5F3;
+
+  /* Borders — hairline, very low contrast */
+  --md-border:        #EAE8E3;
+  --md-border-subtle: #F2F1ED;
+  --md-border-focus:  #5B5FC7;
+
+  /* Text — warm near-black, not pure; softer mutes */
+  --md-text:          #2D2A26;
+  --md-text-muted:    #7A766E;
+  --md-text-faint:    #ADA89F;
+
+  /* Accent — restrained muted indigo, used sparingly */
+  --md-primary:       #5B5FC7;
+  --md-primary-hover: #4B4FB0;
+  --md-primary-soft:  #ECEDF8;
+  --md-primary-text:  #43469A;
+
+  /* Semantics — desaturated; meant for small text/dots, never big fills */
+  --md-success:        #4F9D69;
+  --md-success-soft:   #ECF3EE;
+  --md-success-border: #D2E4D8;
+  --md-success-text:   #3C7A52;
+  --md-warning:        #B07D3B;
+  --md-warning-soft:   #F5EEE2;
+  --md-warning-border: #E6D5B6;
+  --md-warning-text:   #8A6224;
+  --md-danger:         #B5524E;
+  --md-danger-soft:    #F5E9E8;
+  --md-danger-border:  #E6C9C7;
+
+  --md-focus-bg:   #ECEDF8;
+  --md-focus-ring: #C5C7EC;
+  --md-ctrl-bg:    #F2F1EE;
+  --md-ctrl-hover: #E9E7E2;
+
+  /* Buttons — warm graphite fill (keeps the indigo accent for text/links only) */
+  --btn-bg:       #36322C;
+  --btn-bg-hover: #47423A;
+  --btn-fg:       #FBFBFA;
+
+  /* Radius — collapse to two calm values */
+  --md-radius-sm: 8px;
+  --md-radius:    10px;
+  --md-radius-lg: 12px;
+  --md-radius-xl: 14px;
+  --md-radius-md: 10px;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0;
+}
+
+/* ── Quiet palette — dark (higher specificity beats tokens.css html.dark) ── */
+html.dark body.theme-quiet {
+  --md-bg:            #161618;
+  --md-surface:       #1D1D20;
+  --md-surface-alt:   #232327;
+  --md-border:        #2C2C30;
+  --md-border-subtle: #242427;
+  --md-text:          #E9E7E2;
+  --md-text-muted:    #9A958D;
+  --md-text-faint:    #6A665F;
+  --md-primary:       #9498E6;
+  --md-primary-hover: #B0B3EF;
+  --md-primary-soft:  #232348;
+  --md-primary-text:  #C7C9F2;
+  --md-success:        #5FB47C;
+  --md-success-soft:   #16261B;
+  --md-warning:        #C79A57;
+  --md-warning-soft:   #2A2113;
+  --md-danger:         #D08682;
+  --md-danger-soft:    #2A1716;
+  --md-ctrl-bg:        #242427;
+  --md-ctrl-hover:     #2E2E32;
+
+  /* Buttons — inverted off-white in dark (elegant, quiet) */
+  --btn-bg:       #ECEAE6;
+  --btn-bg-hover: #FFFFFF;
+  --btn-fg:       #1D1D20;
+}
+
+/* ═══ Quieting layer — invert the old "hard rules" ═══════════════════════════ */
+
+/* Typography: light weights, calmer headings. Cap the 700/800 shouting. */
+.theme-quiet h1 { font-weight: 600; letter-spacing: -.015em; font-size: 1.3rem; }
+.theme-quiet h2, .theme-quiet h3 { font-weight: 600; letter-spacing: -.01em; }
+.theme-quiet .now-title,
+.theme-quiet .section-head h2,
+.theme-quiet .wins-head h2,
+.theme-quiet .page-header-left h1 { font-weight: 600 !important; }
+.theme-quiet .now-label,
+.theme-quiet .inbox-nudge-title { font-weight: 600 !important; letter-spacing: .06em; }
+.theme-quiet strong, .theme-quiet b { font-weight: 600; }
+
+/* Depth: remove shadows; rely on hairline borders / surface steps. */
+.theme-quiet .now-strip,
+.theme-quiet .task-row,
+.theme-quiet .task-row:hover,
+.theme-quiet .win-row,
+.theme-quiet .win-row:hover,
+.theme-quiet .nice-row,
+.theme-quiet .nice-row:hover,
+.theme-quiet .suggestion-row,
+.theme-quiet .md-right-card,
+.theme-quiet .inbox-nudge,
+.theme-quiet .mdb-card,
+.theme-quiet .cop-accordion { box-shadow: none !important; }
+
+/* NOW strip: from saturated fill → quiet card with a single accent edge. */
+.theme-quiet .now-strip {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-left: 2px solid var(--accent) !important;
+  border-radius: 12px !important;
+}
+.theme-quiet .now-label { color: var(--text-faint) !important; }
+.theme-quiet .now-title { color: var(--text) !important; }
+.theme-quiet .now-empty { border: 1px dashed var(--border) !important; background: var(--surface) !important; }
+.theme-quiet .now-empty .prompt { color: var(--text) !important; font-weight: 600; }
+
+/* Collapse the multicolor badge rainbow into one calm neutral chip. */
+.theme-quiet .etag,
+.theme-quiet .tblock,
+.theme-quiet .reason-tag,
+.theme-quiet .cop-tag,
+.theme-quiet .tag-high,
+.theme-quiet .tag-today,
+.theme-quiet .tag-overdue,
+.theme-quiet .ipill,
+.theme-quiet .capture-status,
+.theme-quiet .suggest-badge,
+.theme-quiet .section-head .count,
+.theme-quiet .wcount {
+  background: var(--surface-alt) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border) !important;
+  font-weight: 500 !important;
+}
+
+/* Time-block headers: neutral, not blue/purple fills. */
+.theme-quiet .time-col-head,
+.theme-quiet .time-col-head.morning,
+.theme-quiet .time-col-head.afternoon,
+.theme-quiet .time-col-head.evening {
+  background: var(--surface-alt) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border) !important;
+  border-bottom: none !important;
+  font-weight: 600 !important;
+}
+
+/* Priority: tone, not loud red/amber. */
+.theme-quiet .pri-high { color: var(--text-muted) !important; font-weight: 600 !important; }
+.theme-quiet .pri-medium, .theme-quiet .pri-low { color: var(--text-faint) !important; font-weight: 400 !important; }
+
+/* Capture source dots: neutral instead of indigo/black fills. */
+.theme-quiet .capture-source,
+.theme-quiet .capture-whisper,
+.theme-quiet .capture-notion,
+.theme-quiet .capture-other {
+  background: var(--surface-alt) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border);
+}
+
+/* Injected briefing card: drop the gradient, keep one quiet accent edge. */
+.theme-quiet .mdb-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-left: 2px solid var(--accent) !important;
+  border-radius: 12px !important;
+}
+.theme-quiet .mdb-objective { font-weight: 600 !important; }
+.theme-quiet .mdb-eyebrow { font-weight: 600 !important; letter-spacing: .08em; }
+
+/* Soften remaining card radii to the unified scale. */
+.theme-quiet .task-row,
+.theme-quiet .win-row,
+.theme-quiet .nice-row,
+.theme-quiet .suggestion-row,
+.theme-quiet .md-right-card,
+.theme-quiet .cop-accordion,
+.theme-quiet .inbox-nudge { border-radius: 10px; }
+
+/* Buttons: keep accent only for genuine primary actions; flatten the rest. */
+.theme-quiet .btn-state,
+.theme-quiet .btn-later-now,
+.theme-quiet .btn-nudge-meetings { font-weight: 500; }
+
+/* Primary buttons → warm graphite (the indigo accent stays for text/links). */
+.theme-quiet .btn-start,
+.theme-quiet .btn-focus-now,
+.theme-quiet .btn-set-now,
+.theme-quiet .btn-state.primary,
+.theme-quiet .iqa-btn,
+.theme-quiet .quick-submit,
+.theme-quiet .btn-nudge-review,
+.theme-quiet .btn-close-day-cta,
+.theme-quiet .mdp-trigger,
+.theme-quiet .mdp-btn-primary,
+.theme-quiet .fab,
+.theme-quiet .myday-chat-fab,
+.theme-quiet .myday-chat-input button {
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+  border-color: var(--btn-bg) !important;
+  box-shadow: none !important;
+}
+.theme-quiet .btn-start:hover,
+.theme-quiet .btn-focus-now:hover,
+.theme-quiet .btn-set-now:hover,
+.theme-quiet .btn-state.primary:hover,
+.theme-quiet .iqa-btn:hover,
+.theme-quiet .quick-submit:hover,
+.theme-quiet .btn-nudge-review:hover,
+.theme-quiet .btn-close-day-cta:hover,
+.theme-quiet .mdp-trigger:hover,
+.theme-quiet .mdp-btn-primary:hover,
+.theme-quiet .fab:hover,
+.theme-quiet .myday-chat-fab:hover {
+  background: var(--btn-bg-hover) !important;
+}
+
+/* Outline "Start Focus" — graphite outline instead of indigo. */
+.theme-quiet .btn-start-focus {
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+}
+.theme-quiet .btn-start-focus:hover {
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+  border-color: var(--btn-bg) !important;
+}
+
+/* Light accent-soft chips stay neutral so nothing competes with text accent. */
+.theme-quiet .btn-add-today {
+  background: var(--surface-alt) !important;
+  color: var(--text) !important;
+}
+
+/* Briefing ritual: graphite for the active energy pill + capture button. */
+.theme-quiet .mdb-energy-btn.active {
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+  border-color: var(--btn-bg) !important;
+}
+.theme-quiet .mdb-dump-save {
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+}
+.theme-quiet .mdb-dump-save:hover { background: var(--btn-bg-hover) !important; }
+
+/* App-wide primary buttons (other pages' own classes) → graphite too. */
+.theme-quiet .btn-primary,
+.theme-quiet .btn-capture,
+.theme-quiet .btn-capture-empty,
+.theme-quiet .btn-review,
+.theme-quiet .btn-modal-submit,
+.theme-quiet .btn-submit,
+.theme-quiet .btn-inbox,
+.theme-quiet .btn-import,
+.theme-quiet .btn-create,
+.theme-quiet .btn-view,
+.theme-quiet .btn-save-inline,
+.theme-quiet .col-quick-submit {
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+  border-color: var(--btn-bg) !important;
+  box-shadow: none !important;
+}
+.theme-quiet .btn-primary:hover,
+.theme-quiet .btn-capture:hover,
+.theme-quiet .btn-capture-empty:hover,
+.theme-quiet .btn-review:hover,
+.theme-quiet .btn-modal-submit:hover,
+.theme-quiet .btn-submit:hover,
+.theme-quiet .btn-inbox:hover,
+.theme-quiet .btn-import:hover,
+.theme-quiet .btn-create:hover,
+.theme-quiet .btn-view:hover,
+.theme-quiet .btn-save-inline:hover,
+.theme-quiet .col-quick-submit:hover {
+  background: var(--btn-bg-hover) !important;
+}
+
+/* Quiet the nav: neutralize the special-colored nav links (beat .nav-links a.x). */
+.theme-quiet .nav-links a.nav-checkin,
+.theme-quiet .nav-links a.nav-focus,
+.theme-quiet .nav-links a.nav-close-day {
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+  border-bottom-color: transparent !important;
+}
+.theme-quiet .nav-links a.active { color: var(--accent) !important; }

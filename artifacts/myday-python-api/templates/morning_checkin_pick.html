@@ -6,7 +6,8 @@
   <title>Pick Must-Dos — MyDay</title>
     <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+<link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -160,17 +161,16 @@
     .cap-warn.show { display: block; }
   </style>
 </head>
-<body>
+<body class="theme-quiet">
   <nav>
     <a class="nav-logo" href="{{ base }}/">MyDay</a>
     <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="checkin">✦ Check In</a>
+      <a href="{{ base }}/morning-checkin" class="checkin">Check In</a>
       <span class="nav-sep"></span>
       <a href="{{ base }}/inbox">Inbox</a>
       <a href="{{ base }}/meetings">Meetings</a>
       <span class="nav-sep"></span>
-      <a href="/">Kanban</a>
+      <a href="/task-manager/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
       <a href="{{ base }}/notes">Notes</a>
@@ -178,8 +178,8 @@
       <a href="{{ base }}/cop-admin">CoP Admin</a>
     </div>
       <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
+      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">Noise</button>
+      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">Dark</button>
     </div>
   </nav>
 
@@ -238,7 +238,7 @@
           <div class="pick-title {% if task.is_today %}selected{% endif %}" id="title-{{ task.id }}">{{ task.title }}</div>
         </div>
         <div class="pick-actions">
-          <a class="btn-edit-sm" href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/morning-checkin/pick" title="Edit task">✎ Edit</a>
+          <a class="btn-edit-sm" href="{{ base }}/tasks/{{ task.id }}/edit?back={{ base }}/morning-checkin/pick" title="Edit task">Edit</a>
           {% if task.is_today %}
           <form method="post" action="{{ base }}/tasks/{{ task.id }}/unset-today">
             <input type="hidden" name="redirect_to" value="{{ base }}/morning-checkin/pick" />
@@ -257,7 +257,7 @@
     </div>
     {% else %}
     <div class="empty-box">
-      <div class="icon">🤔</div>
+      <div class="icon"></div>
       <p>No brain dump tasks found for today.<br>
         <a href="{{ base }}/morning-checkin">Go back and try the brain dump →</a>
       </p>
@@ -270,6 +270,6 @@
       <a class="btn-skip-pick" href="{{ base }}/my-day">Skip picking for now</a>
     </div>
   </main>
-<script src="{{ base }}/static/app.js?v=17"></script>
+<script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>

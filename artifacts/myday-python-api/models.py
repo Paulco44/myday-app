@@ -58,6 +58,10 @@ class Task(Base):
     # Bridge: linked Kanban card
     card_id = Column(Integer, nullable=True)      # cards.id (React Kanban)
 
+    # Collaboration / context
+    status_note = Column(Text, nullable=True)     # why it's in this status / blockers
+    assignee = Column(String(100), nullable=True) # person responsible
+
     project = relationship("Project", back_populates="tasks")
     subtasks = relationship("Subtask", back_populates="task", cascade="all, delete-orphan")
     task_tags = relationship("TaskTag", back_populates="task", cascade="all, delete-orphan")
@@ -233,6 +237,48 @@ class FocusSession(Base):
     completed = Column(Boolean, default=True)       # did the timer reach 0?
     date = Column(Date, nullable=False, default=date.today)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Briefing(Base):
+    """One cached proactive briefing per day (morning objective + stall radar)."""
+    __tablename__ = "briefings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, unique=True, nullable=False, index=True)
+    content = Column(Text, nullable=False)        # JSON-encoded briefing
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Conversation(Base):
+    """A chat thread with the MyDay assistant (Phase 0: single-user, local)."""
+    __tablename__ = "conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=True)          # auto-derived from first message
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    messages = relationship(
+        "Message",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="Message.created_at",
+    )
+
+
+class Message(Base):
+    """One turn in a conversation. Only user/assistant text turns are persisted;
+    tool round-trips happen within a single request and are rebuilt each turn."""
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String, nullable=False)          # user | assistant
+    content = Column(Text, nullable=False)
+    tool_trace = Column(Text, nullable=True)       # JSON list of tools used this turn (display only)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    conversation = relationship("Conversation", back_populates="messages")
 
 
 class NotionExportTarget(Base):

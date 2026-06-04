@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Evening Reset — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
   <style>
     main { max-width: 680px; margin: 0 auto; padding: 1.75rem 1.25rem 6rem; }
@@ -95,42 +96,19 @@
     .btn-ghost-sm:hover { border-color: var(--md-primary); color: var(--md-primary); }
   </style>
 </head>
-<body>
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="nav-checkin">✦ Check In</a>
-      <a href="{{ base }}/focus" class="nav-focus">Focus</a>
-      <a href="{{ base }}/close-day" class="active" style="color:var(--md-primary);font-weight:700;">🌙 Close Day</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review">Review</a>
-      <a href="{{ base }}/cop-admin">CoP Admin</a>
-    </div>
-    <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
-    </div>
-  </nav>
+<body class="theme-quiet">
+  {% include "_nav.html" %}
 
   <main>
 
     <div class="er-header">
-      <div class="er-badge">🌙 Evening Reset</div>
+      <div class="er-badge">Evening Reset</div>
       <h1>How'd it go?</h1>
       <p class="day-msg">{{ day_msg }}</p>
     </div>
 
     {% if now_hour < 16 %}
     <div class="early-notice">
-      <span>⏰</span>
       <span>Closing early is always valid. Whenever you're ready.</span>
     </div>
     {% endif %}
@@ -159,7 +137,7 @@
       </div>
 
       {% if wins_done or nice_done %}
-      <div class="er-section-title" style="margin-top:1.5rem;">Shipped today ✓</div>
+      <div class="er-section-title" style="margin-top:1.5rem;">Shipped today</div>
       <div class="done-list">
         {% for task in wins_done %}
         <div class="done-row">
@@ -254,7 +232,7 @@
     {% if already_closed %}
     <div class="er-section">
       <div class="closed-banner">
-        <div class="closed-icon">🌙</div>
+        <div class="closed-icon"></div>
         <div class="closed-text">
           <strong>Today is already wrapped up.</strong>
           <p>You closed the day. Rest easy — see you tomorrow.</p>
@@ -271,13 +249,13 @@
         Close Today ✓
       </button>
       <div class="cta-hint">Clears today's flags · carries forward any unactioned tasks</div>
-      <div class="cta-done-msg" id="done-msg">Day closed. See you tomorrow. 🌙</div>
+      <div class="cta-done-msg" id="done-msg">Day closed. See you tomorrow.</div>
     </div>
     {% endif %}
 
     {% if not wins_done and not nice_done and not wins_incomplete and not nice_incomplete and not already_closed %}
     <div class="nothing-wrap" style="margin-top:2rem;">
-      <div class="icon">🎯</div>
+      <div class="icon"></div>
       <div class="msg">No tasks were flagged for today.</div>
       <div class="hint">Do a morning check-in tomorrow to plan your wins and nice-to-haves.</div>
       <div style="margin-top:1.5rem;">
@@ -377,6 +355,6 @@
     });
     {% endif %}
   </script>
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>

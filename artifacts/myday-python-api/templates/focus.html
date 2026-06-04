@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Focus Mode — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     body { display: flex; flex-direction: column; min-height: 100dvh; }
 
@@ -151,7 +152,7 @@
     .done-actions { display: flex; gap: .65rem; justify-content: center; flex-wrap: wrap; }
   </style>
 </head>
-<body>
+<body class="theme-quiet">
   <!-- Exit focus button (visible when nav is hidden) -->
   <button class="exit-focus-float" onclick="exitFocusMode()">← Exit Focus</button>
 
@@ -160,10 +161,10 @@
     <div class="right">
       <!-- Brown noise controls -->
       <div class="noise-ctrl">
-        <button class="noise-toggle" id="noise-toggle-btn" onclick="toggleBrownNoise(this)" title="Brown noise for deep focus">🔊 Brown Noise</button>
+        <button class="noise-toggle" id="noise-toggle-btn" onclick="toggleBrownNoise(this)" title="Brown noise for deep focus">Brown Noise</button>
         <input type="range" class="noise-vol" id="noise-vol" min="0" max="100" value="40" oninput="setNoiseVolume(this.value)" title="Noise volume" />
       </div>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
+      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">Dark</button>
       <a class="exit-link" href="{{ base }}/my-day" style="margin-left:.25rem;">← Exit</a>
     </div>
   </nav>
@@ -173,7 +174,7 @@
 
       {% if not now_task %}
       <div class="no-task-box">
-        <div class="icon">🎯</div>
+        <div class="icon"></div>
         <h2>No active focus task</h2>
         <p>Set one task as "Now" on your My Day page, then come back here to start a focused block.</p>
         <a href="{{ base }}/my-day" class="btn btn-primary">← Back to My Day</a>
@@ -183,7 +184,7 @@
 
       <!-- Task header (always visible) -->
       <div class="task-header">
-        <div class="label">⚡ Now — Single Focus</div>
+        <div class="label">Now — Single Focus</div>
         <div class="task-title">{{ now_task.title }}</div>
         <div class="task-meta">
           {% if now_task.energy_tag %}
@@ -193,7 +194,7 @@
           <span class="badge tblock-{{ now_task.time_block }}">{{ now_task.time_block.capitalize() }}</span>
           {% endif %}
           {% if now_task.due_date %}
-          <span class="badge" style="background:var(--md-ctrl-bg);color:var(--md-text-muted);">Due {{ now_task.due_date.strftime('%b %-d') }}</span>
+          <span class="badge" style="background:var(--md-ctrl-bg);color:var(--md-text-muted);">Due {{ now_task.due_date | datefmt('%b %-d') }}</span>
           {% endif %}
         </div>
       </div>
@@ -228,7 +229,7 @@
         </div>
 
         <div class="start-row">
-          <button class="btn-start" onclick="startFocus()">▶ Start Focus</button>
+          <button class="btn-start" onclick="startFocus()">Start Focus</button>
         </div>
       </div>
 
@@ -259,7 +260,7 @@
 
       <!-- ── SESSION COMPLETE PANEL ── -->
       <div id="complete-panel">
-        <div class="icon">⏱</div>
+        <div class="icon"></div>
         <h3 id="complete-headline">Session complete!</h3>
         <p id="complete-msg">You put the time in. What would you like to do?</p>
         <div class="complete-actions">
@@ -270,7 +271,7 @@
 
       <!-- ── STOPPED PANEL ── -->
       <div id="stopped-panel">
-        <div class="icon">☁️</div>
+        <div class="icon"></div>
         <h3>Focus stopped — no worries</h3>
         <p>Every bit of time counts. Pick this up whenever you're ready.</p>
         <div style="display:flex;gap:.65rem;justify-content:center;flex-wrap:wrap;">
@@ -281,7 +282,7 @@
 
       <!-- ── DONE PANEL ── -->
       <div id="done-panel">
-        <div class="icon">✨</div>
+        <div class="icon"></div>
         <h3 id="done-headline">Nice work — you showed up.</h3>
         <div class="done-msg" id="done-msg">You focused on this task. That's what matters.</div>
         <div class="done-actions">
@@ -635,6 +636,6 @@
       });
     }
   </script>
-  <script src="{{ base }}/static/app.js?v=17"></script>
+  <script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>

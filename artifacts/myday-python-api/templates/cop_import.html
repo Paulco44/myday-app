@@ -6,20 +6,11 @@
   <title>CoP CSV Import — MyDay</title>
     <!-- Anti-flicker: apply saved theme before any paint -->
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-<link rel="stylesheet" href="{{ base }}/static/style.css?v=17" />
+<link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
-    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 3.25rem; }
-    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); text-decoration: none; margin-right: 1.5rem; }
-    .nav-links { display: flex; }
-    .nav-links a { display: flex; align-items: center; height: 3.25rem; padding: 0 .9rem; font-size: .88rem; font-weight: 500; color: #64748b; text-decoration: none; border-bottom: 2px solid transparent; }
-    .nav-links a:hover { color: var(--text); }
-    .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .nav-links a.checkin { color: #D97706; font-weight: 600; }
-    .nav-links a.nav-focus { font-size: .82rem; color: #94a3b8; }
-    .nav-links a.nav-focus:hover { color: #64748b; }
 
     main { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
     h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: .35rem; }
@@ -65,31 +56,11 @@
     .path-hint { font-size: .8rem; font-family: monospace; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: .4rem; padding: .5rem .85rem; color: #374151; word-break: break-all; margin-top: .5rem; }
   </style>
 </head>
-<body>
-  <nav>
-    <a class="nav-logo" href="{{ base }}/">MyDay</a>
-    <div class="nav-links">
-      <a href="{{ base }}/my-day">My Day</a>
-      <a href="{{ base }}/morning-checkin" class="checkin">✦ Check In</a>
-      <span class="nav-sep"></span>
-      <a href="{{ base }}/inbox">Inbox</a>
-      <a href="{{ base }}/meetings">Meetings</a>
-      <span class="nav-sep"></span>
-      <a href="/">Kanban</a>
-      <a href="{{ base }}/tasks-page">Tasks</a>
-      <a href="{{ base }}/projects-list">Projects</a>
-      <a href="{{ base }}/notes">Notes</a>
-      <a href="{{ base }}/weekly-review">Review</a>
-      <a href="{{ base }}/cop-admin" >CoP Admin</a>
-    </div>
-      <div class="focus-controls">
-      <button class="ctrl-btn" id="noise-btn" onclick="toggleNoise()" title="Brown noise">🎧 Noise</button>
-      <button class="ctrl-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙 Dark</button>
-    </div>
-  </nav>
+<body class="theme-quiet">
+  {% include "_nav.html" %}
 
   <main>
-    <h1>📥 CoP CSV Import</h1>
+    <h1>CoP CSV Import</h1>
     <p class="subtitle">One-click bulk import from <code>cop_org_plan_pc.csv</code></p>
 
     {% if result %}
@@ -104,7 +75,7 @@
       {% elif result.imported > 0 %}
       <div class="result-box {% if result.errors %}warning{% else %}success{% endif %}">
         <div class="result-headline">
-          {% if result.errors %}Import completed with some issues{% else %}Import successful ✓{% endif %}
+          {% if result.errors %}Import completed with some issues{% else %}Import successful{% endif %}
         </div>
         <div class="result-stats">
           <strong>{{ result.imported }}</strong> initiative{% if result.imported != 1 %}s{% endif %} imported<br>
@@ -163,11 +134,11 @@
         <h2>Run the import</h2>
         <p>Clicking the button below reads the CSV once and inserts every valid row into the database. You can run it multiple times — each run <em>adds</em> new rows (it does not deduplicate or replace existing ones). Clear the table in CoP Admin first if you need a clean slate.</p>
         <form class="import-form" method="post" action="{{ base }}/cop-import">
-          <button class="btn-import" type="submit">▶ Run CoP CSV Import</button>
+          <button class="btn-import" type="submit">Run CoP CSV Import</button>
         </form>
       </div>
     {% endif %}
   </main>
-<script src="{{ base }}/static/app.js?v=17"></script>
+<script src="{{ base }}/static/app.js?v=26"></script>
 </body>
 </html>

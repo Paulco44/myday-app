@@ -37,6 +37,8 @@ class TaskCreate(BaseModel):
     focus_state: Optional[str] = None
     time_block: Optional[str] = None
     energy_tag: Optional[str] = None
+    status_note: Optional[str] = None
+    assignee: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -54,6 +56,8 @@ class TaskUpdate(BaseModel):
     focus_state: Optional[str] = None
     time_block: Optional[str] = None
     energy_tag: Optional[str] = None
+    status_note: Optional[str] = None
+    assignee: Optional[str] = None
 
 
 class TaskRead(BaseModel):
@@ -74,6 +78,29 @@ class TaskRead(BaseModel):
     focus_state: Optional[str]
     time_block: Optional[str]
     energy_tag: Optional[str]
+    status_note: Optional[str]
+    assignee: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Subtask ─────────────────────────────────────────────────────────────────
+
+class SubtaskRead(BaseModel):
+    id: int
+    task_id: int
+    title: str
+    is_done: bool
+
+    class Config:
+        from_attributes = True
+
+
+class TaskDetail(TaskRead):
+    """TaskRead + subtasks + project name, for the detail panel."""
+    subtasks: List[SubtaskRead] = []
+    project_name: Optional[str] = None
 
     class Config:
         from_attributes = True
