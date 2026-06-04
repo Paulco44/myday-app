@@ -89,7 +89,7 @@
       <a href="{{ base }}/inbox">Inbox</a>
       <a href="{{ base }}/meetings" class="active">Meetings</a>
       <span class="nav-sep"></span>
-      <a href="/">Kanban</a>
+      <a href="/task-manager/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
       <a href="{{ base }}/notes">Notes</a>
@@ -140,8 +140,8 @@
           <div class="day-header">
             <div>
               <span class="day-title">
-                {{ group.date.strftime('%B %-d, %Y') }}
-                <span class="weekday">{{ group.date.strftime('%A') }}</span>
+                {{ group.date | datefmt('%B %-d, %Y') }}
+                <span class="weekday">{{ group.date | datefmt('%A') }}</span>
               </span>
             </div>
             <div class="day-pills">
@@ -195,9 +195,9 @@
                             <span class="dest-chip">→ Note</span>
                           {% endif %}
                         {% endif %}
-                        <span>{{ item.created_at.strftime('%-I:%M %p') }}</span>
+                        <span>{{ item.created_at | datefmt('%-I:%M %p') }}</span>
                         {% if item.reviewed_at %}
-                          <span>Reviewed {{ item.reviewed_at.strftime('%-I:%M %p') }}</span>
+                          <span>Reviewed {{ item.reviewed_at | datefmt('%-I:%M %p') }}</span>
                         {% endif %}
                       </div>
                     </div>

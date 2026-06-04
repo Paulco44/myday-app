@@ -193,7 +193,7 @@
           <span class="badge tblock-{{ now_task.time_block }}">{{ now_task.time_block.capitalize() }}</span>
           {% endif %}
           {% if now_task.due_date %}
-          <span class="badge" style="background:var(--md-ctrl-bg);color:var(--md-text-muted);">Due {{ now_task.due_date.strftime('%b %-d') }}</span>
+          <span class="badge" style="background:var(--md-ctrl-bg);color:var(--md-text-muted);">Due {{ now_task.due_date | datefmt('%b %-d') }}</span>
           {% endif %}
         </div>
       </div>

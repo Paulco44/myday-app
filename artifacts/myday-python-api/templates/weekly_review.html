@@ -81,7 +81,7 @@
       <a href="{{ base }}/inbox">Inbox</a>
       <a href="{{ base }}/meetings">Meetings</a>
       <span class="nav-sep"></span>
-      <a href="/">Kanban</a>
+      <a href="/task-manager/kanban">Kanban</a>
       <a href="{{ base }}/tasks-page">Tasks</a>
       <a href="{{ base }}/projects-list">Projects</a>
       <a href="{{ base }}/notes">Notes</a>
@@ -99,7 +99,7 @@
     <div class="wr-header">
       <div class="wr-badge">📊 Weekly Review</div>
       <h1>Your Week</h1>
-      <div class="wr-dates">{{ week_start.strftime('%b %-d') }} – {{ today.strftime('%b %-d, %Y') }}</div>
+      <div class="wr-dates">{{ week_start | datefmt('%b %-d') }} – {{ today | datefmt('%b %-d, %Y') }}</div>
     </div>
 
     <!-- ═══ Row 1: Streak + Consistency ════════════════════════════════════ -->
@@ -187,7 +187,7 @@
           <span class="win-check">✓</span>
           <span class="win-title">{{ task.title }}</span>
           {% if task.completed_at %}
-          <span class="win-date">{{ task.completed_at.strftime('%a %-d') }}</span>
+          <span class="win-date">{{ task.completed_at | datefmt('%a %-d') }}</span>
           {% endif %}
         </div>
         {% endfor %}
