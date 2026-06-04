@@ -117,6 +117,25 @@
       </div>
     {% endif %}
 
+    <!-- ── Billing code (MyDay↔TimeTracker bridge) ── -->
+    <div class="desc-block">
+      <div class="label">Código de facturación (Paylocity)</div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:flex-end;margin-top:.5rem;">
+        <div style="flex:1;min-width:170px;">
+          <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.2rem;">Cliente (CC1)</div>
+          <select id="bc_client" data-current="{{ billing_client.id if billing_client else '' }}" style="width:100%;padding:.4rem;"></select>
+        </div>
+        <div style="flex:1;min-width:170px;">
+          <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.2rem;">Proyecto (CC2)</div>
+          <select id="bc_project" data-current="{{ billing_project.id if billing_project else '' }}" style="width:100%;padding:.4rem;"><option value="">—</option></select>
+        </div>
+        <button type="button" class="btn-primary" id="bc_save" style="padding:.45rem 1rem;">Guardar</button>
+      </div>
+      <div id="bc_status" style="font-size:.8rem;color:var(--text-muted);margin-top:.45rem;">
+        {% if billing_client or billing_project %}Actual: {{ billing_client.name if billing_client else '—' }} ({{ billing_client.code if billing_client else '' }}) / {{ billing_project.name if billing_project else '—' }} ({{ billing_project.code if billing_project else '' }}){% else %}Sin asignar — al hacerlo, las tareas de este proyecto podrán bloquearse en tu calendario ya codificadas.{% endif %}
+      </div>
+    </div>
+
     <!-- ── Open tasks ── -->
     <div class="tasks-block">
       <div class="tasks-header">
@@ -228,5 +247,42 @@
     if (toast) setTimeout(() => { toast.style.transition = 'opacity .5s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 6000);
   </script>
   <script src="{{ base }}/static/app.js?v=26"></script>
+  <script>
+  (function(){
+    var BASE="{{ base }}", PID={{ project.id }};
+    var cs=document.getElementById('bc_client'), ps=document.getElementById('bc_project');
+    if(!cs) return;
+    function loadProjects(cid, preselect){
+      ps.innerHTML='<option value="">—</option>';
+      if(!cid) return;
+      fetch(BASE+'/billing/projects?client_id='+cid).then(function(r){return r.json();}).then(function(d){
+        (d.projects||[]).forEach(function(p){
+          var o=document.createElement('option'); o.value=p.id; o.textContent=p.name+(p.code?' ('+p.code+')':'');
+          if(String(p.id)===String(preselect)) o.selected=true; ps.appendChild(o);
+        });
+      });
+    }
+    fetch(BASE+'/billing/clients').then(function(r){return r.json();}).then(function(d){
+      var cur=cs.dataset.current;
+      cs.innerHTML='<option value="">—</option>';
+      (d.clients||[]).forEach(function(c){
+        var o=document.createElement('option'); o.value=c.id; o.textContent=c.name+(c.code?' ('+c.code+')':'');
+        if(String(c.id)===cur) o.selected=true; cs.appendChild(o);
+      });
+      if(cur) loadProjects(cur, ps.dataset.current);
+    });
+    cs.addEventListener('change', function(){ loadProjects(cs.value, null); });
+    document.getElementById('bc_save').addEventListener('click', function(){
+      var st=document.getElementById('bc_status'); st.textContent='Guardando…';
+      fetch(BASE+'/projects/'+PID+'/billing',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({client_id: cs.value?parseInt(cs.value,10):null, project_id: ps.value?parseInt(ps.value,10):null})})
+       .then(function(r){return r.json();}).then(function(j){
+          if(j.ok){ var c=j.client||{}, p=j.project||{};
+            st.textContent='✓ Guardado: '+(c.name||'—')+' ('+(c.code||'')+') / '+(p.name||'—')+' ('+(p.code||'')+')'; }
+          else st.textContent='✗ error';
+       }).catch(function(e){ st.textContent='✗ '+e; });
+    });
+  })();
+  </script>
 </body>
 </html>

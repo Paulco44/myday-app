@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planificador semanal — MyDay</title>
+  <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
+  <style>
+    main.planner { max-width: 1240px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    .pl-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .pl-head h1 { font-size:1.4rem; font-weight:800; }
+    .pl-sub { color:var(--text-muted); font-size:.85rem; margin-top:.15rem; }
+    .wk-actions { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+    .wk-nav { display:inline-flex; gap:.15rem; }
+    .wk-nav a { text-decoration:none; color:var(--text); border:1px solid var(--border-subtle); border-radius:.4rem; padding:.3rem .6rem; font-size:.82rem; }
+    .wk-nav a:hover { border-color:var(--accent); }
+    #push-week { padding:.5rem 1rem; font-weight:700; }
+    #push-result { margin-bottom:.8rem; font-size:.84rem; }
+    .pr-card { border-radius:.6rem; padding:.7rem .9rem; border:1px solid var(--border-subtle); background:var(--surface); }
+    .pr-ok { color:var(--success); } .pr-warn { color:var(--danger,#b4541f); }
+    .hint { font-size:.76rem; color:var(--text-faint); margin-bottom:.6rem; }
+
+    .grid-scroll { overflow-x:auto; border:1px solid var(--border-subtle); border-radius:.7rem; background:var(--surface); }
+    .grid { display:grid; grid-template-columns:46px repeat(7,minmax(120px,1fr)); min-width:900px; }
+    .col-head { height:42px; padding:.35rem .4rem; font-size:.76rem; font-weight:700; border-bottom:1px solid var(--border-subtle); border-left:1px solid var(--border-subtle); display:flex; align-items:center; gap:.3rem; }
+    .col-head .date { color:var(--text-faint); font-weight:500; }
+    .col-head .day-total { margin-left:auto; color:var(--accent-text); background:var(--accent-soft); border-radius:999px; padding:.02rem .4rem; font-size:.7rem; }
+    .day-col.today .col-head { color:var(--accent); }
+    .col-body { position:relative; border-left:1px solid var(--border-subtle); }
+    .time-col .col-head { border-left:none; }
+    .time-col .col-body { border-left:none; }
+    .hr { position:absolute; right:4px; font-size:.66rem; color:var(--text-faint); transform:translateY(-50%); }
+    .block { position:absolute; left:3px; right:3px; box-sizing:border-box; border:1px solid var(--border-subtle); border-left:3px solid var(--accent); border-radius:.4rem; padding:.18rem .35rem; background:var(--bg); overflow:hidden; cursor:grab; min-height:30px; }
+    .block:hover { border-color:var(--accent); box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:5; }
+    .block.incomplete { border-left-color:var(--danger,#b4541f); }
+    .block.dragging { opacity:.5; }
+    .b-time { font-size:.66rem; color:var(--text-muted); font-weight:600; }
+    .b-time .pushed { color:var(--success); }
+    .b-title { font-size:.76rem; font-weight:600; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .b-codes { font-size:.64rem; color:var(--text-faint); font-family:monospace; }
+    .block.incomplete .b-codes { color:var(--danger,#b4541f); }
+    .b-del { position:absolute; top:1px; right:3px; background:none; border:none; color:var(--text-faint); font-size:.8rem; cursor:pointer; line-height:1; display:none; }
+    .block:hover .b-del { display:block; }
+
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; z-index:50; }
+    .modal-overlay[hidden] { display:none; }   /* hidden attr must win over display:flex */
+    .modal { background:var(--surface); border:1px solid var(--border); border-radius:.8rem; padding:1.3rem; width:min(420px,92vw); display:flex; flex-direction:column; gap:.55rem; }
+    .modal h3 { font-size:1.05rem; font-weight:800; }
+    .modal label { font-size:.74rem; color:var(--text-muted); display:block; margin-bottom:.12rem; }
+    .modal input, .modal select { width:100%; padding:.45rem; border:1px solid var(--border); border-radius:.4rem; background:var(--bg); color:var(--text); font-size:.88rem; }
+    .m-row { display:flex; gap:.5rem; } .m-row > div { flex:1; }
+    .m-actions { display:flex; gap:.6rem; align-items:center; margin-top:.4rem; }
+    #m-status { font-size:.78rem; color:var(--text-muted); }
+
+    /* Priority rail */
+    .planner-body { display:flex; gap:.8rem; align-items:flex-start; }
+    .rail { width:236px; flex:none; background:var(--surface); border:1px solid var(--border-subtle); border-radius:.7rem; padding:.6rem; align-self:stretch; max-height:720px; overflow-y:auto; }
+    @media (max-width:900px){ .planner-body{ flex-direction:column;} .rail{ width:auto; max-height:none; order:2;} }
+    .rail-head { font-size:.82rem; font-weight:800; margin-bottom:.55rem; display:flex; align-items:center; gap:.3rem; }
+    .rail-head .c { color:var(--text-faint); font-weight:500; font-size:.74rem; }
+    .rail-item { border:1px solid var(--border-subtle); border-radius:.5rem; padding:.45rem .5rem; margin-bottom:.45rem; cursor:grab; background:var(--bg); }
+    .rail-item:hover { border-color:var(--accent); }
+    .rail-item.dragging { opacity:.5; }
+    .badge-row { display:flex; gap:.25rem; margin-bottom:.28rem; flex-wrap:wrap; }
+    .bdg { font-size:.6rem; font-weight:700; border-radius:999px; padding:.06rem .42rem; letter-spacing:.02em; }
+    .bdg-u { background:#fae0d5; color:#b4541f; } .bdg-i { background:var(--accent-soft); color:var(--accent-text); } .bdg-s { background:#e0efe0; color:#3d7a3d; }
+    html.dark .bdg-u{ background:#3a241c; color:#e8a07f;} html.dark .bdg-s{ background:#1f2e1f; color:#9fd09f;}
+    .ri-title { font-size:.8rem; font-weight:600; line-height:1.2; }
+    .ri-meta { font-size:.68rem; color:var(--text-muted); margin-top:.22rem; display:flex; gap:.5rem; flex-wrap:wrap; }
+    .ri-nocode { color:var(--danger,#b4541f); }
+    .rail-empty { font-size:.78rem; color:var(--text-faint); padding:.4rem 0; }
+  </style>
+</head>
+<body class="theme-quiet">
+  {% include "_nav.html" %}
+  <main class="planner">
+    <div class="pl-head">
+      <div>
+        <h1>Planificador semanal</h1>
+        <div class="pl-sub">{{ week_label }} · {{ block_count }} bloque(s) · planea y empuja a Paylocity a la ofensiva</div>
+      </div>
+      <div class="wk-actions">
+        <span class="wk-nav">
+          <a href="{{ base }}/planner?week_start={{ prev_week }}">←</a>
+          <a href="{{ base }}/planner">Hoy</a>
+          <a href="{{ base }}/planner?week_start={{ next_week }}">→</a>
+        </span>
+        <button id="auto-plan" type="button" style="padding:.5rem .9rem;font-weight:700;background:var(--accent-soft);color:var(--accent-text);border:1px solid var(--accent);border-radius:.45rem;cursor:pointer;">✦ Auto-planear</button>
+        <button id="push-week" class="btn-primary">Empujar semana al calendario</button>
+        <button id="clear-week" type="button" title="Vacía todos los bloques de la semana" style="padding:.5rem .8rem;font-size:.82rem;background:none;color:var(--text-muted);border:1px solid var(--border-subtle);border-radius:.45rem;cursor:pointer;">Limpiar semana</button>
+      </div>
+    </div>
+    <div id="push-result"></div>
+    <div class="hint">Arrastra desde "Qué importa" a un hueco · arrastra un bloque para moverlo · clic en un hueco para crear · clic en un bloque para editar.</div>
+
+    <div class="planner-body">
+      <aside class="rail">
+        <div class="rail-head">Qué importa <span class="c" id="rail-count"></span></div>
+        <div id="rail-list"><div class="rail-empty">Cargando…</div></div>
+      </aside>
+    <div class="grid-scroll">
+      <div class="grid">
+        <!-- time gutter -->
+        <div class="time-col">
+          <div class="col-head"></div>
+          <div class="col-body" id="gutter"></div>
+        </div>
+        {% for day in days %}
+        <div class="day-col {% if day.is_today %}today{% endif %}">
+          <div class="col-head">{{ day.name[:3] }} <span class="date">{{ day.date.strftime('%d/%m') }}</span>
+            {% if day.total_min %}<span class="day-total">{{ (day.total_min/60)|round(1) }}h</span>{% endif %}
+          </div>
+          <div class="col-body" data-day="{{ day.iso }}">
+            {% for b in day.blocks %}
+            <div class="block {% if not b.complete %}incomplete{% endif %}" draggable="true"
+                 data-id="{{ b.id }}" data-iso="{{ b.iso }}" data-min="{{ b.minutes }}"
+                 data-cc1="{{ b.billing_client_id or '' }}" data-cc2="{{ b.billing_project_id or '' }}" data-cc3="{{ b.billing_task_id or '' }}">
+              <button class="b-del" type="button" title="Quitar">×</button>
+              <div class="b-time">{{ b.time }}{% if b.pushed %} <span class="pushed" title="En calendario">✓</span>{% endif %}</div>
+              <div class="b-title">{{ b.title }}</div>
+              <div class="b-codes">{{ b.codes }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    </div><!-- /planner-body -->
+
+    <section style="margin-top:1.2rem;">
+      <button id="recon-toggle" type="button" style="background:none;border:1px solid var(--border-subtle);border-radius:.5rem;padding:.5rem .9rem;font-size:.85rem;font-weight:600;color:var(--text);cursor:pointer;">
+        Reconciliación: planeado vs real (TimeTracker) ▾
+      </button>
+      <div id="recon-body" hidden style="margin-top:.8rem;"></div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <h3 id="m-title">Nuevo bloque</h3>
+      <div><label for="m-name">¿Qué vas a hacer?</label><input id="m-name" placeholder="Ej. Preparar propuesta ECO 2.0" /></div>
+      <div><label for="m-cc1">Cliente (CC1)</label><select id="m-cc1"></select></div>
+      <div><label for="m-cc2">Proyecto (CC2)</label><select id="m-cc2"><option value="">—</option></select></div>
+      <div><label for="m-cc3">Tipo de trabajo (CC3)</label><select id="m-cc3"><option value="">—</option></select></div>
+      <div class="m-row">
+        <div><label for="m-date">Día</label><input id="m-date" type="date" /></div>
+        <div><label for="m-time">Hora</label><input id="m-time" type="time" value="09:00" /></div>
+        <div><label for="m-min">Min</label><input id="m-min" type="number" min="5" max="600" value="60" /></div>
+      </div>
+      <div class="m-actions">
+        <button id="m-save" class="btn-primary" type="button">Guardar bloque</button>
+        <button id="m-cancel" type="button" style="background:none;border:none;color:var(--text-muted);cursor:pointer;">Cancelar</button>
+        <span id="m-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ base }}/static/app.js?v=26"></script>
+  <script>
+  (function(){
+    var BASE="{{ base }}", WEEK="{{ week_start }}";
+    var START=7, END=21, PXH=46, SNAP=15, GRIDH=(END-START)*PXH;
+
+    // ── Lay out the time grid ──
+    document.querySelectorAll('.col-body').forEach(function(cb){
+      cb.style.height=GRIDH+'px';
+      if(cb.id!=='gutter') cb.style.backgroundImage='repeating-linear-gradient(to bottom, transparent 0, transparent '+(PXH-1)+'px, var(--border-subtle) '+(PXH-1)+'px, var(--border-subtle) '+PXH+'px)';
+    });
+    var gutter=document.getElementById('gutter');
+    for(var h=START; h<=END; h++){
+      var l=document.createElement('div'); l.className='hr'; l.style.top=((h-START)*PXH)+'px';
+      l.textContent=((h%12)||12)+(h<12?'am':'pm'); gutter.appendChild(l);
+    }
+    function place(b){
+      var iso=b.dataset.iso, hh=+iso.slice(11,13), mm=+iso.slice(14,16);
+      var mins=(hh-START)*60+mm;
+      b.style.top=Math.max(0, mins/60*PXH)+'px';
+      b.style.height=Math.max(30, (+b.dataset.min)/60*PXH)+'px';
+    }
+    document.querySelectorAll('.block').forEach(place);
+
+    // ── Drag & drop (move blocks AND schedule rail tasks) ──
+    var grabY=0, dragData=null;
+    function timeFromY(cb, clientY, off){
+      var rect=cb.getBoundingClientRect();
+      var y=clientY-rect.top-(off||0);
+      var mins=Math.round(((y/PXH)*60)/SNAP)*SNAP;
+      mins=Math.max(0, Math.min((END-START)*60-SNAP, mins));
+      var t=START*60+mins, hh=Math.floor(t/60), mm=t%60;
+      return {iso:cb.dataset.day+'T'+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':00', mins:mins};
+    }
+    document.querySelectorAll('.block').forEach(function(b){
+      b.addEventListener('dragstart', function(e){ dragData={id:b.dataset.id, minutes:+b.dataset.min}; e.dataTransfer.setData('text/plain', b.dataset.id); grabY=e.offsetY; b.classList.add('dragging'); });
+      b.addEventListener('dragend', function(){ b.classList.remove('dragging'); });
+    });
+    document.querySelectorAll('.col-body[data-day]').forEach(function(cb){
+      cb.addEventListener('dragover', function(e){ e.preventDefault(); });
+      cb.addEventListener('drop', function(e){
+        e.preventDefault();
+        var id=(dragData&&dragData.id) || e.dataTransfer.getData('text/plain'); if(!id) return;
+        var pos=timeFromY(cb, e.clientY, grabY);
+        var mins=(dragData&&dragData.minutes) || null;
+        fetch(BASE+'/planner/block/'+id+'/move',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({scheduled_start:pos.iso, scheduled_minutes:mins})})
+          .then(function(r){return r.json();}).then(function(){ location.reload(); })
+          .catch(function(){ location.reload(); });
+      });
+      // click empty area -> new block at that time
+      cb.addEventListener('click', function(e){
+        if(e.target!==cb) return;
+        var pos=timeFromY(cb, e.clientY, 0);
+        openModal(cb.dataset.day, null, pos.iso.slice(11,16));
+      });
+    });
+
+    // ── Modal + cascade ──
+    var modal=document.getElementById('modal'), mName=document.getElementById('m-name'),
+        cc1=document.getElementById('m-cc1'), cc2=document.getElementById('m-cc2'), cc3=document.getElementById('m-cc3'),
+        mDate=document.getElementById('m-date'), mTime=document.getElementById('m-time'), mMin=document.getElementById('m-min'),
+        mStatus=document.getElementById('m-status'), mTitle=document.getElementById('m-title');
+    var editId=null;
+    function opts(sel, list, selected, ph){
+      sel.innerHTML='<option value="">'+(ph||'—')+'</option>';
+      (list||[]).forEach(function(o){ var e=document.createElement('option'); e.value=o.id; e.textContent=o.name+(o.code?' ('+o.code+')':''); if(String(o.id)===String(selected)) e.selected=true; sel.appendChild(e); });
+    }
+    function loadClients(s){ return fetch(BASE+'/billing/clients').then(function(r){return r.json();}).then(function(d){opts(cc1,d.clients,s);}); }
+    function loadProjects(c,s){ if(!c){opts(cc2,[]);return Promise.resolve();} return fetch(BASE+'/billing/projects?client_id='+c).then(function(r){return r.json();}).then(function(d){opts(cc2,d.projects,s);}); }
+    function loadTasks(p,s){ if(!p){opts(cc3,[]);return Promise.resolve();} return fetch(BASE+'/billing/tasks?project_id='+p).then(function(r){return r.json();}).then(function(d){opts(cc3,d.tasks,s);}); }
+    cc1.addEventListener('change', function(){ loadProjects(cc1.value,null).then(function(){opts(cc3,[]);}); });
+    cc2.addEventListener('change', function(){ loadTasks(cc2.value,null); });
+
+    function openModal(day, block, timeStr){
+      mStatus.textContent=''; modal.hidden=false;
+      if(block){
+        editId=block.dataset.id; mTitle.textContent='Editar bloque';
+        mName.value=block.querySelector('.b-title').textContent;
+        var iso=block.dataset.iso; mDate.value=iso.slice(0,10); mTime.value=iso.slice(11,16); mMin.value=block.dataset.min;
+        loadClients(block.dataset.cc1).then(function(){ return loadProjects(block.dataset.cc1, block.dataset.cc2); }).then(function(){ return loadTasks(block.dataset.cc2, block.dataset.cc3); });
+      } else {
+        editId=null; mTitle.textContent='Nuevo bloque'; mName.value='';
+        mDate.value=day; mTime.value=timeStr||'09:00'; mMin.value=60;
+        loadClients(null); opts(cc2,[]); opts(cc3,[]);
+      }
+      mName.focus();
+    }
+    function closeModal(){ modal.hidden=true; }
+    document.querySelectorAll('.block').forEach(function(el){
+      el.addEventListener('click', function(e){ if(e.target.classList.contains('b-del')) return; openModal(null, el); });
+      el.querySelector('.b-del').addEventListener('click', function(e){
+        e.stopPropagation();
+        if(!confirm('¿Quitar este bloque? (también borra su evento del calendario)')) return;
+        fetch(BASE+'/planner/block/'+el.dataset.id+'/unschedule',{method:'POST'}).then(function(){ location.reload(); });
+      });
+    });
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e){ if(e.target===modal) closeModal(); });
+    document.getElementById('m-save').addEventListener('click', function(){
+      if(!mDate.value || !mTime.value){ mStatus.textContent='⚠ Falta día u hora.'; return; }
+      mStatus.textContent='Guardando…';
+      var body={ scheduled_start: mDate.value+'T'+mTime.value+':00', scheduled_minutes: parseInt(mMin.value||'60',10),
+        title: mName.value||'Bloque',
+        billing_client_id: cc1.value?parseInt(cc1.value,10):null,
+        billing_project_id: cc2.value?parseInt(cc2.value,10):null,
+        billing_task_id: cc3.value?parseInt(cc3.value,10):null };
+      if(editId) body.block_id=parseInt(editId,10);
+      fetch(BASE+'/planner/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+        .then(function(r){return r.json();}).then(function(j){ if(j.ok) location.reload(); else mStatus.textContent='✗ error'; })
+        .catch(function(e){ mStatus.textContent='✗ '+e; });
+    });
+
+    // ── Push week ──
+    document.getElementById('push-week').addEventListener('click', function(){
+      var btn=this; btn.disabled=true;
+      var pr=document.getElementById('push-result'); pr.innerHTML='<div class="pr-card">Empujando la semana al calendario…</div>';
+      fetch(BASE+'/planner/push-week?week_start='+WEEK,{method:'POST'}).then(function(r){return r.json();}).then(function(j){
+        btn.disabled=false; var s=j.summary||{};
+        var html='<div class="pr-card"><strong class="pr-ok">✓ '+s.pushed+' bloque(s) empujados</strong>';
+        if(s.skipped){ html+=' · <span class="pr-warn">'+s.skipped+' sin código completo (no se empujaron)</span>'; }
+        if(s.errors){ html+=' · <span class="pr-warn">'+s.errors+' error(es)</span>'; }
+        if(j.skipped_incomplete && j.skipped_incomplete.length){ html+='<div style="margin-top:.4rem;font-size:.78rem;">Incompletos: '+j.skipped_incomplete.map(function(x){return x.title+' ('+x.codes+')';}).join(', ')+'</div>'; }
+        html+='</div>'; pr.innerHTML=html;
+      }).catch(function(e){ btn.disabled=false; pr.innerHTML='<div class="pr-card pr-warn">✗ '+e+'</div>'; });
+    });
+
+    // ── Reconciliation: planned vs actual (TimeTracker) ──
+    function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':s; return d.innerHTML; }
+    document.getElementById('recon-toggle').addEventListener('click', function(){
+      var body=document.getElementById('recon-body');
+      if(!body.hidden){ body.hidden=true; return; }
+      body.hidden=false; body.innerHTML='<div class="pr-card">Cargando…</div>';
+      fetch(BASE+'/planner/reconcile?week_start='+WEEK).then(function(r){return r.json();}).then(function(j){
+        if(!j.available){ body.innerHTML='<div class="pr-card pr-warn">TimeTracker no disponible (no se pudo leer su base de datos).</div>'; return; }
+        var rows=j.by_project.map(function(p){
+          var d=p.delta, col=Math.abs(d)<0.01?'var(--text-faint)':(d<0?'var(--danger,#b4541f)':'var(--success)');
+          return '<tr><td style="font-family:monospace;padding:.15rem .3rem;">'+esc(p.code)+'</td><td style="padding:.15rem .3rem;">'+esc(p.name)+'</td><td style="text-align:right;padding:.15rem .3rem;">'+p.planned+'</td><td style="text-align:right;padding:.15rem .3rem;">'+p.actual+'</td><td style="text-align:right;padding:.15rem .3rem;color:'+col+';">'+(d>0?'+':'')+d+'</td></tr>';
+        }).join('');
+        var dayrows=j.by_day.map(function(x){ return '<span style="display:inline-block;min-width:104px;font-size:.74rem;color:var(--text-muted);">'+x.date.slice(5)+': <b>'+x.planned+'</b>/'+x.actual+'</span>'; }).join('');
+        body.innerHTML='<div class="pr-card">'+
+          '<div style="margin-bottom:.5rem;"><strong>Planeado '+j.planned_total+' h</strong> · Real '+j.actual_total+' h <span style="color:var(--text-faint);font-size:.76rem;">(Δ = real − plan)</span></div>'+
+          (rows? '<table style="width:100%;border-collapse:collapse;font-size:.8rem;"><thead><tr style="color:var(--text-faint);text-align:left;"><th style="padding:.15rem .3rem;">CC2</th><th style="padding:.15rem .3rem;">Proyecto</th><th style="text-align:right;padding:.15rem .3rem;">Plan</th><th style="text-align:right;padding:.15rem .3rem;">Real</th><th style="text-align:right;padding:.15rem .3rem;">Δ</th></tr></thead><tbody>'+rows+'</tbody></table>'
+                : '<div style="color:var(--text-faint);font-size:.8rem;">Sin actividad ni bloques con código esta semana.</div>')+
+          '<div style="margin-top:.6rem;border-top:1px solid var(--border-subtle);padding-top:.5rem;font-size:.78rem;">Por día (plan/real): '+dayrows+'</div>'+
+          '</div>';
+      }).catch(function(e){ body.innerHTML='<div class="pr-card pr-warn">✗ '+e+'</div>'; });
+    });
+
+    // ── Auto-plan the week (fill free slots with prioritized tasks) ──
+    document.getElementById('auto-plan').addEventListener('click', function(){
+      if(!confirm('MyDay colocará tus tareas prioritarias en los huecos libres de la semana (Lun–Vie, alrededor de tus reuniones). Es un borrador: nada se envía al calendario hasta que des "Empujar". ¿Continuar?')) return;
+      var btn=this; btn.disabled=true;
+      var pr=document.getElementById('push-result'); pr.innerHTML='<div class="pr-card">✦ Planeando tu semana…</div>';
+      fetch(BASE+'/planner/auto-plan?week_start='+WEEK,{method:'POST'}).then(function(r){return r.json();}).then(function(j){
+        var s=j.summary||{};
+        try { sessionStorage.setItem('myday_autoplan', JSON.stringify({week:WEEK, ids:(j.placed||[]).map(function(p){return p.id;})})); } catch(e){}
+        pr.innerHTML='<div class="pr-card"><strong class="pr-ok">✦ '+s.placed+' tarea(s) colocadas</strong>'+
+          (s.unplaced? ' · <span class="pr-warn">'+s.unplaced+' sin hueco (semana llena)</span>':'')+
+          '<div style="margin-top:.3rem;font-size:.78rem;color:var(--text-muted);">Revísalas, ajusta arrastrando, y dale "Empujar semana" cuando estés conforme.</div></div>';
+        setTimeout(function(){ location.reload(); }, 1000);
+      }).catch(function(e){ btn.disabled=false; pr.innerHTML='<div class="pr-card pr-warn">✗ '+e+'</div>'; });
+    });
+
+    // ── Reset: clear the whole week ──
+    document.getElementById('clear-week').addEventListener('click', function(){
+      if(!confirm('¿Vaciar TODOS los bloques de esta semana? Vuelven al backlog y se borran sus eventos de calendario.')) return;
+      fetch(BASE+'/planner/clear-week?week_start='+WEEK,{method:'POST'}).then(function(r){return r.json();})
+        .then(function(){ try{ sessionStorage.removeItem('myday_autoplan'); }catch(e){} location.reload(); });
+    });
+
+    // ── Undo banner after an auto-plan (uses ids saved before reload) ──
+    (function(){
+      var raw; try { raw=sessionStorage.getItem('myday_autoplan'); } catch(e){ return; }
+      if(!raw) return;
+      try { sessionStorage.removeItem('myday_autoplan'); } catch(e){}
+      var data; try { data=JSON.parse(raw); } catch(e){ return; }
+      if(!data || data.week!==WEEK || !data.ids || !data.ids.length) return;
+      var pr=document.getElementById('push-result');
+      var div=document.createElement('div'); div.className='pr-card';
+      div.innerHTML='✦ Auto-planeé '+data.ids.length+' bloque(s) — borrador. <button id="undo-auto" type="button" style="margin-left:.4rem;background:none;border:1px solid var(--border);border-radius:.4rem;padding:.2rem .6rem;cursor:pointer;color:var(--text);">Deshacer auto-plan</button>';
+      pr.appendChild(div);
+      document.getElementById('undo-auto').addEventListener('click', function(){
+        this.disabled=true; this.textContent='Deshaciendo…';
+        fetch(BASE+'/planner/unschedule-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:data.ids, delete_events:true})})
+          .then(function(r){return r.json();}).then(function(){ location.reload(); })
+          .catch(function(){ location.reload(); });
+      });
+    })();
+
+    // ── Priority rail (what matters, unscheduled) ──
+    function renderRail(){
+      var list=document.getElementById('rail-list');
+      fetch(BASE+'/planner/backlog').then(function(r){return r.json();}).then(function(d){
+        document.getElementById('rail-count').textContent='('+d.count+')';
+        if(!d.tasks.length){ list.innerHTML='<div class="rail-empty">Nada pendiente sin agendar. 🎉</div>'; return; }
+        list.innerHTML='';
+        d.tasks.forEach(function(t){
+          var el=document.createElement('div'); el.className='rail-item'; el.draggable=true;
+          el.dataset.id=t.id; el.dataset.min=t.minutes;
+          var badges='';
+          if(t.overdue||t.urgent) badges+='<span class="bdg bdg-u">🔴 '+(t.overdue?'Vencida':'Urgente')+'</span>';
+          if(t.important) badges+='<span class="bdg bdg-i">⭐ Importante</span>';
+          if(t.stimulating) badges+='<span class="bdg bdg-s">✨ Estimulante</span>';
+          var meta=[];
+          if(t.due) meta.push('vence '+t.due.slice(5));
+          meta.push(t.minutes+'m');
+          if(t.project) meta.push(esc(t.project));
+          if(!t.has_codes) meta.push('<span class="ri-nocode">sin código</span>');
+          el.innerHTML=(badges?'<div class="badge-row">'+badges+'</div>':'')+
+            '<div class="ri-title">'+esc(t.title)+'</div>'+
+            '<div class="ri-meta">'+meta.join(' · ')+'</div>';
+          el.addEventListener('dragstart', function(e){ dragData={id:String(t.id), minutes:t.minutes}; e.dataTransfer.setData('text/plain', String(t.id)); grabY=0; el.classList.add('dragging'); });
+          el.addEventListener('dragend', function(){ el.classList.remove('dragging'); });
+          list.appendChild(el);
+        });
+      }).catch(function(){ list.innerHTML='<div class="rail-empty">No se pudo cargar el backlog.</div>'; });
+    }
+    renderRail();
+  })();
+  </script>
+</body>
+</html>

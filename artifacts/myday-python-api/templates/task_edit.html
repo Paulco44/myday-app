@@ -304,8 +304,77 @@
           <a class="btn-cancel" href="{{ back }}">Cancel</a>
         </div>
       </form>
+
+      <hr class="divider" />
+      <div class="section-label">Bloque facturable → calendario (Paylocity)</div>
+      {% if billing_project_id %}
+      <div class="field">
+        <label for="bill_cc3">Tipo de trabajo (CC3)</label>
+        <select id="bill_cc3" data-current="{{ task.billing_task_id or '' }}"><option value="">—</option></select>
+        <div class="field-hint">Tipos válidos del proyecto «{{ billing_project_name }}».</div>
+      </div>
+      <div class="field">
+        <label for="bill_start">Inicio del bloque</label>
+        <input type="datetime-local" id="bill_start"
+               value="{{ task.scheduled_start.strftime('%Y-%m-%dT%H:%M') if task.scheduled_start else '' }}" />
+      </div>
+      <div class="field">
+        <label for="bill_min">Duración (min)</label>
+        <input type="number" id="bill_min" min="5" max="600"
+               value="{{ task.scheduled_minutes or task.time_estimate_minutes or 60 }}" />
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-save" id="bill_push">Bloquear en calendario</button>
+        <span id="bill_status" style="font-size:.85rem;color:var(--text-muted);">
+          {% if task.calendar_event_id %}Ya en calendario — re-bloquear lo actualiza.{% endif %}
+        </span>
+      </div>
+      {% else %}
+      <div class="field-hint">
+        Este proyecto aún no tiene código de facturación.
+        {% if task.project_id %}<a href="{{ base }}/projects/{{ task.project_id }}">Asígnalo en el proyecto →</a>
+        {% else %}Asigna la tarea a un proyecto primero (arriba).{% endif %}
+      </div>
+      {% endif %}
     </div>
   </main>
 <script src="{{ base }}/static/app.js?v=26"></script>
+<script>
+(function(){
+  var BASE="{{ base }}", BP={{ billing_project_id if billing_project_id else 'null' }}, TASK={{ task.id }};
+  var sel=document.getElementById('bill_cc3');
+  if(sel && BP){
+    fetch(BASE+'/billing/tasks?project_id='+BP).then(function(r){return r.json();}).then(function(d){
+      (d.tasks||[]).forEach(function(t){
+        var o=document.createElement('option');
+        o.value=t.id; o.textContent=t.name+(t.code?' ('+t.code+')':'');
+        if(String(t.id)===sel.dataset.current) o.selected=true;
+        sel.appendChild(o);
+      });
+    });
+  }
+  var btn=document.getElementById('bill_push');
+  if(btn){ btn.addEventListener('click', function(){
+    var start=document.getElementById('bill_start').value;
+    var min=parseInt(document.getElementById('bill_min').value||'60',10);
+    var cc3=document.getElementById('bill_cc3').value;
+    var st=document.getElementById('bill_status');
+    if(!start){ st.textContent='⚠ Pon una hora de inicio.'; return; }
+    st.textContent='Enviando al calendario…'; btn.disabled=true;
+    fetch(BASE+'/tasks/'+TASK+'/push-calendar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({start:start, minutes:min, billing_task_id: cc3?parseInt(cc3,10):null})})
+     .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+     .then(function(res){ btn.disabled=false;
+       if(res.ok){
+         var codes=res.j.codes||'//';
+         var missing=codes.split('/').some(function(x){return !x.trim();});
+         st.textContent=(missing?'⚠ Bloqueado pero falta un código (CC1/CC2/CC3 = '+codes+') — revisa el tipo y vuelve a bloquear.'
+                                : '✓ Bloqueado · códigos '+codes);
+         st.style.color = missing ? 'var(--danger, #b4541f)' : 'var(--success, var(--text-muted))';
+       } else { st.textContent='✗ '+(res.j.detail||'error'); }
+     }).catch(function(e){ btn.disabled=false; st.textContent='✗ '+e; });
+  }); }
+})();
+</script>
 </body>
 </html>
