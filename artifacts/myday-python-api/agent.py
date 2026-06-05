@@ -1009,6 +1009,145 @@ def apply_day_plan(db, assignments: list) -> dict:
     return {"applied": True, "count": len(applied), "assignments": applied}
 
 
+# ─── Weekly auto-plan: LLM reasoning layer over the deterministic engine ───────
+
+_WEEK_PLAN_TOOL = {
+    "name": "submit_week_plan",
+    "description": "Devuelve el plan semanal de bloques de trabajo para Paul, encajados en sus huecos libres.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string", "description": "2-4 frases en español: cómo organizaste la semana y por qué."},
+            "assignments": {
+                "type": "array",
+                "description": "Una entrada por tarea que COLOCAS en un hueco. No inventes IDs ni días: usa solo los dados.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "integer"},
+                        "day": {"type": "string", "description": "Fecha del bloque, ISO YYYY-MM-DD. Debe ser uno de los días con huecos."},
+                        "start": {"type": "string", "description": "Hora local de inicio HH:MM (24h), dentro de un hueco libre."},
+                        "minutes": {"type": "integer", "description": "Duración en minutos (15-240). Cabe dentro del hueco."},
+                        "reason": {"type": "string", "description": "Por qué aquí/ahora, 1 frase breve en español (energía, agrupación, urgencia)."},
+                    },
+                    "required": ["task_id", "day", "start", "minutes", "reason"],
+                },
+            },
+            "deferred": {
+                "type": "array",
+                "description": "Tareas que decides NO agendar esta semana a propósito (dejar buffer / evitar sobrecarga).",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "integer"},
+                        "reason": {"type": "string", "description": "Por qué la dejas fuera, 1 frase en español."},
+                    },
+                    "required": ["task_id", "reason"],
+                },
+            },
+            "warnings": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Señales de atención: semana sobrecargada, demasiadas vencidas, poco hueco.",
+            },
+        },
+        "required": ["summary", "assignments"],
+    },
+}
+
+
+def _fmt_free_by_day(free_by_day: dict, today: date) -> str:
+    """Render free intervals as human, day-labelled lines for the prompt."""
+    lines = []
+    for d_iso in sorted(free_by_day):
+        ivs = free_by_day[d_iso]
+        if not ivs:
+            continue
+        try:
+            d = date.fromisoformat(d_iso)
+            label = f"{d.strftime('%A')} {d_iso}"
+        except Exception:
+            label = d_iso
+        slots = ", ".join(f"{s // 60:02d}:{s % 60:02d}-{e // 60:02d}:{e % 60:02d} ({e - s}min)"
+                           for s, e in ivs)
+        lines.append(f"- {label}: {slots}")
+    return "\n".join(lines) if lines else "(sin huecos libres esta semana)"
+
+
+def compute_week_plan(free_by_day: dict, tasks: list, energy_today: Optional[str] = None,
+                      calendar: Optional[list] = None, today: Optional[date] = None) -> dict:
+    """Ask the model to place prioritized tasks into the week's free slots, reasoning
+    about energy/time-of-day, grouping and buffer. Returns a validated-by-schema plan;
+    the caller still slot-validates each assignment before writing draft blocks.
+    Returns {"error": ...} if the LLM is not configured or returns nothing."""
+    if not is_configured():
+        return {"error": "ANTHROPIC_API_KEY no está configurada."}
+    today = today or date.today()
+    valid_ids = {t.get("id") for t in tasks}
+    valid_days = set(free_by_day)
+
+    free_str = _fmt_free_by_day(free_by_day, today)
+    tasks_json = json.dumps(tasks, ensure_ascii=False)
+    cal_json = json.dumps(calendar or [], ensure_ascii=False)
+    energy_str = ENERGY_LABELS.get(energy_today or "", "no indicada")
+
+    system = (
+        "Eres el planificador SEMANAL de Paul (consultor en V2A Consulting), perfil ENFP + ADHD: "
+        "necesita una semana enfocada, sin sobrecarga, con trabajo agrupado y aire para respirar. "
+        "Tu trabajo es ENCAJAR las tareas en los huecos libres, no solo describirlas.\n\n"
+        f"Fecha de hoy: {today.isoformat()} ({today.strftime('%A')}). Energía reportada: {energy_str}.\n\n"
+        "Reglas de planificación:\n"
+        "- Coloca cada bloque DENTRO de un hueco libre listado, en su día, con start+minutes que QUEPAN en ese hueco. "
+        "No solapes dos bloques. No uses días ni horas fuera de los huecos dados.\n"
+        "- Trabajo creativo/de alta concentración o alta energía → MAÑANA. Admin/rutina/baja energía → tarde. "
+        "Usa energy_tag y la energía reportada.\n"
+        "- AGRUPA tareas del mismo proyecto/contexto en el mismo día o en bloques contiguos cuando tenga sentido.\n"
+        "- Respeta vencimientos: lo vencido/urgente (due_in_days bajo o negativo) va primero y pronto.\n"
+        "- DEJA BUFFER: no llenes cada hueco al 100%. Es mejor una semana realista que una saturada. "
+        "Puedes mover a 'deferred' tareas de bajo valor para no sobrecargar (di por qué).\n"
+        "- Duración: usa la estimación de la tarea si existe; si no, 60 min. Máximo 240.\n"
+        "- No inventes IDs ni días ni tareas. Usa solo los candidatos y los huecos dados. "
+        "Llama a submit_week_plan exactamente una vez."
+    )
+    user = (
+        "Huecos libres de la semana (planifica DENTRO de estos; ya excluyen reuniones, almuerzo y bloques existentes):\n"
+        + free_str + "\n\n"
+        "Reuniones reales de Microsoft 365 esta semana (contexto; NO las dupliques como tareas):\n"
+        + cal_json + "\n\n"
+        "Tareas candidatas, ya ordenadas por prioridad (JSON). due_in_days negativo = vencida. "
+        "Encaja las que importan en los huecos y razona cada colocación:\n\n" + tasks_json
+    )
+
+    client = get_client()
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=4096,
+        system=[{"type": "text", "text": system}],
+        tools=[_WEEK_PLAN_TOOL],
+        tool_choice={"type": "tool", "name": "submit_week_plan"},
+        messages=[{"role": "user", "content": user}],
+    )
+    plan = None
+    for block in resp.content:
+        if getattr(block, "type", None) == "tool_use" and block.name == "submit_week_plan":
+            plan = block.input
+            break
+    if not plan:
+        return {"error": "El modelo no devolvió un plan."}
+
+    plan = _recover_leaked_plan(plan)
+
+    # Drop hallucinated ids/days; the caller still checks slot-fit + overlap.
+    clean = []
+    for a in plan.get("assignments", []) or []:
+        if a.get("task_id") in valid_ids and a.get("day") in valid_days:
+            clean.append(a)
+    plan["assignments"] = clean
+    plan["deferred"] = [d for d in (plan.get("deferred") or []) if d.get("task_id") in valid_ids]
+    plan.setdefault("warnings", [])
+    return plan
+
+
 # ─── Phase 2: Microsoft 365 (email + calendar) ────────────────────────────────
 
 def safe_calendar(days: int = 1) -> list:

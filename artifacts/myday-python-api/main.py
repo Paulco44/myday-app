@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pathlib
 from contextlib import asynccontextmanager
@@ -27,6 +28,7 @@ import schemas
 import agent
 import ms_graph
 import billing_catalog
+import billing_rank
 import reconcile
 from database import engine, get_db, Base, SessionLocal
 
@@ -81,6 +83,7 @@ def run_migrations():
         ("scheduled_minutes", "INTEGER"),
         ("calendar_event_id", "TEXT"),
         ("calendar_pushed_at", "TIMESTAMP"),
+        ("plan_reason", "TEXT"),
     ]
     log_cols = [
         ("has_morning_checkin", "BOOLEAN DEFAULT 0"),
@@ -2679,17 +2682,21 @@ def billing_import(db: Session = Depends(get_db)):
 
 @app.get(f"{BASE}/billing/clients")
 def billing_clients(db: Session = Depends(get_db)):
-    return {"clients": [_bc_dict(c) for c in billing_catalog.list_clients(db)]}
+    # Ranked by how often you actually use each (recency-weighted); soft, not filtered.
+    return {"clients": billing_rank.rank_clients(db)}
 
 
 @app.get(f"{BASE}/billing/projects")
-def billing_projects(client_id: int = Query(...), db: Session = Depends(get_db)):
-    return {"projects": [_bc_dict(p) for p in billing_catalog.projects_for_client(db, client_id)]}
+def billing_projects(client_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    # All active projects, ranked by P(project | client) when the client has history,
+    # else by overall frequency. "frequent" flags the ones to surface on top.
+    return {"projects": billing_rank.rank_projects(db, client_id)}
 
 
 @app.get(f"{BASE}/billing/tasks")
-def billing_tasks(project_id: int = Query(...), db: Session = Depends(get_db)):
-    return {"tasks": [_bc_dict(t) for t in billing_catalog.tasks_for_project(db, project_id)]}
+def billing_tasks(project_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    # All active tasks, ranked by P(task | project) when the project has history.
+    return {"tasks": billing_rank.rank_tasks(db, project_id)}
 
 
 @app.get(f"{BASE}/billing/catalog")
@@ -2796,6 +2803,7 @@ def _block_dict(db: Session, t: models.Task):
         "billing_project_id": t.billing_project_id,
         "billing_task_id": t.billing_task_id,
         "pushed": bool(t.calendar_event_id),
+        "plan_reason": t.plan_reason,
     }
 
 
@@ -2909,6 +2917,7 @@ def planner_unschedule(task_id: int, delete_event: int = Query(default=1), db: S
         t.calendar_event_id = None
         t.calendar_pushed_at = None
     t.scheduled_start = None
+    t.plan_reason = None
     db.commit()
     return {"ok": True}
 
@@ -2922,6 +2931,7 @@ def _unschedule_task(t: models.Task, delete_event: bool = True):
         t.calendar_event_id = None
         t.calendar_pushed_at = None
     t.scheduled_start = None
+    t.plan_reason = None
 
 
 @app.post(f"{BASE}/planner/clear-week")
@@ -3054,6 +3064,55 @@ def _local_minutes(iso):
         return None, None, None
 
 
+def _free_copy(free_by_day):
+    """Deep copy of the {day: [[s,e],...]} free map so an engine can consume it
+    without destroying the original (needed for LLM→deterministic fallback)."""
+    return {d: [list(iv) for iv in ivs] for d, ivs in free_by_day.items()}
+
+
+def _place_split(intervals, start_min, minutes):
+    """Try to carve [start_min, start_min+minutes] out of one free interval.
+    On success, split that interval into the remaining left/right gaps and
+    return True; otherwise return False (no fit / overlap)."""
+    end_min = start_min + minutes
+    for idx, (s, e) in enumerate(intervals):
+        if s <= start_min and end_min <= e:
+            remainders = []
+            if start_min - s >= 15:
+                remainders.append([s, start_min])
+            if e - end_min >= 15:
+                remainders.append([end_min, e])
+            intervals[idx:idx + 1] = remainders
+            return True
+    return False
+
+
+def _deterministic_plan(cand, free_by_day, db):
+    """Earliest-fit placement of ranked tasks into free slots. Mutates tasks +
+    free_by_day. Returns (placed, unplaced). The reliable fallback engine."""
+    placed, unplaced = [], []
+    for t in cand:
+        dur = min(t.time_estimate_minutes or 60, 240)
+        done = False
+        for d_iso in sorted(free_by_day):
+            for iv in free_by_day[d_iso]:
+                if iv[1] - iv[0] >= dur:
+                    sm = iv[0]
+                    t.scheduled_start = datetime.fromisoformat(f"{d_iso}T{sm // 60:02d}:{sm % 60:02d}:00")
+                    t.scheduled_minutes = dur
+                    t.plan_reason = None
+                    iv[0] += dur
+                    placed.append({"id": t.id, "title": t.title, "day": d_iso,
+                                   "time": f"{sm // 60:02d}:{sm % 60:02d}", "minutes": dur})
+                    done = True
+                    break
+            if done:
+                break
+        if not done:
+            unplaced.append({"id": t.id, "title": t.title})
+    return placed, unplaced
+
+
 @app.post(f"{BASE}/planner/auto-plan")
 def planner_auto_plan(week_start: str = Query(...), db: Session = Depends(get_db)):
     """Draft the week: drop prioritized unscheduled tasks into free slots
@@ -3076,13 +3135,17 @@ def planner_auto_plan(week_start: str = Query(...), db: Session = Depends(get_db
         sm = b.scheduled_start.hour * 60 + b.scheduled_start.minute
         busy_by_day.setdefault(d, []).append((sm, sm + (b.scheduled_minutes or 60)))
 
-    # Calendar meetings this week (busy)
+    # Calendar meetings this week (busy) + a summary for the LLM to reason around
+    cal_summary = []
     try:
         for ev in ms_graph.get_events_between(start_dt, end_dt):
             d, sm, _ = _local_minutes(ev.get("start"))
             d2, em, _ = _local_minutes(ev.get("end"))
             if d and d == d2 and em > sm:
                 busy_by_day.setdefault(d, []).append((sm, em))
+                cal_summary.append({"day": d, "start": f"{sm // 60:02d}:{sm % 60:02d}",
+                                    "end": f"{em // 60:02d}:{em % 60:02d}",
+                                    "subject": ev.get("subject") or "(reunión)"})
     except Exception:
         pass
 
@@ -3110,27 +3173,89 @@ def planner_auto_plan(week_start: str = Query(...), db: Session = Depends(get_db
                 t.due_date.isoformat() if t.due_date else "9999",
                 0 if t.priority == "high" else 1 if t.priority == "medium" else 2)
     cand.sort(key=rank)
+    by_id = {t.id: t for t in cand}
 
-    placed, unplaced = [], []
-    for t in cand:
-        dur = min(t.time_estimate_minutes or 60, 240)
-        done = False
-        for d_iso in sorted(free_by_day):
-            for iv in free_by_day[d_iso]:
-                if iv[1] - iv[0] >= dur:
-                    sm = iv[0]
-                    t.scheduled_start = datetime.fromisoformat(f"{d_iso}T{sm // 60:02d}:{sm % 60:02d}:00")
-                    t.scheduled_minutes = dur
-                    iv[0] += dur
-                    placed.append({"id": t.id, "title": t.title, "day": d_iso, "time": f"{sm // 60:02d}:{sm % 60:02d}", "minutes": dur})
-                    done = True
-                    break
-            if done:
-                break
-        if not done:
-            unplaced.append({"id": t.id, "title": t.title})
+    # ── LLM reasoning layer (preferred); deterministic engine is the fallback ──
+    if agent.is_configured() and cand and any(free_by_day.values()):
+        try:
+            log = db.query(models.DailyLog).filter(models.DailyLog.date == today).first()
+            energy_today = log.energy_today if log else None
+
+            def _payload(t):
+                overdue = bool(t.due_date and t.due_date < today)
+                return {
+                    "id": t.id, "title": t.title,
+                    "project": t.project.name if t.project else None,
+                    "energy_tag": t.energy_tag,
+                    "due_in_days": (t.due_date - today).days if t.due_date else None,
+                    "overdue": overdue,
+                    "minutes": min(t.time_estimate_minutes or 60, 240),
+                    "urgent": bool(t.due_date and t.due_date <= soon),
+                    "important": (t.priority == "high") or (t.today_category == "win"),
+                    "stimulating": t.energy_tag in ("creative", "social"),
+                }
+
+            llm_free = _free_copy(free_by_day)
+            plan = agent.compute_week_plan(
+                llm_free, [_payload(t) for t in cand],
+                energy_today=energy_today, calendar=cal_summary, today=today,
+            )
+            if plan.get("error"):
+                raise RuntimeError(plan["error"])
+
+            placed, rejected = [], []
+            placed_ids = set()
+            # Place earliest blocks first so slot consumption is deterministic.
+            for a in sorted(plan.get("assignments", []),
+                            key=lambda x: (str(x.get("day")), str(x.get("start")))):
+                tid = a.get("task_id")
+                t = by_id.get(tid)
+                if not t or tid in placed_ids:
+                    continue
+                d_iso = a.get("day")
+                try:
+                    hh, mm = str(a.get("start")).split(":")[:2]
+                    start_min = int(hh) * 60 + int(mm)
+                except Exception:
+                    rejected.append(tid); continue
+                minutes = max(15, min(int(a.get("minutes") or 60), 240))
+                if d_iso in llm_free and _place_split(llm_free[d_iso], start_min, minutes):
+                    t.scheduled_start = datetime.fromisoformat(
+                        f"{d_iso}T{start_min // 60:02d}:{start_min % 60:02d}:00")
+                    t.scheduled_minutes = minutes
+                    t.plan_reason = (a.get("reason") or "")[:280] or None
+                    placed_ids.add(tid)
+                    placed.append({"id": tid, "title": t.title, "day": d_iso,
+                                   "time": f"{start_min // 60:02d}:{start_min % 60:02d}",
+                                   "minutes": minutes, "reason": t.plan_reason})
+                else:
+                    rejected.append(tid)
+
+            deferred = [{"id": d.get("task_id"),
+                         "title": by_id[d["task_id"]].title if d.get("task_id") in by_id else None,
+                         "reason": d.get("reason")}
+                        for d in plan.get("deferred", []) if d.get("task_id") in by_id]
+            deferred_ids = {d["id"] for d in deferred}
+            unplaced = [{"id": t.id, "title": t.title} for t in cand
+                        if t.id not in placed_ids and t.id not in deferred_ids]
+            db.commit()
+            return {
+                "engine": "llm",
+                "narrative": plan.get("summary"),
+                "placed": placed, "deferred": deferred, "unplaced": unplaced,
+                "warnings": plan.get("warnings", []),
+                "summary": {"placed": len(placed), "deferred": len(deferred),
+                            "unplaced": len(unplaced),
+                            "rejected": len([r for r in rejected if r not in placed_ids])},
+            }
+        except Exception as exc:
+            db.rollback()
+            logging.warning("auto-plan LLM layer failed, using deterministic engine: %s", exc)
+
+    # ── Deterministic fallback (LLM off, no data, or LLM failed) ──
+    placed, unplaced = _deterministic_plan(cand, free_by_day, db)
     db.commit()
-    return {"placed": placed, "unplaced": unplaced,
+    return {"engine": "deterministic", "placed": placed, "unplaced": unplaced,
             "summary": {"placed": len(placed), "unplaced": len(unplaced)}}
 
 

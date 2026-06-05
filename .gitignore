@@ -72,3 +72,5 @@ __pycache__/
 # "Time and attendance" workbooks. Kept out of git (the live catalog lives in Postgres).
 billing_catalog_seed.json
 **/billing_catalog_seed.json
+# Raw Paylocity cost-center extraction (same confidential client/engagement data)
+**/_live_paylocity.json

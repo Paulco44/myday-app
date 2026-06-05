@@ -73,6 +73,7 @@ class Task(Base):
     scheduled_minutes = Column(Integer, nullable=True)  # planned block duration
     calendar_event_id = Column(String, nullable=True)   # Outlook event id (re-push/update)
     calendar_pushed_at = Column(DateTime, nullable=True)
+    plan_reason = Column(String, nullable=True)         # why the LLM placed this block here
 
     project = relationship("Project", back_populates="tasks")
     subtasks = relationship("Subtask", back_populates="task", cascade="all, delete-orphan")
