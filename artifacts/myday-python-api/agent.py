@@ -330,6 +330,34 @@ TOOLS = [
         },
     },
     {
+        "name": "sync_ms_teams",
+        "description": "Pull recent Microsoft Teams chats into the inbox (deduped). Message bodies stay local; "
+                       "only metadata is shown unless you read a message explicitly.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"limit": {"type": "integer", "default": 25}},
+        },
+    },
+    {
+        "name": "list_ms_teams",
+        "description": "List synced Teams chats in the inbox (metadata only: topic/sender + time). "
+                       "Does NOT include the message body — use read_teams_message for that.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"limit": {"type": "integer", "default": 25}},
+        },
+    },
+    {
+        "name": "read_teams_message",
+        "description": "Read the full body of one synced Teams message by its inbox item id. Only call this when "
+                       "the user explicitly asks to read/summarize a specific Teams chat (confidentiality).",
+        "input_schema": {
+            "type": "object",
+            "properties": {"item_id": {"type": "integer"}},
+            "required": ["item_id"],
+        },
+    },
+    {
         "name": "get_briefing",
         "description": "Today's proactive briefing: the single main objective + stall radar (tasks sitting too "
                        "long with recommended next action). Use when the user asks for their briefing, what to "
@@ -444,6 +472,32 @@ def _dispatch(name: str, a: dict, db) -> dict:
         if not i:
             return {"error": "email no encontrado (¿id correcto y source ms_email?)"}
         return {"item_id": i.id, "subject": i.title, "meta": i.summary, "body": i.raw_content}
+
+    if name == "sync_ms_teams":
+        return sync_ms_teams(db, limit=int(a.get("limit", 25)))
+
+    if name == "list_ms_teams":
+        items = (
+            db.query(models.InboxItem)
+            .filter(models.InboxItem.source == "ms_teams")
+            .order_by(models.InboxItem.created_at.desc())
+            .limit(int(a.get("limit", 25)))
+            .all()
+        )
+        # Metadata only — no body.
+        return {"chats": [
+            {"item_id": i.id, "title": i.title, "meta": i.summary,
+             "status": i.status, "web_link": i.linked_note_url}
+            for i in items
+        ], "count": len(items)}
+
+    if name == "read_teams_message":
+        i = db.query(models.InboxItem).filter(
+            models.InboxItem.id == a["item_id"], models.InboxItem.source == "ms_teams"
+        ).first()
+        if not i:
+            return {"error": "mensaje de Teams no encontrado (¿id correcto y source ms_teams?)"}
+        return {"item_id": i.id, "title": i.title, "meta": i.summary, "body": i.raw_content}
 
     if name == "get_briefing":
         return get_or_create_briefing(db, force=bool(a.get("refresh", False)))
@@ -676,10 +730,12 @@ def build_system_prompt() -> str:
         "llevarlo a Notion, usa export_note_to_notion (revisa antes list_notion_targets).\n"
         "- Cuando ejecutes acciones, resume al final qué hiciste con los IDs/títulos afectados.\n"
         "- Si una herramienta devuelve un error, explícalo en lenguaje natural y propón una alternativa.\n\n"
-        "Acceso actual: datos internos de MyDay (tareas, proyectos, inbox, notas), Notion, y el "
-        "CALENDARIO de Microsoft 365 (usa get_calendar_events para ver reuniones; planifica alrededor "
-        "de ellas). El correo de Outlook está pendiente de aprobación de admin; si te piden algo de email, "
-        "explica que aún no está habilitado. Los chats de Teams llegarán después."
+        "Acceso actual: datos internos de MyDay (tareas, proyectos, inbox, notas), Notion, y Microsoft 365: "
+        "CALENDARIO (get_calendar_events; planifica alrededor de las reuniones), EMAIL de Outlook "
+        "(sync_ms_email/list_ms_email; cuerpos solo con read_email_body) y CHATS de Teams "
+        "(sync_ms_teams/list_ms_teams; cuerpos solo con read_teams_message). Confidencialidad: para email y "
+        "Teams a ti solo te llegan metadatos (asunto/tema, remitente, hora); el cuerpo se guarda local y solo "
+        "lo lees si el usuario lo pide explícitamente para un ítem concreto."
     )
 
 
@@ -1176,6 +1232,36 @@ def sync_ms_email(db, limit: int = 25) -> dict:
         fields = ms_graph.email_to_inbox_fields(msg)
         dup = db.query(models.InboxItem).filter(
             models.InboxItem.source == "ms_email",
+            models.InboxItem.external_id == fields["external_id"],
+        ).first()
+        if dup:
+            skipped += 1
+            continue
+        db.add(models.InboxItem(**fields))
+        imported += 1
+    db.commit()
+    return {"imported": imported, "skipped": skipped}
+
+
+def sync_ms_teams(db, limit: int = 25) -> dict:
+    """Pull recent Teams chats into the inbox (deduped). Message bodies stay local."""
+    if not ms_graph.teams_enabled():
+        return {"error": "El acceso a Teams (Chat.Read) requiere aprobación de admin en tu tenant y "
+                         "aún no está habilitado."}
+    if not ms_graph.is_connected():
+        return {"error": "No conectado a Microsoft 365. Conéctalo en Integraciones → Microsoft 365."}
+    try:
+        chats = ms_graph.get_chat_messages(top=limit)
+    except Exception as exc:
+        return {"error": str(exc)}
+    imported = skipped = 0
+    for chat in chats:
+        fields = ms_graph.teams_to_inbox_fields(chat)
+        if not fields.get("external_id"):
+            skipped += 1
+            continue
+        dup = db.query(models.InboxItem).filter(
+            models.InboxItem.source == "ms_teams",
             models.InboxItem.external_id == fields["external_id"],
         ).first()
         if dup:

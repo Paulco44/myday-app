@@ -36,6 +36,10 @@ SCOPES = (os.environ.get("MS_SCOPES") or "Calendars.Read").split()
 def mail_enabled() -> bool:
     return "Mail.Read" in SCOPES
 
+
+def teams_enabled() -> bool:
+    return "Chat.Read" in SCOPES
+
 _CACHE_PATH = os.path.join(os.path.dirname(__file__), ".ms_token_cache.json")
 
 # Module-global state for the pending device-code flow (single-user, local).
@@ -320,6 +324,77 @@ def _parse_received(s: str) -> datetime:
         return datetime.fromisoformat(s.replace("Z", "+00:00")).replace(tzinfo=None)
     except Exception:
         return datetime.utcnow()
+
+
+# ─── Teams chats (Chat.Read) ────────────────────────────────────────────────────
+
+def _strip_html(s: Optional[str]) -> Optional[str]:
+    """Teams message bodies can be HTML; keep a plain-text version for local storage."""
+    if not s:
+        return s
+    import re
+    text = re.sub(r"<[^>]+>", " ", s)
+    text = (text.replace("&nbsp;", " ").replace("&amp;", "&")
+                .replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'"))
+    return " ".join(text.split())
+
+
+def get_chat_messages(top: int = 25) -> list:
+    """Recent Teams chats with their last message. Metadata + body (body kept
+    local on store). Uses /me/chats with the expanded last-message preview."""
+    data = _graph_get(
+        "/me/chats",
+        {
+            "$top": str(top),
+            "$expand": "lastMessagePreview",
+            "$orderby": "lastMessagePreview/createdDateTime desc",
+        },
+    )
+    chats = []
+    for c in data.get("value", []):
+        lm = c.get("lastMessagePreview") or {}
+        frm = ((lm.get("from") or {}).get("user") or {})
+        body = (lm.get("body") or {})
+        chats.append({
+            "chat_id": c.get("id"),
+            "message_id": lm.get("id"),
+            "chat_type": c.get("chatType"),          # oneOnOne | group | meeting
+            "topic": c.get("topic"),
+            "from_name": frm.get("displayName"),
+            "created": _fmt_dt(lm.get("createdDateTime")),
+            "body": _strip_html(body.get("content")),  # local only
+            "web_link": c.get("webUrl"),
+        })
+    return chats
+
+
+def teams_to_inbox_fields(chat: dict) -> dict:
+    """Convert a Teams chat (with its last message) into InboxItem kwargs.
+    Metadata-only summary; full message body stored LOCALLY in raw_content."""
+    sender = chat.get("from_name") or "alguien"
+    created = chat.get("created") or ""
+    topic = chat.get("topic")
+    ctype = chat.get("chat_type")
+    if topic:
+        title = f"Teams: {topic}"
+    elif ctype == "oneOnOne":
+        title = f"Teams: chat con {sender}"
+    else:
+        title = f"Teams: {ctype or 'chat'}"
+    summary = f"Teams · {sender} · {created[:16].replace('T', ' ')}"   # metadata only
+    return {
+        "source": "ms_teams",
+        "source_type": "teams",
+        # message id when present (so each new message dedups uniquely); else chat id
+        "external_id": chat.get("message_id") or chat.get("chat_id"),
+        "title": title,
+        "raw_content": chat.get("body"),     # local only — never auto-sent to Claude
+        "summary": summary,
+        "suggested_actions_json": "[]",
+        "linked_note_url": chat.get("web_link"),
+        "status": "new",
+        "created_at": _parse_received(created),
+    }
 
 
 # ─── Calendar WRITE (MyDay↔TimeTracker bridge: coded work blocks) ─────────────

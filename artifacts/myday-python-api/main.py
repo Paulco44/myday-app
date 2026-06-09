@@ -10,7 +10,9 @@ from typing import Optional, List
 # Must run before reading env-dependent config below.
 try:
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+    # override=True so the .env file is authoritative for config (e.g. MS_SCOPES);
+    # otherwise a stale value already in the process environment would win.
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"), override=True)
 except Exception:
     pass
 
@@ -3355,6 +3357,7 @@ def microsoft_settings(
     db: Session = Depends(get_db),
 ):
     email_count = db.query(models.InboxItem).filter(models.InboxItem.source == "ms_email").count()
+    teams_count = db.query(models.InboxItem).filter(models.InboxItem.source == "ms_teams").count()
     last_result = None
     if imported is not None or skipped is not None:
         last_result = {"imported": imported or 0, "skipped": skipped or 0}
@@ -3365,9 +3368,11 @@ def microsoft_settings(
             "status": ms_graph.flow_status(),
             "tenant": ms_graph.tenant(),
             "email_count": email_count,
+            "teams_count": teams_count,
             "last_result": last_result,
             "scopes": " ".join(ms_graph.SCOPES),
             "mail_enabled": ms_graph.mail_enabled(),
+            "teams_enabled": ms_graph.teams_enabled(),
         },
     )
 
@@ -3386,6 +3391,17 @@ def microsoft_status():
 @app.post(f"{BASE}/integrations/microsoft/sync-email")
 def microsoft_sync_email(db: Session = Depends(get_db)):
     result = agent.sync_ms_email(db, limit=40)
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return RedirectResponse(
+        url=f"{BASE}/integrations/microsoft?imported={result['imported']}&skipped={result['skipped']}",
+        status_code=303,
+    )
+
+
+@app.post(f"{BASE}/integrations/microsoft/sync-teams")
+def microsoft_sync_teams(db: Session = Depends(get_db)):
+    result = agent.sync_ms_teams(db, limit=40)
     if "error" in result:
         raise HTTPException(status_code=503, detail=result["error"])
     return RedirectResponse(

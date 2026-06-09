@@ -104,6 +104,19 @@
     </div>
     {% endif %}
 
+    <!-- Teams sync -->
+    {% if status.connected and teams_enabled %}
+    <div class="card">
+      <h2>Teams → Inbox</h2>
+      <div class="token-row">
+        <div class="instructions" style="margin-top:0;">{{ teams_count }} chat(s) de Teams sincronizados en el inbox.</div>
+        <form method="post" action="{{ base }}/integrations/microsoft/sync-teams">
+          <button type="submit" class="btn-import">Sincronizar Teams ahora</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Confidentiality -->
     <div class="card">
       <h2>Confidencialidad</h2>
