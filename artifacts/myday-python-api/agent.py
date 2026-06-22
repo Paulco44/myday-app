@@ -1273,6 +1273,116 @@ def sync_ms_teams(db, limit: int = 25) -> dict:
     return {"imported": imported, "skipped": skipped}
 
 
+# ─── Inbox triage (AI classification of pending items) ─────────────────────────
+# Confidentiality contract agreed with Paul: Claude sees title/sender/time plus a
+# LIMITED PREVIEW (first ~300 chars of plain text). Never the full body, and
+# never attachments (attachments are never even downloaded by the sync).
+
+_TRIAGE_PREVIEW_CHARS = 300
+
+_TRIAGE_TOOL = {
+    "name": "submit_inbox_triage",
+    "description": "Clasifica los ítems pendientes del inbox de Paul.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "item_id": {"type": "integer"},
+                        "category": {"type": "string", "enum": ["action", "fyi", "archive"],
+                                     "description": "action = requiere algo de Paul · fyi = leer y listo · archive = sin valor accionable"},
+                        "reason": {"type": "string", "description": "Por qué, en UNA frase corta (español)."},
+                        "suggested_action": {"type": "string",
+                                             "description": "Solo si category=action: el siguiente paso concreto."},
+                    },
+                    "required": ["item_id", "category", "reason"],
+                },
+            },
+        },
+        "required": ["items"],
+    },
+}
+
+
+def _triage_preview(item) -> str:
+    """Plain-text preview capped at _TRIAGE_PREVIEW_CHARS. Strips HTML (emails)."""
+    raw = item.raw_content or ""
+    text = ms_graph._strip_html(raw) if "<" in raw[:500] else " ".join(raw.split())
+    return (text or "")[:_TRIAGE_PREVIEW_CHARS]
+
+
+def compute_inbox_triage(db, limit: int = 60, force: bool = False) -> dict:
+    """Classify pending inbox items (action / fyi / archive) with a one-line
+    reason. Sends metadata + limited preview only; saves into triage_json."""
+    if not is_configured():
+        return {"error": "ANTHROPIC_API_KEY no está configurada."}
+    q = db.query(models.InboxItem).filter(models.InboxItem.status.in_(["new", "reviewing"]))
+    if not force:
+        q = q.filter(models.InboxItem.triage_json.is_(None))
+    items = q.order_by(models.InboxItem.created_at.desc()).limit(limit).all()
+    if not items:
+        return {"triaged": 0, "message": "Nada pendiente de triar."}
+
+    payload = [
+        {
+            "item_id": i.id,
+            "source": i.source,
+            "title": i.title,
+            "meta": i.summary,                  # sender + time (metadata line)
+            "preview": _triage_preview(i),       # limited plain-text preview
+        }
+        for i in items
+    ]
+    system = (
+        "Eres el asistente de triaje del inbox de Paul (consultor en V2A). Recibes ítems pendientes "
+        "(emails, chats de Teams, notas de reuniones, capturas) con su metadata y un PREVIEW limitado.\n"
+        "Clasifica cada uno:\n"
+        "- 'action': requiere que Paul haga algo (responder, decidir, dar seguimiento). Da el paso concreto.\n"
+        "- 'fyi': vale leerlo pero no exige acción (informes, avisos internos).\n"
+        "- 'archive': sin valor accionable (newsletters, notificaciones automáticas, chats triviales o ya resueltos).\n"
+        "Reglas: razón de UNA frase, en español, específica (no 'es un email'). Si el preview es insuficiente "
+        "para estar seguro, prefiere 'fyi' sobre 'archive'. Newsletters/marketing/no-reply casi siempre 'archive'. "
+        "Devuelve TODOS los item_id recibidos, exactamente una vez. Llama submit_inbox_triage una sola vez."
+    )
+    client = get_client()
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=4096,
+        system=[{"type": "text", "text": system}],
+        tools=[_TRIAGE_TOOL],
+        tool_choice={"type": "tool", "name": "submit_inbox_triage"},
+        messages=[{"role": "user", "content": "Ítems (JSON):\n\n" + json.dumps(payload, ensure_ascii=False)}],
+    )
+    result = None
+    for block in resp.content:
+        if getattr(block, "type", None) == "tool_use" and block.name == "submit_inbox_triage":
+            result = block.input
+            break
+    if not result or "items" not in result:
+        return {"error": "El modelo no devolvió el triaje."}
+
+    by_id = {i.id: i for i in items}
+    saved = 0
+    counts = {"action": 0, "fyi": 0, "archive": 0}
+    for t in result["items"]:
+        item = by_id.get(t.get("item_id"))
+        cat = t.get("category")
+        if not item or cat not in counts:
+            continue  # drop hallucinated ids/categories
+        item.triage_json = json.dumps({
+            "category": cat,
+            "reason": (t.get("reason") or "").strip(),
+            "suggested_action": (t.get("suggested_action") or "").strip(),
+        }, ensure_ascii=False)
+        counts[cat] += 1
+        saved += 1
+    db.commit()
+    return {"triaged": saved, "pending_sent": len(items), **counts}
+
+
 # ─── Phase 3: Proactive briefing + stall radar ─────────────────────────────────
 
 _BRIEFING_TOOL = {

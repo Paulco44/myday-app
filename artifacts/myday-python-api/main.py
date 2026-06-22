@@ -94,6 +94,7 @@ def run_migrations():
     ]
     inbox_cols = [
         ("linked_note_id", "INTEGER"),
+        ("triage_json", "TEXT"),
     ]
     project_cols = [
         ("source_ref", "TEXT"),
@@ -1975,6 +1976,31 @@ def weekly_review(request: Request, db: Session = Depends(get_db)):
 INBOX_STATUSES = ["new", "reviewing", "promoted", "archived"]
 
 
+_NEWSLETTER_HINTS = ("no-reply", "noreply", "newsletter", "digest", "unsubscribe",
+                     "mailer", "notifications@", "automated")
+
+
+def _inbox_view_fields(item) -> dict:
+    """Per-item presentation extras: local snippet, parsed triage, cheap hint.
+    The snippet renders LOCALLY in Paul's browser — nothing here goes to the API."""
+    raw = item.raw_content or ""
+    snippet = ms_graph._strip_html(raw) if "<" in raw[:500] else " ".join(raw.split())
+    triage = None
+    if item.triage_json:
+        try:
+            triage = json.loads(item.triage_json)
+        except Exception:
+            triage = None
+    hint = None
+    if not triage:
+        blob = f"{item.title} {item.summary or ''}".lower()
+        if item.source == "ms_email" and any(k in blob for k in _NEWSLETTER_HINTS):
+            hint = "parece newsletter"
+        elif item.source == "ms_teams" and "· paul cohen ·" in blob:
+            hint = "el último mensaje es tuyo"
+    return {"snippet": (snippet or "")[:180], "triage": triage, "hint": hint}
+
+
 @app.get(f"{BASE}/inbox", response_class=HTMLResponse)
 def inbox_list(request: Request, db: Session = Depends(get_db)):
     items = (
@@ -1989,11 +2015,41 @@ def inbox_list(request: Request, db: Session = Depends(get_db)):
         .count()
     )
     unreviewed_count = sum(1 for i in items if i.status in ("new", "reviewing"))
+    view = {i.id: _inbox_view_fields(i) for i in items}
     return templates.TemplateResponse(
         request, "inbox.html",
         {"base": BASE, "items": items, "archived_count": archived_count,
-         "unreviewed_count": unreviewed_count},
+         "unreviewed_count": unreviewed_count, "view": view},
     )
+
+
+@app.post(f"{BASE}/inbox/triage")
+def inbox_triage(force: int = Query(default=0), db: Session = Depends(get_db)):
+    """AI-classify pending items (metadata + limited preview only; no attachments)."""
+    result = agent.compute_inbox_triage(db, force=bool(force))
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return result
+
+
+from pydantic import BaseModel as _PydBase
+
+
+class BulkIdsBody(_PydBase):
+    ids: List[int]
+
+
+@app.post(f"{BASE}/inbox/bulk-archive")
+def inbox_bulk_archive(body: BulkIdsBody, db: Session = Depends(get_db)):
+    n = 0
+    for item_id in body.ids:
+        item = db.query(models.InboxItem).filter(models.InboxItem.id == item_id).first()
+        if item and item.status != "archived":
+            item.status = "archived"
+            item.reviewed_at = datetime.utcnow()
+            n += 1
+    db.commit()
+    return {"archived": n}
 
 
 @app.post(f"{BASE}/inbox/quick-capture")

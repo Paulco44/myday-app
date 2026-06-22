@@ -49,11 +49,37 @@
     .empty-state .btn-capture-empty { display: inline-flex; align-items: center; gap: .4rem; margin-top: 1.25rem; background: var(--accent); color: #1A1A1A; border: none; border-radius: .5rem; padding: .52rem 1.25rem; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; }
     .empty-state .btn-capture-empty:hover { opacity: .88; }
 
-    /* ── Inbox card ── */
-    .inbox-list { display: flex; flex-direction: column; gap: .75rem; }
-    .inbox-card { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1rem 1.15rem; display: flex; gap: 1rem; align-items: flex-start; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; position: relative; }
+    /* ── Inbox card (compact) ── */
+    .inbox-list { display: flex; flex-direction: column; gap: .45rem; }
+    .inbox-card { background: var(--surface); border: 1px solid var(--border); border-radius: .6rem; padding: .6rem .8rem; display: flex; gap: .6rem; align-items: flex-start; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; position: relative; }
     .inbox-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
     html.dark .inbox-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+
+    /* selection checkbox */
+    .card-check { flex: none; margin-top: .2rem; width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+    .inbox-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+    /* triage badges */
+    .tri { display: inline-flex; align-items: center; padding: .1rem .5rem; border-radius: 999px; font-size: .68rem; font-weight: 700; letter-spacing: .02em; }
+    .tri-action { background: var(--accent-soft); color: var(--accent-text); }
+    .tri-fyi { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+    .tri-archive { background: #efece6; color: #8a7d68; }
+    html.dark .tri-archive { background: #2a2722; color: #b3a890; }
+    .tri-hint { font-size: .68rem; color: var(--text-faint); font-style: italic; }
+    .tri-reason { font-size: .78rem; color: var(--text-muted); line-height: 1.45; margin-top: .15rem; }
+    .tri-reason .next-step { color: var(--accent-text); font-weight: 600; }
+
+    /* toolbar: filters + bulk actions */
+    .inbox-toolbar { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; padding: .55rem .8rem; border-bottom: 1px solid var(--border-subtle); background: var(--bg); position: sticky; top: 0; z-index: 5; }
+    .flt { border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: .18rem .65rem; font-size: .74rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .flt.active { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+    .bulk-bar { display: none; align-items: center; gap: .5rem; margin-left: auto; }
+    .bulk-bar.visible { display: inline-flex; }
+    .bulk-bar .count { font-size: .76rem; color: var(--text-muted); font-weight: 600; }
+    .btn-bulk { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: .4rem; padding: .25rem .7rem; font-size: .76rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-bulk:hover { border-color: var(--accent); }
+    .toolbar-link { font-size: .74rem; color: var(--text-muted); cursor: pointer; font-weight: 600; background: none; border: none; font-family: inherit; }
+    .toolbar-link:hover { color: var(--accent-text); }
 
     /* status indicator dot */
     .inbox-card::before { content: ''; position: absolute; left: -1px; top: 1rem; width: 3px; height: 1.4rem; border-radius: 0 2px 2px 0; background: transparent; }
@@ -132,7 +158,10 @@
         <h1>Inbox</h1>
         <p class="subtitle">Capture everything — brain dumps, meeting notes, quick ideas. Process one at a time.</p>
       </div>
-      <button class="btn-capture" onclick="openCapture()">＋ Quick capture</button>
+      <div style="display:flex;gap:.5rem;flex-shrink:0;">
+        <button class="btn-bulk" id="btn-triage" onclick="runTriage()" title="Clasifica lo pendiente con IA (metadatos + preview limitado, nunca adjuntos)" style="align-self:flex-start;padding:.5rem .9rem;font-size:.85rem;">✦ Triar inbox</button>
+        <button class="btn-capture" onclick="openCapture()">＋ Quick capture</button>
+      </div>
     </div>
 
     <!-- Tab bar -->
@@ -167,6 +196,23 @@
           {% set needs_review = items | selectattr('status', 'ne', 'promoted') | list %}
           {% set processed    = items | selectattr('status', 'equalto', 'promoted') | list %}
 
+          {% if not show_archived and needs_review %}
+          <div class="inbox-toolbar">
+            <input type="checkbox" class="card-check" id="check-all" title="Seleccionar visibles" onclick="toggleAll(this)" />
+            <button class="flt active" data-src="all" onclick="setFilter(this)">Todos</button>
+            <button class="flt" data-src="ms_teams" onclick="setFilter(this)">Teams</button>
+            <button class="flt" data-src="ms_email" onclick="setFilter(this)">Email</button>
+            <button class="flt" data-src="whisper" onclick="setFilter(this)">Meetings</button>
+            <button class="flt" data-src="other" onclick="setFilter(this)">Notas</button>
+            <button class="toolbar-link" id="sel-archivable" onclick="selectArchivables()" style="display:none;">Seleccionar archivables</button>
+            <span class="bulk-bar" id="bulk-bar">
+              <span class="count" id="bulk-count"></span>
+              <button class="btn-bulk" onclick="bulkArchive()">Archivar</button>
+              <button class="toolbar-link" onclick="clearSelection()">Limpiar</button>
+            </span>
+          </div>
+          {% endif %}
+
           <div class="inbox-list" id="inbox-list">
 
             {% if needs_review and processed and not show_archived %}
@@ -174,10 +220,14 @@
             {% endif %}
 
             {% for item in needs_review if not show_archived %}
+              {% set v = view[item.id] %}
               <a class="inbox-card status-{{ item.status }}" href="{{ base }}/inbox/{{ item.id }}"
                  data-detail-url="{{ base }}/inbox/{{ item.id }}"
                  data-item-id="{{ item.id }}"
+                 data-source="{{ item.source }}"
+                 data-triage="{{ v.triage.category if v.triage else '' }}"
                  data-item-title="{{ item.title | e }}">
+                <input type="checkbox" class="card-check" onclick="event.stopPropagation(); toggleCard(this)" />
                 <div class="inbox-card-body">
                   <div class="inbox-card-title">{{ item.title }}</div>
                   <div class="inbox-card-meta">
@@ -185,22 +235,32 @@
                     <span class="badge badge-{{ src }}">
                       {% if src == 'brain_dump' %}Quick note
                       {% elif src == 'meeting' %}Meeting
+                      {% elif src == 'teams' %}Teams
+                      {% elif src == 'email' %}Email
                       {% else %}{{ src | replace('_', ' ') | title }}{% endif %}
                     </span>
-                    <span class="badge badge-{{ item.status }}">
-                      {% if item.status == 'new' %}● New
-                      {% elif item.status == 'reviewing' %}◎ Reviewing
-                      {% else %}{{ item.status | title }}{% endif %}
-                    </span>
-                    {% if item.suggested_actions_json %}
-                      <span class="action-pill">{{ item.suggested_actions_json.count('"') // 2 }} action suggestions</span>
+                    {% if v.triage %}
+                      <span class="tri tri-{{ v.triage.category }}">
+                        {% if v.triage.category == 'action' %}Acción
+                        {% elif v.triage.category == 'fyi' %}FYI
+                        {% else %}Archivable{% endif %}
+                      </span>
+                    {% elif v.hint %}
+                      <span class="tri-hint">{{ v.hint }}</span>
+                    {% endif %}
+                    {% if item.suggested_actions_json and item.suggested_actions_json != '[]' %}
+                      <span class="action-pill">{{ item.suggested_actions_json.count('"') // 2 }} sugerencias</span>
                     {% endif %}
                     <span>{{ item.created_at.strftime('%b %d, %I:%M %p') }}</span>
                   </div>
-                  {% if item.summary %}
+                  {% if v.triage and v.triage.reason %}
+                    <div class="tri-reason">{{ v.triage.reason }}
+                      {% if v.triage.suggested_action %}<span class="next-step">→ {{ v.triage.suggested_action }}</span>{% endif %}
+                    </div>
+                  {% elif v.snippet %}
+                    <div class="inbox-card-summary">{{ v.snippet }}</div>
+                  {% elif item.summary %}
                     <div class="inbox-card-summary">{{ item.summary }}</div>
-                  {% elif item.raw_content %}
-                    <div class="inbox-card-summary">{{ item.raw_content[:200] }}</div>
                   {% endif %}
                   <div class="card-quick-actions" onclick="event.preventDefault(); event.stopPropagation();">
                     <button class="btn-card-use"
@@ -461,6 +521,95 @@
       if (!isTyping) openCapture();
     }
   });
+
+  // ── Source filter ──
+  function visibleCards() {
+    return [...document.querySelectorAll('.inbox-card[data-item-id]')].filter(c => c.style.display !== 'none');
+  }
+  function setFilter(btn) {
+    document.querySelectorAll('.flt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const src = btn.dataset.src;
+    const known = ['ms_teams', 'ms_email', 'whisper'];
+    document.querySelectorAll('.inbox-card[data-item-id]').forEach(c => {
+      const s = c.dataset.source || '';
+      const show = src === 'all' || (src === 'other' ? !known.includes(s) : s === src);
+      c.style.display = show ? '' : 'none';
+    });
+    clearSelection();
+  }
+
+  // ── Selection + bulk actions ──
+  function selectedIds() {
+    return [...document.querySelectorAll('.inbox-card .card-check:checked')]
+      .map(ch => parseInt(ch.closest('.inbox-card').dataset.itemId, 10));
+  }
+  function refreshBulkBar() {
+    const n = selectedIds().length;
+    const bar = document.getElementById('bulk-bar');
+    if (!bar) return;
+    bar.classList.toggle('visible', n > 0);
+    document.getElementById('bulk-count').textContent = n + ' seleccionado' + (n !== 1 ? 's' : '');
+  }
+  function toggleCard(ch) {
+    ch.closest('.inbox-card').classList.toggle('selected', ch.checked);
+    refreshBulkBar();
+  }
+  function toggleAll(master) {
+    visibleCards().forEach(c => {
+      const ch = c.querySelector('.card-check');
+      if (ch) { ch.checked = master.checked; c.classList.toggle('selected', master.checked); }
+    });
+    refreshBulkBar();
+  }
+  function clearSelection() {
+    document.querySelectorAll('.inbox-card .card-check:checked').forEach(ch => { ch.checked = false; ch.closest('.inbox-card').classList.remove('selected'); });
+    const master = document.getElementById('check-all');
+    if (master) master.checked = false;
+    refreshBulkBar();
+  }
+  function selectArchivables() {
+    clearSelection();
+    visibleCards().filter(c => c.dataset.triage === 'archive').forEach(c => {
+      const ch = c.querySelector('.card-check');
+      if (ch) { ch.checked = true; c.classList.add('selected'); }
+    });
+    refreshBulkBar();
+  }
+  async function bulkArchive() {
+    const ids = selectedIds();
+    if (!ids.length) return;
+    if (!confirm('¿Archivar ' + ids.length + ' ítem(s)? Los encuentras luego en Archived.')) return;
+    try {
+      await fetch(`${BASE}/inbox/bulk-archive`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids }),
+      });
+    } catch (err) { /* reload shows truth */ }
+    window.location.reload();
+  }
+
+  // ── AI triage ──
+  async function runTriage() {
+    const btn = document.getElementById('btn-triage');
+    btn.disabled = true; btn.textContent = '✦ Triando…';
+    try {
+      const r = await fetch(`${BASE}/inbox/triage`, { method: 'POST' });
+      const j = await r.json();
+      if (!r.ok) { alert('Triaje falló: ' + (j.detail || r.status)); btn.disabled = false; btn.textContent = '✦ Triar inbox'; return; }
+      window.location.reload();
+    } catch (err) {
+      alert('Triaje falló: ' + err);
+      btn.disabled = false; btn.textContent = '✦ Triar inbox';
+    }
+  }
+
+  // Show "Seleccionar archivables" only when some card has triage=archive
+  (function () {
+    const any = document.querySelector('.inbox-card[data-triage="archive"]');
+    const link = document.getElementById('sel-archivable');
+    if (any && link) link.style.display = '';
+  })();
   </script>
 </body>
 </html>

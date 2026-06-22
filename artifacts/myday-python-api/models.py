@@ -221,6 +221,7 @@ class InboxItem(Base):
     raw_content = Column(Text, nullable=True)
     summary = Column(Text, nullable=True)
     suggested_actions_json = Column(Text, nullable=True)  # JSON-encoded list[str]
+    triage_json = Column(Text, nullable=True)  # AI triage: {"category","reason","suggested_action"}
     status = Column(String, nullable=False, default="new")  # new|reviewing|promoted|archived
     created_at = Column(DateTime, default=datetime.utcnow)
     reviewed_at = Column(DateTime, nullable=True)

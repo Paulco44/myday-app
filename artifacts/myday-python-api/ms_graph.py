@@ -341,12 +341,14 @@ def _strip_html(s: Optional[str]) -> Optional[str]:
 
 def get_chat_messages(top: int = 25) -> list:
     """Recent Teams chats with their last message. Metadata + body (body kept
-    local on store). Uses /me/chats with the expanded last-message preview."""
+    local on store). Expands members so 1:1 chats are titled after the
+    COUNTERPART (not whoever sent the last message)."""
+    me = (connected_account() or "").lower()
     data = _graph_get(
         "/me/chats",
         {
             "$top": str(top),
-            "$expand": "lastMessagePreview",
+            "$expand": "members,lastMessagePreview",
             "$orderby": "lastMessagePreview/createdDateTime desc",
         },
     )
@@ -355,12 +357,19 @@ def get_chat_messages(top: int = 25) -> list:
         lm = c.get("lastMessagePreview") or {}
         frm = ((lm.get("from") or {}).get("user") or {})
         body = (lm.get("body") or {})
+        counterpart = None
+        for m in (c.get("members") or []):
+            email = (m.get("email") or "").lower()
+            if email and email != me:
+                counterpart = m.get("displayName")
+                break
         chats.append({
             "chat_id": c.get("id"),
             "message_id": lm.get("id"),
             "chat_type": c.get("chatType"),          # oneOnOne | group | meeting
             "topic": c.get("topic"),
-            "from_name": frm.get("displayName"),
+            "counterpart": counterpart,              # the other person (1:1 chats)
+            "from_name": frm.get("displayName"),     # who wrote the LAST message
             "created": _fmt_dt(lm.get("createdDateTime")),
             "body": _strip_html(body.get("content")),  # local only
             "web_link": c.get("webUrl"),
@@ -378,7 +387,8 @@ def teams_to_inbox_fields(chat: dict) -> dict:
     if topic:
         title = f"Teams: {topic}"
     elif ctype == "oneOnOne":
-        title = f"Teams: chat con {sender}"
+        # Title after the counterpart, not the last sender (which may be Paul himself)
+        title = f"Teams: chat con {chat.get('counterpart') or sender}"
     else:
         title = f"Teams: {ctype or 'chat'}"
     summary = f"Teams · {sender} · {created[:16].replace('T', ' ')}"   # metadata only
