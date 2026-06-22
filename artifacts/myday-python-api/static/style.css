@@ -514,7 +514,8 @@ html.dark .move-btn-primary { background:var(--md-primary-soft)!important; color
 .move-more-wrapper { position:relative; display:inline-block; }
 .move-btn-more { font-size:.82rem!important; padding:.15rem .5rem!important; letter-spacing:2px; opacity:.5!important; }
 .card:hover .move-btn-more { opacity:1!important; }
-.move-dropdown { display:none; position:absolute; bottom:calc(100% + 4px); left:0; background:var(--surface); border:1px solid var(--border); border-radius:.5rem; padding:.3rem; box-shadow:0 4px 16px rgba(0,0,0,.12); flex-direction:column; gap:.2rem; min-width:120px; z-index:50; }
+/* position:fixed so the menu escapes the column's overflow clipping; placement set by JS */
+.move-dropdown { display:none; position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:.5rem; padding:.3rem; box-shadow:0 4px 16px rgba(0,0,0,.18); flex-direction:column; gap:.2rem; min-width:120px; z-index:1000; }
 .move-dropdown.move-dropdown-open { display:flex!important; }
 .move-dropdown .move-btn { width:100%; text-align:left; opacity:1!important; font-size:.82rem!important; }
 html.dark .move-dropdown { background:var(--md-surface-alt); border-color:var(--md-border); box-shadow:0 4px 16px rgba(0,0,0,.4); }

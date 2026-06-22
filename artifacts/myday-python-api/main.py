@@ -21,7 +21,7 @@ import notion_client as notion
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import or_, text as sa_text
+from sqlalchemy import or_, text as sa_text, func
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
@@ -104,6 +104,7 @@ def run_migrations():
         ("last_synced_at", "DATETIME"),
         ("billing_client_id", "INTEGER"),
         ("billing_project_id", "INTEGER"),
+        ("daily_minutes_goal", "INTEGER"),
     ]
     note_cols = [
         ("notion_page_id", "TEXT"),
@@ -1049,6 +1050,20 @@ async def kanban(request: Request, db: Session = Depends(get_db)):
 
     wip_limit = 3
 
+    # Daily commitments rail: projects with a daily time goal + minutes given today
+    commitments = build_commitments(db, today)
+    # Projects available to turn into a commitment (active, no goal yet)
+    addable_projects = (
+        db.query(models.Project)
+        .filter(
+            models.Project.is_active == True,
+            or_(models.Project.daily_minutes_goal == None,
+                models.Project.daily_minutes_goal == 0),
+        )
+        .order_by(models.Project.name)
+        .all()
+    )
+
     response = templates.TemplateResponse(
         request, "kanban.html",
         {
@@ -1060,10 +1075,112 @@ async def kanban(request: Request, db: Session = Depends(get_db)):
             "now_task_id": now_task.id if now_task else None,
             "done_today_count": done_today_count,
             "today": today,
+            "commitments": commitments,
+            "addable_projects": addable_projects,
         },
     )
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     return response
+
+
+def _minutes_today(db: Session, project_id: int, day: date) -> int:
+    """Total minutes logged to a commitment project on `day` (clamped at >= 0)."""
+    total = (
+        db.query(func.coalesce(func.sum(models.CommitmentLog.minutes), 0))
+        .filter(
+            models.CommitmentLog.project_id == project_id,
+            models.CommitmentLog.date == day,
+        )
+        .scalar()
+    )
+    return max(0, int(total or 0))
+
+
+def build_commitments(db: Session, day: date) -> list:
+    """List of daily-commitment projects with today's progress, ready for the template."""
+    projects = (
+        db.query(models.Project)
+        .filter(
+            models.Project.is_active == True,
+            models.Project.daily_minutes_goal != None,
+            models.Project.daily_minutes_goal > 0,
+        )
+        .order_by(models.Project.name)
+        .all()
+    )
+    out = []
+    for p in projects:
+        goal = int(p.daily_minutes_goal or 0)
+        done = _minutes_today(db, p.id, day)
+        pct = min(100, round(done * 100 / goal)) if goal else 0
+        out.append({
+            "id": p.id,
+            "name": p.name,
+            "goal": goal,
+            "done": done,
+            "pct": pct,
+            "met": done >= goal,
+        })
+    return out
+
+
+# ─── Daily commitments (Kanban rail) ──────────────────────────────────────────
+
+@app.post(f"{BASE}/commitments/set")
+async def commitment_set(
+    project_id: int = Form(...),
+    daily_minutes_goal: Optional[int] = Form(default=None),
+    db: Session = Depends(get_db),
+):
+    """Turn a project into a daily commitment (goal > 0) or remove it (0/blank)."""
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if project:
+        goal = daily_minutes_goal or 0
+        project.daily_minutes_goal = goal if goal > 0 else None
+        db.commit()
+    return RedirectResponse(url=f"{BASE}/kanban", status_code=303)
+
+
+@app.post(f"{BASE}/commitments/{{project_id}}/log")
+async def commitment_log(
+    project_id: int,
+    minutes: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Append minutes given to a commitment today (manual). Returns today's totals."""
+    today = date.today()
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project or not project.daily_minutes_goal:
+        raise HTTPException(status_code=404, detail="No es un compromiso diario")
+    db.add(models.CommitmentLog(
+        project_id=project_id, date=today, minutes=int(minutes), source="manual",
+    ))
+    db.commit()
+    goal = int(project.daily_minutes_goal or 0)
+    done = _minutes_today(db, project_id, today)
+    return JSONResponse({
+        "status": "ok", "project_id": project_id, "goal": goal, "done": done,
+        "pct": (min(100, round(done * 100 / goal)) if goal else 0), "met": done >= goal,
+    })
+
+
+@app.post(f"{BASE}/commitments/{{project_id}}/reset-today")
+async def commitment_reset_today(project_id: int, db: Session = Depends(get_db)):
+    """Clear today's manual minutes for a commitment."""
+    today = date.today()
+    db.query(models.CommitmentLog).filter(
+        models.CommitmentLog.project_id == project_id,
+        models.CommitmentLog.date == today,
+        models.CommitmentLog.source == "manual",
+    ).delete(synchronize_session=False)
+    db.commit()
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    goal = int(project.daily_minutes_goal or 0) if project else 0
+    done = _minutes_today(db, project_id, today)
+    return JSONResponse({
+        "status": "ok", "project_id": project_id, "goal": goal, "done": done,
+        "pct": (min(100, round(done * 100 / goal)) if goal else 0), "met": done >= goal,
+    })
 
 
 @app.post(f"{BASE}/tasks/{{task_id}}/status")
@@ -1322,7 +1439,7 @@ async def create_task_form(
 
 
 @app.post(f"{BASE}/tasks-page/{{task_id}}/delete")
-async def delete_task_form(task_id: int, db: Session = Depends(get_db)):
+async def delete_task_form(task_id: int, db: Session = Depends(get_db), back: str = Form(default="")):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if db_task:
         # Bridge cleanup: clear task_id on the linked Kanban card before deleting
@@ -1333,7 +1450,7 @@ async def delete_task_form(task_id: int, db: Session = Depends(get_db)):
                 pass  # best-effort, non-fatal
         db.delete(db_task)
         db.commit()
-    return RedirectResponse(url=f"{BASE}/tasks-page", status_code=303)
+    return RedirectResponse(url=back or f"{BASE}/tasks-page", status_code=303)
 
 
 @app.post(f"{BASE}/tasks/bulk")

@@ -114,6 +114,20 @@
     .btn-save:hover { opacity: .88; }
     .btn-cancel { color: var(--md-text-muted, var(--text-muted)); text-decoration: none; font-size: .86rem; font-weight: 500; padding: .5rem; }
     .btn-cancel:hover { color: var(--text); }
+    .btn-delete { margin-left: auto; background: none; border: 1px solid var(--md-border, var(--border)); border-radius: .5rem; padding: .5rem 1rem; font-size: .86rem; font-weight: 600; font-family: inherit; color: #b5524e; cursor: pointer; transition: background .15s, border-color .15s; }
+    .btn-delete:hover { background: #fbeae9; border-color: #d99b97; }
+    html.dark .btn-delete { color: #f0a9a4; }
+    html.dark .btn-delete:hover { background: #2d1413; border-color: #7a3a37; }
+
+    /* ── Confirm dialog ── */
+    #confirm-dialog { border: none; border-radius: 12px; padding: 1.4rem; box-shadow: 0 16px 40px rgba(0,0,0,.22); max-width: 360px; width: 90vw; background: var(--md-surface, var(--surface)); color: var(--md-text, var(--text)); }
+    #confirm-dialog::backdrop { background: rgba(15,23,42,.45); }
+    .confirm-msg { font-size: .92rem; font-weight: 500; margin-bottom: 1.25rem; line-height: 1.5; }
+    .confirm-actions { display: flex; gap: .6rem; justify-content: flex-end; }
+    .confirm-yes { background: #b5524e; color: #fff; border: none; border-radius: 8px; padding: .45rem 1.1rem; font-size: .86rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .confirm-no  { background: var(--md-surface-alt, var(--surface-alt)); color: var(--md-text, var(--text)); border: 1px solid var(--md-border, var(--border)); border-radius: 8px; padding: .45rem 1.1rem; font-size: .86rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .confirm-yes:hover { background: #9f4743; }
+    .confirm-no:hover  { background: var(--md-bg, var(--bg)); }
 
     /* ── Hint text ── */
     .field-hint { font-size:.78rem; color: var(--md-text-faint, var(--text-faint)); margin-top: .28rem; line-height: 1.45; }
@@ -382,12 +396,41 @@
         <div class="form-actions">
           <button class="btn-save" type="submit">Save changes</button>
           <a class="btn-cancel" href="{{ back }}">Cancel</a>
+          <button type="button" class="btn-delete" id="btn-delete">Borrar tarea</button>
         </div>
+      </form>
+
+      <!-- Delete (separate form — HTML forms can't nest) -->
+      <form id="delete-form" method="post" action="{{ base }}/tasks-page/{{ task.id }}/delete">
+        <input type="hidden" name="back" value="{{ back }}" />
       </form>
     </div>
   </main>
+
+  <!-- Confirm dialog -->
+  <dialog id="confirm-dialog">
+    <p class="confirm-msg">¿Borrar esta tarea? No se puede deshacer.</p>
+    <div class="confirm-actions">
+      <button class="confirm-no"  id="confirm-no" type="button">Cancelar</button>
+      <button class="confirm-yes" id="confirm-yes" type="button">Borrar</button>
+    </div>
+  </dialog>
 <script src="{{ base }}/static/app.js?v=26"></script>
 <script>
+(function(){
+  // ── Delete with confirm dialog ──
+  var delBtn=document.getElementById('btn-delete');
+  var dlg=document.getElementById('confirm-dialog');
+  var delForm=document.getElementById('delete-form');
+  if(delBtn && dlg && delForm){
+    delBtn.addEventListener('click', function(){
+      if(typeof dlg.showModal==='function') dlg.showModal();
+      else delForm.submit();  // fallback for browsers without <dialog>
+    });
+    document.getElementById('confirm-no').addEventListener('click', function(){ dlg.close(); });
+    document.getElementById('confirm-yes').addEventListener('click', function(){ delForm.submit(); });
+  }
+})();
 (function(){
   var BASE="{{ base }}", BP={{ billing_project_id if billing_project_id else 'null' }}, TASK={{ task.id }};
   var sel=document.getElementById('bill_cc3');

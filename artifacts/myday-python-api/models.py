@@ -25,6 +25,9 @@ class Project(Base):
     # Billing bridge: default Client (CC1) + Project (CC2) this project bills to
     billing_client_id = Column(Integer, ForeignKey("billing_clients.id", ondelete="SET NULL"), nullable=True)
     billing_project_id = Column(Integer, ForeignKey("billing_projects.id", ondelete="SET NULL"), nullable=True)
+    # Daily commitment: if set (>0), this project is a continuous commitment with a
+    # daily time target shown as a rail on the Kanban. NULL/0 = not a commitment.
+    daily_minutes_goal = Column(Integer, nullable=True)
 
     tasks = relationship("Task", back_populates="project")
     recurring_tasks = relationship("RecurringTask", back_populates="project")
@@ -126,6 +129,23 @@ class RecurringTask(Base):
     active = Column(Boolean, default=True)
 
     project = relationship("Project", back_populates="recurring_tasks")
+
+
+class CommitmentLog(Base):
+    """Append-only log of time given to a daily-commitment project on a given day.
+
+    Daily progress = SUM(minutes) for (project_id, date). It resets every day
+    automatically because reads filter by date. `source` keeps provenance so a
+    focus-timer feed can be added later alongside manual entries.
+    """
+    __tablename__ = "commitment_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    date = Column(Date, nullable=False, default=date.today, index=True)
+    minutes = Column(Integer, nullable=False, default=0)
+    source = Column(String(20), nullable=False, default="manual")  # manual | focus | calendar
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Settings(Base):

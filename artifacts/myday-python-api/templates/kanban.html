@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kanban — MyDay</title>
   <script>(function(){try{if(localStorage.getItem('myday-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v=25" />
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v=26" />
   <link rel="stylesheet" href="{{ base }}/static/theme.css?v=28" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -111,6 +111,37 @@
     .save-feedback { font-size: .7rem; color: var(--success); font-weight: 600; }
 
     .empty-col { text-align: center; padding: 1rem .5rem; color: #94a3b8; font-size: .8rem; }
+
+    /* ── Daily commitments rail ── */
+    .commit-rail { display: flex; gap: .6rem; align-items: stretch; flex-wrap: wrap; padding: .5rem 1.5rem .1rem; }
+    .commit-rail-label { align-self: center; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-right: .15rem; }
+    .commit-chip { background: var(--surface); border: 1px solid var(--border); border-radius: .6rem; padding: .5rem .65rem; min-width: 200px; display: flex; flex-direction: column; gap: .4rem; }
+    .commit-chip.met { border-color: #86EFAC; background: #F0FDF4; }
+    html.dark .commit-chip.met { border-color: #16A34A; background: #042014; }
+    .commit-chip-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+    .commit-name { font-size: .82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+    .commit-mins { font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
+    .commit-chip.met .commit-mins::before { content: "✓ "; color: #16A34A; font-weight: 700; }
+    .commit-bar { height: 6px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+    .commit-bar-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .25s ease; }
+    .commit-chip.met .commit-bar-fill { background: #16A34A; }
+    .commit-actions { display: flex; gap: .3rem; align-items: center; }
+    .commit-add, .commit-reset, .commit-remove { font-size: .72rem; padding: .15rem .4rem; border-radius: .3rem; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); cursor: pointer; font-family: inherit; }
+    .commit-add:hover { background: var(--accent-soft, #e0e7ff); color: var(--accent-text, #3730a3); border-color: var(--accent); }
+    .commit-add:disabled { opacity: .5; cursor: default; }
+    .commit-reset { margin-left: auto; opacity: .55; }
+    .commit-remove { opacity: .55; }
+    .commit-reset:hover { opacity: 1; }
+    .commit-remove:hover { opacity: 1; color: #b5524e; border-color: #d99b97; }
+    .commit-add-wrap { align-self: center; }
+    .commit-addnew { font-size: .78rem; padding: .42rem .75rem; border-radius: .5rem; border: 1.5px dashed var(--border); background: none; color: var(--text-faint); font-weight: 600; font-family: inherit; cursor: pointer; }
+    .commit-addnew:hover { border-color: var(--accent); color: var(--accent); }
+    .commit-addform { display: flex; gap: .35rem; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; padding: .4rem; }
+    .commit-addform select, .commit-addform input { font-size: .8rem; font-family: inherit; padding: .3rem .45rem; border: 1px solid var(--border); border-radius: .35rem; background: var(--bg); color: var(--text); outline: none; }
+    .commit-addform input[type=number] { width: 92px; }
+    .commit-addform button { font-size: .78rem; padding: .32rem .6rem; border-radius: .35rem; border: none; cursor: pointer; font-family: inherit; }
+    .commit-addform button[type=submit] { background: var(--accent); color: #1a1a1a; font-weight: 700; }
+    .commit-addcancel { background: none !important; border: 1px solid var(--border) !important; color: var(--text-muted) !important; }
   </style>
 </head>
 <body class="theme-quiet">
@@ -128,6 +159,42 @@
     <button class="energy-filter-btn" data-energy="admin">Admin</button>
     <button class="energy-filter-btn" data-energy="social">Social</button>
     <button class="energy-filter-btn" data-energy="low_energy">Low energy</button>
+  </div>
+
+  <!-- ── Daily commitments rail ── -->
+  <div class="commit-rail" id="commit-rail">
+    <span class="commit-rail-label">Compromisos de hoy</span>
+
+    {% for c in commitments %}
+    <div class="commit-chip {% if c.met %}met{% endif %}"
+         id="commit-{{ c.id }}" data-id="{{ c.id }}" data-goal="{{ c.goal }}">
+      <div class="commit-chip-head">
+        <span class="commit-name" title="{{ c.name }}">{{ c.name }}</span>
+        <span class="commit-mins"><strong class="commit-done">{{ c.done }}</strong>/{{ c.goal }} min</span>
+      </div>
+      <div class="commit-bar"><div class="commit-bar-fill" style="width: {{ c.pct }}%"></div></div>
+      <div class="commit-actions">
+        <button type="button" class="commit-add" data-min="15">+15</button>
+        <button type="button" class="commit-add" data-min="30">+30</button>
+        <button type="button" class="commit-reset" title="Reiniciar hoy">↺</button>
+        <button type="button" class="commit-remove" title="Quitar compromiso">✕</button>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="commit-add-wrap">
+      <button type="button" class="commit-addnew" id="commit-addnew">+ Compromiso</button>
+      <form class="commit-addform" id="commit-addform" method="post"
+            action="{{ base }}/commitments/set" style="display:none">
+        <select name="project_id" required>
+          <option value="">Proyecto…</option>
+          {% for p in addable_projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+        <input type="number" name="daily_minutes_goal" min="5" max="480" step="5" placeholder="min/día" required />
+        <button type="submit">Añadir</button>
+        <button type="button" class="commit-addcancel">Cancelar</button>
+      </form>
+    </div>
   </div>
 
   <div class="board" id="board">
@@ -428,6 +495,69 @@
     }
   </script>
 
-  <script src="{{ base }}/static/app.js?v=26"></script>
+  <!-- ── Daily commitments rail ── -->
+  <script>
+  (function(){
+    const BASE = "{{ base }}";
+    const rail = document.getElementById('commit-rail');
+    if (!rail) return;
+
+    async function post(url, params){
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params ? new URLSearchParams(params).toString() : '',
+      });
+    }
+
+    function applyState(chip, data){
+      const done = chip.querySelector('.commit-done');
+      if (done) done.textContent = data.done;
+      const fill = chip.querySelector('.commit-bar-fill');
+      if (fill) fill.style.width = (data.pct || 0) + '%';
+      chip.classList.toggle('met', !!data.met);
+    }
+
+    rail.addEventListener('click', async (e) => {
+      const chip = e.target.closest('.commit-chip');
+      const addBtn = e.target.closest('.commit-add');
+      const resetBtn = e.target.closest('.commit-reset');
+      const removeBtn = e.target.closest('.commit-remove');
+      if (!chip) return;
+      const id = chip.dataset.id;
+
+      if (addBtn){
+        addBtn.disabled = true;
+        try {
+          const res = await post(`${BASE}/commitments/${id}/log`, { minutes: addBtn.dataset.min });
+          if (res.ok) applyState(chip, await res.json());
+        } finally { addBtn.disabled = false; }
+      } else if (resetBtn){
+        const res = await post(`${BASE}/commitments/${id}/reset-today`);
+        if (res.ok) applyState(chip, await res.json());
+      } else if (removeBtn){
+        if (!confirm('¿Quitar este compromiso diario? Se conserva el historial de minutos.')) return;
+        await post(`${BASE}/commitments/set`, { project_id: id, daily_minutes_goal: 0 });
+        window.location.reload();
+      }
+    });
+
+    const addnew  = document.getElementById('commit-addnew');
+    const addform = document.getElementById('commit-addform');
+    if (addnew && addform){
+      addnew.addEventListener('click', () => {
+        addnew.style.display = 'none';
+        addform.style.display = 'flex';
+        addform.querySelector('select').focus();
+      });
+      addform.querySelector('.commit-addcancel').addEventListener('click', () => {
+        addform.style.display = 'none';
+        addnew.style.display = '';
+      });
+    }
+  })();
+  </script>
+
+  <script src="{{ base }}/static/app.js?v=27"></script>
 </body>
 </html>

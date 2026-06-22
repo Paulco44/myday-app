@@ -188,7 +188,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.createElement('button'); btn.className = 'move-btn move-btn-more'; btn.type = 'button'; btn.textContent = '···'; btn.title = 'Move to…';
         const drop = document.createElement('div'); drop.className = 'move-dropdown';
         others.forEach(f => drop.appendChild(f));
-        btn.onclick = e => { e.stopPropagation(); drop.classList.toggle('move-dropdown-open'); };
+        btn.onclick = e => {
+          e.stopPropagation();
+          const willOpen = !drop.classList.contains('move-dropdown-open');
+          // Close any other open menus first
+          document.querySelectorAll('.move-dropdown-open').forEach(d => { if (d !== drop) d.classList.remove('move-dropdown-open'); });
+          drop.classList.toggle('move-dropdown-open', willOpen);
+          if (!willOpen) return;
+          // Place it via fixed coords so the column's overflow can't clip it.
+          const r = btn.getBoundingClientRect();
+          const dw = drop.offsetWidth || 120;
+          const dh = drop.offsetHeight || 0;
+          let left = Math.min(r.left, window.innerWidth - dw - 8);
+          if (left < 8) left = 8;
+          let top = r.bottom + 4;                                   // prefer opening downward
+          if (top + dh > window.innerHeight - 8 && r.top - dh - 4 >= 8) {
+            top = r.top - dh - 4;                                   // flip up only if it would overflow the viewport
+          }
+          drop.style.left = left + 'px';
+          drop.style.top = top + 'px';
+        };
         document.addEventListener('click', () => drop.classList.remove('move-dropdown-open'));
         wrap.appendChild(btn); wrap.appendChild(drop); actions.appendChild(wrap);
       }
